@@ -8,6 +8,7 @@ import type {
   Cargo,
   PackResult,
   PackSettings,
+  Point3D,
   SavedSession,
   Theme,
   Vehicle,
@@ -21,11 +22,18 @@ const KEYS = {
   cargo: 'mlp:cargo',
   vehicleId: 'mlp:vehicle-id',
   result: 'mlp:result',
+  pristine: 'mlp:pristine-items',
   activeVariant: 'mlp:active-variant',
   settings: 'mlp:settings',
   sessions: 'mlp:sessions',
   theme: 'mlp:theme',
 };
+
+/**
+ * Карта "эталонных" (автоматически рассчитанных) грузов по вариантам.
+ * Используется для кнопки «Сбросить позиции».
+ */
+export type PristineMap = Record<string, PackResult['variants'][number]['items']>;
 
 /** Интерфейс глобального состояния */
 interface AppState {
@@ -55,10 +63,21 @@ interface AppState {
   // Результат
   result: PackResult | null;
   setResult: (r: PackResult | null) => void;
+  /** Эталонные позиции для сброса (устанавливаются вместе с result) */
+  pristine: PristineMap;
+  setPristine: (p: PristineMap) => void;
   activeVariant: string | null;
   setActiveVariant: (id: string | null) => void;
   isCalculating: boolean;
   setCalculating: (b: boolean) => void;
+
+  // --- Ручное редактирование раскладки ---
+  /** Обновляет позицию конкретного груза в текущем варианте */
+  updateCargoPosition: (cargoId: string, position: Point3D) => void;
+  /** Поворачивает груз вокруг вертикальной оси Y на указанный угол (град) */
+  rotateCargo: (cargoId: string, angle: number) => void;
+  /** Возвращает все позиции варианта к автоматически рассчитанным */
+  resetPositions: () => void;
 
   // Сессии
   sessions: SavedSession[];
@@ -69,6 +88,24 @@ interface AppState {
   // Ошибки
   error: string | null;
   setError: (e: string | null) => void;
+}
+
+/**
+ * Обновляет items активного варианта результата.
+ * Возвращает новый result или тот же, если данных недостаточно.
+ */
+function patchActiveVariantItems(
+  result: PackResult | null,
+  activeVariant: string | null,
+  updater: (item: PackResult['variants'][number]['items'][number]) =>
+    PackResult['variants'][number]['items'][number],
+): PackResult | null {
+  if (!result || !activeVariant) return result;
+  const variants = result.variants.map((v) => {
+    if (v.id !== activeVariant) return v;
+    return { ...v, items: v.items.map(updater) };
+  });
+  return { ...result, variants };
 }
 
 export const useAppStore = create<AppState>()(
@@ -149,6 +186,11 @@ export const useAppStore = create<AppState>()(
         saveToStorage(KEYS.result, r);
         set({ result: r });
       },
+      pristine: loadFromStorage<PristineMap>(KEYS.pristine, {}),
+      setPristine: (p) => {
+        saveToStorage(KEYS.pristine, p);
+        set({ pristine: p });
+      },
       activeVariant: loadFromStorage<string | null>(KEYS.activeVariant, null),
       setActiveVariant: (id) => {
         saveToStorage(KEYS.activeVariant, id);
@@ -156,6 +198,55 @@ export const useAppStore = create<AppState>()(
       },
       isCalculating: false,
       setCalculating: (b) => set({ isCalculating: b }),
+
+      // --- Ручное редактирование ---
+      updateCargoPosition: (cargoId, position) => {
+        const result = patchActiveVariantItems(get().result, get().activeVariant, (item) =>
+          item.id === cargoId ? { ...item, position } : item,
+        );
+        saveToStorage(KEYS.result, result);
+        set({ result });
+      },
+      rotateCargo: (cargoId, angle) => {
+        const result = patchActiveVariantItems(get().result, get().activeVariant, (item) => {
+          if (item.id !== cargoId) return item;
+          const norm = ((angle % 360) + 360) % 360;
+          return { ...item, rotationY: norm, rotation: { y: norm } };
+        });
+        saveToStorage(KEYS.result, result);
+        set({ result });
+      },
+      resetPositions: () => {
+        const pristine = get().pristine;
+        const activeVariant = get().activeVariant;
+        const result = get().result;
+        if (!pristine || !activeVariant || !result) return;
+        const targetItems = pristine[activeVariant];
+        if (!targetItems) return;
+        // Восстанавливаем эталонные позиции и повороты для активного варианта
+        const itemsById = new Map(targetItems.map((it) => [it.id, it]));
+        const variants = result.variants.map((v) => {
+          if (v.id !== activeVariant) return v;
+          return {
+            ...v,
+            items: v.items.map((it) => {
+              const pristineItem = itemsById.get(it.id);
+              if (!pristineItem) return it;
+              return {
+                ...it,
+                position: { ...pristineItem.position },
+                rotationY: pristineItem.rotationY,
+                rotation: pristineItem.rotation
+                  ? { ...pristineItem.rotation }
+                  : undefined,
+              };
+            }),
+          };
+        });
+        const newResult = { ...result, variants };
+        saveToStorage(KEYS.result, newResult);
+        set({ result: newResult });
+      },
 
       // --- Сессии ---
       sessions: loadFromStorage<SavedSession[]>(KEYS.sessions, []),
@@ -190,7 +281,6 @@ export const useAppStore = create<AppState>()(
           activeVariant: s.activeVariant,
           settings: s.settings,
         });
-        // Если авто из сессии не является стандартным — добавим в пользовательские
         const hasVehicle = [...VEHICLE_PRESETS, ...get().customVehicles].some(
           (v) => v.id === s.vehicle.id,
         );
@@ -217,6 +307,7 @@ export const useAppStore = create<AppState>()(
         cargo: s.cargo,
         settings: s.settings,
         result: s.result,
+        pristine: s.pristine,
         activeVariant: s.activeVariant,
         sessions: s.sessions,
       }),

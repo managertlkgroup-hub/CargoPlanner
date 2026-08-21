@@ -1,5 +1,10 @@
 // ============================================================================
 // Прозрачный контейнер (кузов автомобиля) в 3D
+//
+// Система координат: центр кузова расположен в точке (0, 0, 0),
+// ось X — вдоль длины, ось Y — вверх, ось Z — вдоль ширины.
+// Пакер оперирует координатами "левого нижнего угла" в мм; для отображения
+// используется центрирование (см. helpers).
 // ============================================================================
 
 import * as THREE from 'three';
@@ -17,7 +22,7 @@ export default function Container3D({ vehicle }: Props) {
   const h = vehicle.height * SCALE;
   const l = vehicle.length * SCALE;
 
-  // Каркас кузова через LineSegments
+  // Каркас кузова через LineSegments (центрирован в начале координат)
   const halfL = l / 2;
   const halfW = w / 2;
   const halfH = h / 2;
@@ -30,13 +35,10 @@ export default function Container3D({ vehicle }: Props) {
   ];
 
   const edges = [
-    // низ
     corners[0], corners[1], corners[1], corners[2],
     corners[2], corners[3], corners[3], corners[0],
-    // верх
     corners[4], corners[5], corners[5], corners[6],
     corners[6], corners[7], corners[7], corners[4],
-    // вертикали
     corners[0], corners[4], corners[1], corners[5],
     corners[2], corners[6], corners[3], corners[7],
   ];
@@ -54,7 +56,7 @@ export default function Container3D({ vehicle }: Props) {
   return (
     <group>
       {/* Пол */}
-      <mesh position={[l / 2, 0, w / 2]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[l, w]} />
         <meshStandardMaterial color="#94a3b8" transparent opacity={0.35} />
       </mesh>
@@ -64,18 +66,18 @@ export default function Container3D({ vehicle }: Props) {
         <lineBasicMaterial color="#3b82f6" />
       </lineSegments>
 
-      {/* Задняя стенка */}
-      <mesh position={[0, h / 2, w / 2]}>
+      {/* Задняя стенка (x = -l/2) */}
+      <mesh position={[-halfL, h / 2, 0]}>
         <boxGeometry args={[0.02, h, w]} />
         <meshStandardMaterial color="#3b82f6" transparent opacity={0.08} />
       </mesh>
 
       {/* Боковые стенки (полупрозрачные) */}
-      <mesh position={[l / 2, h / 2, 0]}>
+      <mesh position={[0, h / 2, -halfW]}>
         <boxGeometry args={[l, h, 0.02]} />
         <meshStandardMaterial color="#3b82f6" transparent opacity={0.05} />
       </mesh>
-      <mesh position={[l / 2, h / 2, w]}>
+      <mesh position={[0, h / 2, halfW]}>
         <boxGeometry args={[l, h, 0.02]} />
         <meshStandardMaterial color="#3b82f6" transparent opacity={0.05} />
       </mesh>

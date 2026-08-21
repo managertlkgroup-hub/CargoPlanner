@@ -1,7 +1,3 @@
-// ============================================================================
-// Таблица грузов с действиями (добавить, удалить, CSV, паллеты, пример)
-// ============================================================================
-
 import { useRef, useState } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import type { Cargo } from '../../types';
@@ -16,10 +12,12 @@ import CargoRow from './CargoRow';
 /** Пример тестовых грузов */
 function sampleCargo(): Cargo[] {
   return [
-    { id: uid(), name: 'Ящик с инструментом', length: 600, width: 400, height: 300, weight: 25, quantity: 4, stackable: true },
-    { id: uid(), name: 'Европаллет', length: 1200, width: 800, height: 144, weight: 250, quantity: 3, stackable: true },
-    { id: uid(), name: 'Коробка хрупкая', length: 500, width: 500, height: 400, weight: 40, quantity: 2, stackable: false },
-    { id: uid(), name: 'Мешок цемента', length: 700, width: 400, height: 200, weight: 50, quantity: 10, stackable: true },
+    { id: uid(), name: 'Ящик с инструментом', shape: 'box', length: 600, width: 400, height: 300, weight: 25, quantity: 4, stackable: true },
+    { id: uid(), name: 'Европаллет', shape: 'box', length: 1200, width: 800, height: 144, weight: 250, quantity: 3, stackable: true },
+    { id: uid(), name: 'Коробка хрупкая', shape: 'box', length: 500, width: 500, height: 400, weight: 40, quantity: 2, stackable: false },
+    { id: uid(), name: 'Мешок цемента', shape: 'box', length: 700, width: 400, height: 200, weight: 50, quantity: 10, stackable: true },
+    { id: uid(), name: 'Труба стальная', shape: 'cylinder', length: 3000, diameter: 220, weight: 80, quantity: 3, stackable: true },
+    { id: uid(), name: 'Бочка металлическая', shape: 'cylinder', length: 880, diameter: 580, weight: 60, quantity: 2, stackable: true },
   ];
 }
 
@@ -53,7 +51,7 @@ export default function CargoTable() {
   const handleAddPallet = (key: 'euro' | 'fin') => {
     const p = PALLET_PRESETS[key];
     addCargoBulk([
-      { id: uid(), name: p.name, length: p.length, width: p.width, height: p.height, weight: p.weight, quantity: 1, stackable: true },
+      { id: uid(), name: p.name, shape: 'box', length: p.length, width: p.width, height: p.height, weight: p.weight, quantity: 1, stackable: true },
     ]);
   };
 
@@ -117,9 +115,10 @@ export default function CargoTable() {
               <tr>
                 <th style={{ width: 32 }}></th>
                 <th>Название</th>
+                <th>Форма</th>
                 <th>Дл.</th>
                 <th>Шир.</th>
-                <th>Выс.</th>
+                <th>Выс./Диам.</th>
                 <th>Вес</th>
                 <th>Кол-во</th>
                 <th style={{ width: 80 }}>Штаб.</th>

@@ -2,7 +2,7 @@
 // Типы для модуля упаковки (packer)
 // ============================================================================
 
-import type { Cargo, PackSettings } from '../../types';
+import type { Cargo, CargoShape, PackSettings } from '../../types';
 
 /** Входные данные для упаковщика */
 export interface PackerInput {
@@ -18,6 +18,10 @@ export interface PackerInput {
 export interface Box {
   id: string;
   name: string;
+  shape: CargoShape;
+  /** Диаметр для цилиндров (мм), undefined для прямоугольников */
+  diameter?: number;
+  /** Габаритный объём для упаковки (для цилиндра width=height=diameter) */
   length: number;
   width: number;
   height: number;
@@ -25,7 +29,7 @@ export interface Box {
   stackable: boolean;
 }
 
-/** Размещённый прямоугольный параллелепипед в 3D */
+/** Размещённый груз в 3D */
 export interface PlacedBox extends Box {
   x: number;
   y: number;

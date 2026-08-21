@@ -19,10 +19,26 @@ export interface Vehicle extends Dimensions {
   isCustom?: boolean;
 }
 
-/** Отдельная позиция груза в списке грузов (до расчёта) */
-export interface Cargo extends Dimensions {
+/** Форма груза */
+export type CargoShape = 'box' | 'cylinder';
+
+/**
+ * Отдельная позиция груза в списке грузов (до расчёта).
+ * Для прямоугольного груза (shape='box') используются width и height,
+ * для цилиндрического (shape='cylinder') — diameter (ширина и высота равны диаметру).
+ */
+export interface Cargo {
   id: string;
   name: string;
+  shape: CargoShape;
+  /** Длина груза (для цилиндра — длина трубы/бочки), мм */
+  length: number;
+  /** Ширина (только для прямоугольных грузов), мм */
+  width?: number;
+  /** Высота (только для прямоугольных грузов), мм */
+  height?: number;
+  /** Диаметр (только для цилиндров), мм */
+  diameter?: number;
   weight: number;
   quantity: number;
   stackable: boolean;
@@ -35,21 +51,31 @@ export interface Point3D {
   z: number;
 }
 
-/** Поворот груза по осям (градусы) */
+/** Поворот груза по осям (градусы) — сохранено для обратной совместимости */
 export interface Rotation {
   /** Вращение вокруг оси Y (град) */
   y: number;
 }
 
-/** Размещённый груз в результате расчёта */
+/**
+ * Размещённый груз в результате расчёта.
+ * position — это координаты левого нижнего угла груза в мм (в системе кузова,
+ * где x вдоль длины, y вверх, z вдоль ширины).
+ */
 export interface PackedItem {
   id: string;
   name: string;
-  /** Фактические габариты с учётом поворота */
+  shape: CargoShape;
+  /** Диаметр для цилиндров (мм) */
+  diameter?: number;
+  /** Фактические габариты с учётом поворота (для цилиндра — bounding box) */
   dimensions: Dimensions;
   weight: number;
   position: Point3D;
-  rotation: Rotation;
+  /** Угол поворота вокруг вертикальной оси Y (град) */
+  rotationY?: number;
+  /** Сохранено для обратной совместимости со старыми сохранёнными данными */
+  rotation?: Rotation;
   color: string;
   stackable: boolean;
 }
@@ -104,3 +130,36 @@ export interface SavedSession {
 
 /** Тема оформления */
 export type Theme = 'light' | 'dark';
+
+/**
+ * Вспомогательная функция: возвращает "эффективные" габариты груза для упаковки.
+ * Для цилиндра ширина и высота равны диаметру.
+ */
+export function getCargoSize(cargo: Cargo): Dimensions {
+  if (cargo.shape === 'cylinder') {
+    const d = cargo.diameter ?? 0;
+    return { length: cargo.length, width: d, height: d };
+  }
+  return {
+    length: cargo.length,
+    width: cargo.width ?? 0,
+    height: cargo.height ?? 0,
+  };
+}
+
+/**
+ * Вспомогательная функция: реальный объём груза (мм^3).
+ * Для цилиндра используется формула объёма цилиндра, для прямоугольника — V = L*W*H.
+ */
+export function getCargoVolume(cargo: Cargo): number {
+  if (cargo.shape === 'cylinder') {
+    const d = cargo.diameter ?? 0;
+    return Math.PI * (d / 2) ** 2 * cargo.length;
+  }
+  return (cargo.width ?? 0) * (cargo.height ?? 0) * cargo.length;
+}
+
+/** Человекочитаемое название формы */
+export function shapeLabel(shape: CargoShape): string {
+  return shape === 'cylinder' ? 'Цилиндр' : 'Прямоугольный';
+}

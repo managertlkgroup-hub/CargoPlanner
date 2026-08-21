@@ -3,6 +3,7 @@
 // ============================================================================
 
 import type { Cargo } from '../../types';
+import { shapeLabel } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 
 export default function CargoRow({ cargo, selected, onToggleSelect }: Props) {
   const updateCargo = useAppStore((s) => s.updateCargo);
+  const isCylinder = cargo.shape === 'cylinder';
 
   return (
     <tr>
@@ -27,10 +29,11 @@ export default function CargoRow({ cargo, selected, onToggleSelect }: Props) {
         <input
           type="text"
           value={cargo.name}
-          style={{ width: '100%', minWidth: 120 }}
+          style={{ width: '100%', minWidth: 110 }}
           onChange={(e) => updateCargo(cargo.id, { name: e.target.value })}
         />
       </td>
+      <td style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{shapeLabel(cargo.shape)}</td>
       <td>
         <input
           type="number"
@@ -38,20 +41,35 @@ export default function CargoRow({ cargo, selected, onToggleSelect }: Props) {
           onChange={(e) => updateCargo(cargo.id, { length: Number(e.target.value) })}
         />
       </td>
-      <td>
-        <input
-          type="number"
-          value={cargo.width}
-          onChange={(e) => updateCargo(cargo.id, { width: Number(e.target.value) })}
-        />
-      </td>
-      <td>
-        <input
-          type="number"
-          value={cargo.height}
-          onChange={(e) => updateCargo(cargo.id, { height: Number(e.target.value) })}
-        />
-      </td>
+      {isCylinder ? (
+        <>
+          <td className="text-muted" style={{ textAlign: 'center' }}>—</td>
+          <td>
+            <input
+              type="number"
+              value={cargo.diameter ?? 0}
+              onChange={(e) => updateCargo(cargo.id, { diameter: Number(e.target.value) })}
+            />
+          </td>
+        </>
+      ) : (
+        <>
+          <td>
+            <input
+              type="number"
+              value={cargo.width}
+              onChange={(e) => updateCargo(cargo.id, { width: Number(e.target.value) })}
+            />
+          </td>
+          <td>
+            <input
+              type="number"
+              value={cargo.height}
+              onChange={(e) => updateCargo(cargo.id, { height: Number(e.target.value) })}
+            />
+          </td>
+        </>
+      )}
       <td>
         <input
           type="number"
