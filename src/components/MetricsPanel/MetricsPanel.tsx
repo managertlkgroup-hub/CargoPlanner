@@ -1,3 +1,6 @@
+import { useActiveVariant } from '../../store/useAppStore';
+import { formatNumber, volumeToM3 } from '../../utils/helpers';
+
 export default function MetricsPanel() {
   const variant = useActiveVariant();
   if (!variant) return null;
