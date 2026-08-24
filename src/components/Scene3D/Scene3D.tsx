@@ -10,10 +10,24 @@ const Scene3D: React.FC = () => {
   const rotateCargo = useAppStore((s) => s.rotateCargo);
   const setError = useAppStore((s) => s.setError);
 
+  const result = useAppStore((s) => s.result);
+  const activeVariant = useAppStore((s) => s.activeVariant);
   const variant = useActiveVariant();
   const vehicle = useSelectedVehicle();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // При изменении результата или активного варианта перерисовываем сцену:
+  // сбрасываем выбранный груз и логируем данные для отладки.
+  useEffect(() => {
+    // Сбрасываем выделение при смене раскладки
+    setSelectedId(null);
+    console.log('[Scene3D] Данные обновлены:', {
+      variants: result?.variants?.length ?? 0,
+      activeVariant,
+      items: variant?.items?.length ?? 0,
+    });
+  }, [result, activeVariant, variant]);
 
   // Поворот выделенного груза клавишей R на +90° (store задаёт абсолютный угол)
   const handleKeyDown = useCallback(
