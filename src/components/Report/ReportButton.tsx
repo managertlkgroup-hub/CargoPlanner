@@ -1,10 +1,11 @@
 // ============================================================================
-// Кнопка формирования PDF-отчёта
+// Кнопки формирования отчётов (PDF и Excel)
 // ============================================================================
 
 import { getCurrentVehicle, useActiveVariant } from '../../store/useAppStore';
 import { useAppStore } from '../../store/useAppStore';
 import { generatePdfReport } from '../../lib/export/pdfExport';
+import { exportToXLSX } from '../../lib/export/xlsxExport';
 
 export default function ReportButton() {
   const cargo = useAppStore((s) => s.cargo);
@@ -16,7 +17,7 @@ export default function ReportButton() {
   const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
   const variant = useActiveVariant();
 
-  const handleClick = () => {
+  const handlePdf = () => {
     if (!result || !variant) {
       setError('Сначала выполните расчёт и выберите вариант раскладки.');
       return;
@@ -28,9 +29,26 @@ export default function ReportButton() {
     }
   };
 
+  const handleXlsx = () => {
+    if (!result || result.variants.length === 0) {
+      setError('Сначала выполните расчёт.');
+      return;
+    }
+    try {
+      exportToXLSX(vehicle, cargo, result.variants);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Ошибка экспорта в Excel');
+    }
+  };
+
   return (
-    <button className="btn btn-primary" onClick={handleClick}>
-      📄 Сформировать отчёт
-    </button>
+    <div className="row" style={{ gap: 8 }}>
+      <button className="btn btn-primary" onClick={handlePdf}>
+        📄 Отчёт PDF
+      </button>
+      <button className="btn btn-success" onClick={handleXlsx}>
+        📊 Экспорт в Excel
+      </button>
+    </div>
   );
 }

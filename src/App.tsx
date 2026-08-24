@@ -10,6 +10,7 @@ import CoordinatesEditor from './components/Scene3D/CoordinatesEditor';
 import VariantTabs from './components/VariantTabs/VariantTabs';
 import MetricsPanel from './components/MetricsPanel/MetricsPanel';
 import SettingsModal from './components/Settings/SettingsModal';
+import ReportButton from './components/Report/ReportButton';
 
 const App: React.FC = () => {
   const cargo = useAppStore((s) => s.cargo);
@@ -87,6 +88,7 @@ const App: React.FC = () => {
           <div className="scene-container" style={{ minHeight: 480 }}>
             <Scene3D />
           </div>
+          <ReportButton />
           <CoordinatesEditor />
         </div>
       </main>
