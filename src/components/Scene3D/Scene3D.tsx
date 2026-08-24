@@ -17,6 +17,8 @@ const Scene3D: React.FC = () => {
   const vehicle = useSelectedVehicle();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Блокировка камеры во время перетаскивания груза
+  const [isDragging, setIsDragging] = useState(false);
 
   // Диагностика: при изменении данных выводим каждый груз с его параметрами
   useEffect(() => {
@@ -139,14 +141,16 @@ const Scene3D: React.FC = () => {
             isSelected={selectedId === item.id}
             onSelect={(id) => setSelectedId(id)}
             onMove={(id, position) => updateCargoPosition(id, position)}
-            onDragStart={() => undefined}
-            onDragEnd={() => undefined}
+            onDragStart={() => setIsDragging(true)}
+            onDragEnd={() => setIsDragging(false)}
             onBoundsViolation={(msg) => setError(msg)}
           />
         ))}
 
+        {/* Камера заблокирована во время перетаскивания груза */}
         <OrbitControls
           makeDefault
+          enabled={!isDragging}
           enablePan
           enableZoom
           target={[0, containerSize.height / 2, 0]}
@@ -154,6 +158,14 @@ const Scene3D: React.FC = () => {
           maxDistance={maxDim * 5}
         />
       </Canvas>
+
+      {/* Уголок с размерами кузова */}
+      <div
+        className="absolute top-2 left-2 text-xs text-white bg-black/50 px-2 py-1 rounded pointer-events-none"
+        style={{ zIndex: 10 }}
+      >
+        Кузов: {vehicle.length}×{vehicle.width}×{vehicle.height} мм
+      </div>
 
       <div className="absolute bottom-2 left-2 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 p-1 rounded shadow pointer-events-none">
         Перетаскивайте грузы мышью · R — поворот · ЛКМ вращение · колесо — зум

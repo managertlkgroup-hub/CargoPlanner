@@ -1,27 +1,7 @@
-@media (max-width: 1200px) {
-  .app-layout {
-    grid-template-columns: 360px 1fr;
-  }
-}
-
-@media (max-width: 1024px) {
-  .app-layout {
-    grid-template-columns: 1fr;
-    height: auto;
-    min-height: 0;
-    overflow: visible;
-  }
-  .left-panel {
-    order: 2;
-    max-height: none;
-    overflow: visible;
-  }
-  .right-panel {
-    order: 1;
-    max-height: none;
-    overflow: visible;
-  }
-  .scene-container {
-    min-height: 360px;
-  }
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: var(--shadow);
 }
