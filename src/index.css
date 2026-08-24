@@ -1,7 +1,41 @@
-.panel {
+.error-toast-close {
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+/* --- Модальные окна --- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 16px;
+}
+
+.modal {
   background: var(--bg-panel);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 14px;
-  box-shadow: var(--shadow);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-md);
+  padding: 20px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal h3 {
+  margin: 0 0 16px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
 }

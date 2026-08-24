@@ -95,7 +95,7 @@ export default function RouteEditor() {
         <span>🗺 Маршрут</span>
       </div>
 
-      <div className="variant-tabs" style={{ marginBottom: 12 }}>
+      <div className="variant-tabs mb-1">
         <button
           type="button"
           className={`variant-tab ${tab === 'loading' ? 'active' : ''}`}
@@ -126,9 +126,9 @@ export default function RouteEditor() {
           <label>Адрес (необязательно)</label>
           <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="г. Москва, ул. …" />
         </div>
-        {error && <div className="form-group full text-muted" style={{ color: 'var(--danger)' }}>{error}</div>}
+        {error && <div className="form-group full text-muted text-danger">{error}</div>}
         <div className="form-group full">
-          <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
+          <button type="submit" className="btn btn-primary w-full">
             + Добавить
           </button>
         </div>
@@ -164,32 +164,19 @@ interface PointListProps {
 /** Список точек с кнопками удаления и изменения порядка */
 function PointList({ points, onRemove, onMoveUp, onMoveDown }: PointListProps) {
   if (points.length === 0) {
-    return <div className="text-muted">Точек пока нет. Добавьте первую.</div>;
+    return <div className="text-muted mt-1">Точек пока нет. Добавьте первую.</div>;
   }
   return (
-    <div style={{ marginTop: 12 }}>
+    <div className="point-list">
       {points.map((p, i) => (
-        <div
-          key={p.id}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 8,
-            padding: '8px 10px',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            marginBottom: 6,
-            background: 'var(--bg-card)',
-          }}
-        >
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 600, fontSize: 13 }}>{i + 1}. {p.name}</div>
+        <div key={p.id} className="route-point">
+          <div className="route-point-info">
+            <div className="route-point-name">{i + 1}. {p.name}</div>
             {p.address && (
-              <div className="text-muted" style={{ fontSize: 12 }}>{p.address}</div>
+              <div className="text-muted route-point-addr">{p.address}</div>
             )}
           </div>
-          <div className="row" style={{ gap: 4 }}>
+          <div className="row">
             <button className="btn btn-sm" onClick={() => onMoveUp(i)} title="Выше" disabled={i === 0}>↑</button>
             <button className="btn btn-sm" onClick={() => onMoveDown(i)} title="Ниже" disabled={i === points.length - 1}>↓</button>
             <button className="btn btn-sm btn-danger" onClick={() => onRemove(p.id)} title="Удалить">✕</button>

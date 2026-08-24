@@ -96,9 +96,9 @@ export default function AddCargoForm() {
         <label>Кол-во, шт</label>
         <input name="quantity" type="number" min={1} defaultValue={1} />
       </div>
-      {error && <div className="form-group full text-muted" style={{ color: 'var(--danger)' }}>{error}</div>}
+      {error && <div className="form-group full text-muted text-danger">{error}</div>}
       <div className="form-group full">
-        <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
+        <button type="submit" className="btn btn-primary w-full">
           + Добавить груз
         </button>
       </div>

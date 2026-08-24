@@ -42,7 +42,7 @@ export default function ReportButton() {
   };
 
   return (
-    <div className="row" style={{ gap: 8 }}>
+    <div className="row">
       <button className="btn btn-primary" onClick={handlePdf}>
         📄 Отчёт PDF
       </button>

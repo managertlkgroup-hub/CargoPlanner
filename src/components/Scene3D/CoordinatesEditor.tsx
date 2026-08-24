@@ -31,7 +31,7 @@ export default function CoordinatesEditor() {
         <span>🖐 Ручное редактирование</span>
         <button className="btn btn-sm" onClick={resetPositions}>Сбросить позиции</button>
       </div>
-      <div className="cargo-table-wrap" style={{ maxHeight: 220 }}>
+      <div className="cargo-table-wrap coords-scroll">
         <table className="cargo-table">
           <thead>
             <tr>
@@ -45,9 +45,7 @@ export default function CoordinatesEditor() {
           <tbody>
             {variant.items.map((it) => (
               <tr key={it.id}>
-                <td style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {it.name}
-                </td>
+                <td className="coords-name">{it.name}</td>
                 <td>
                   <input
                     type="number"
@@ -70,13 +68,13 @@ export default function CoordinatesEditor() {
                   />
                 </td>
                 <td>
-                  <div className="row" style={{ gap: 4 }}>
+                  <div className="row-sm">
                     <input
                       type="number"
                       value={Math.round(it.rotationY ?? 0)}
                       step={90}
                       onChange={(e) => rotateCargo(it.id, Number(e.target.value))}
-                      style={{ width: 56 }}
+                      className="input-rotation"
                     />
                     <button
                       className="btn btn-sm"

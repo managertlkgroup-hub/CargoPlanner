@@ -6,7 +6,6 @@
 // (без ошибки "tr cannot appear as a child of div").
 // ============================================================================
 
-import type { CSSProperties } from 'react';
 import type { Cargo } from '../../types';
 import { shapeLabel } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
@@ -17,22 +16,6 @@ interface Props {
   onToggleSelect: (id: string) => void;
 }
 
-/** Базовый стиль ячейки таблицы */
-const cellStyle: CSSProperties = {
-  display: 'table-cell',
-  padding: '6px 8px',
-  borderBottom: '1px solid var(--border)',
-  verticalAlign: 'middle',
-  fontSize: 13,
-  whiteSpace: 'nowrap',
-};
-
-/** Стиль компактного инпута для числовых полей */
-const inputStyle: CSSProperties = {
-  width: 64,
-  padding: '4px 6px',
-};
-
 export default function CargoRow({ cargo, selected, onToggleSelect }: Props) {
   const updateCargo = useAppStore((s) => s.updateCargo);
   const loadingPoints = useAppStore((s) => s.loadingPoints);
@@ -40,96 +23,91 @@ export default function CargoRow({ cargo, selected, onToggleSelect }: Props) {
   const isCylinder = cargo.shape === 'cylinder';
 
   return (
-    <div
-      style={{
-        display: 'table-row',
-        background: selected ? 'var(--bg-card)' : 'transparent',
-      }}
-    >
-      <div style={cellStyle}>
+    <div className={`cargo-row ${selected ? 'cargo-row-selected' : ''}`}>
+      <div className="cargo-row-cell">
         <input
           type="checkbox"
           checked={selected}
           onChange={() => onToggleSelect(cargo.id)}
         />
       </div>
-      <div style={{ ...cellStyle, width: 130 }}>
+      <div className="cargo-row-cell cargo-name-cell">
         <input
           type="text"
           value={cargo.name}
-          style={{ width: '100%', minWidth: 110 }}
+          className="input-block"
           onChange={(e) => updateCargo(cargo.id, { name: e.target.value })}
         />
       </div>
-      <div style={cellStyle}>{shapeLabel(cargo.shape)}</div>
-      <div style={cellStyle}>
+      <div className="cargo-row-cell">{shapeLabel(cargo.shape)}</div>
+      <div className="cargo-row-cell">
         <input
           type="number"
           value={cargo.length}
-          style={inputStyle}
+          className="input-compact"
           onChange={(e) => updateCargo(cargo.id, { length: Number(e.target.value) })}
         />
       </div>
       {isCylinder ? (
         <>
-          <div style={cellStyle}>—</div>
-          <div style={cellStyle}>
+          <div className="cargo-row-cell">—</div>
+          <div className="cargo-row-cell">
             <input
               type="number"
               value={cargo.diameter ?? 0}
-              style={inputStyle}
+              className="input-compact"
               onChange={(e) => updateCargo(cargo.id, { diameter: Number(e.target.value) })}
             />
           </div>
         </>
       ) : (
         <>
-          <div style={cellStyle}>
+          <div className="cargo-row-cell">
             <input
               type="number"
               value={cargo.width}
-              style={inputStyle}
+              className="input-compact"
               onChange={(e) => updateCargo(cargo.id, { width: Number(e.target.value) })}
             />
           </div>
-          <div style={cellStyle}>
+          <div className="cargo-row-cell">
             <input
               type="number"
               value={cargo.height}
-              style={inputStyle}
+              className="input-compact"
               onChange={(e) => updateCargo(cargo.id, { height: Number(e.target.value) })}
             />
           </div>
         </>
       )}
-      <div style={cellStyle}>
+      <div className="cargo-row-cell">
         <input
           type="number"
           value={cargo.weight}
-          style={inputStyle}
+          className="input-compact"
           onChange={(e) => updateCargo(cargo.id, { weight: Number(e.target.value) })}
         />
       </div>
-      <div style={cellStyle}>
+      <div className="cargo-row-cell">
         <input
           type="number"
           min={1}
           value={cargo.quantity}
-          style={inputStyle}
+          className="input-compact"
           onChange={(e) => updateCargo(cargo.id, { quantity: Math.max(1, Math.floor(Number(e.target.value) || 1)) })}
         />
       </div>
-      <div style={cellStyle}>
+      <div className="cargo-row-cell">
         <input
           type="checkbox"
           checked={cargo.stackable}
           onChange={(e) => updateCargo(cargo.id, { stackable: e.target.checked })}
         />
       </div>
-      <div style={cellStyle}>
+      <div className="cargo-row-cell">
         <select
           value={cargo.loadingPointId ?? ''}
-          style={{ maxWidth: 120, padding: '4px 6px' }}
+          className="select-compact"
           onChange={(e) => updateCargo(cargo.id, { loadingPointId: e.target.value || undefined })}
         >
           <option value="">—</option>
@@ -140,10 +118,10 @@ export default function CargoRow({ cargo, selected, onToggleSelect }: Props) {
             ))}
         </select>
       </div>
-      <div style={cellStyle}>
+      <div className="cargo-row-cell">
         <select
           value={cargo.unloadingPointId ?? ''}
-          style={{ maxWidth: 120, padding: '4px 6px' }}
+          className="select-compact"
           onChange={(e) => updateCargo(cargo.id, { unloadingPointId: e.target.value || undefined })}
         >
           <option value="">—</option>

@@ -12,9 +12,10 @@ interface Props {
 export default function ThemeToggle({ theme, onToggle }: Props) {
   return (
     <button
-      className="btn btn-sm"
+      className="theme-toggle"
       onClick={onToggle}
       title={theme === 'light' ? 'Включить тёмную тему' : 'Включить светлую тему'}
+      aria-label={theme === 'light' ? 'Включить тёмную тему' : 'Включить светлую тему'}
     >
       {theme === 'light' ? '🌙' : '☀️'}
     </button>

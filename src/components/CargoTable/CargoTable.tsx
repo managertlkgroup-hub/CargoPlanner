@@ -4,7 +4,6 @@
 
 import { useState } from 'react';
 import { FixedSizeList as List } from 'react-window';
-import type { CSSProperties } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import CargoRow from './CargoRow';
 import AddCargoForm from './AddCargoForm';
@@ -85,7 +84,7 @@ export default function CargoTable() {
       </div>
 
       {/* Панель действий */}
-      <div className="row" style={{ gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+      <div className="table-actions">
         <button className="btn btn-sm" onClick={() => setShowAdd((v) => !v)}>
           {showAdd ? '− Скрыть форму' : '+ Добавить'}
         </button>
@@ -101,13 +100,13 @@ export default function CargoTable() {
         <button className="btn btn-sm" onClick={handleExport} disabled={cargo.length === 0}>
           Экспорт CSV
         </button>
-        <label className="btn btn-sm" style={{ cursor: 'pointer', margin: 0 }}>
+        <label className="btn btn-sm btn-file">
           Импорт CSV
           <input
             type="file"
             accept=".csv"
             onChange={handleImport}
-            style={{ display: 'none' }}
+            className="hidden-input"
           />
         </label>
       </div>
@@ -116,64 +115,45 @@ export default function CargoTable() {
       {showAdd && <AddCargoForm />}
 
       {/* Заголовок таблицы */}
-      <div style={{ display: 'table', width: '100%', borderCollapse: 'collapse' }}>
-        <div style={{ display: 'table-header-group' }}>
-          <div
-            style={{
-              display: 'table-row',
-              background: 'var(--bg-muted, #f5f5f5)',
-              fontWeight: 700,
-              fontSize: 12,
-            }}
-          >
-            <div style={headerCellStyle}>✓</div>
-            <div style={headerCellStyle}>Название</div>
-            <div style={headerCellStyle}>Форма</div>
-            <div style={headerCellStyle}>Длина, мм</div>
-            <div style={headerCellStyle}>Ширина, мм</div>
-            <div style={headerCellStyle}>Выс./Диам., мм</div>
-            <div style={headerCellStyle}>Вес, кг</div>
-            <div style={headerCellStyle}>Кол-во</div>
-            <div style={headerCellStyle}>Штаб.</div>
-            <div style={headerCellStyle}>Точка загрузки</div>
-            <div style={headerCellStyle}>Точка выгрузки</div>
-          </div>
+      <div className="cargo-table-header">
+        <div className="cargo-table-header-row">
+          <div className="cargo-table-header-cell">✓</div>
+          <div className="cargo-table-header-cell">Название</div>
+          <div className="cargo-table-header-cell">Форма</div>
+          <div className="cargo-table-header-cell">Длина, мм</div>
+          <div className="cargo-table-header-cell">Ширина, мм</div>
+          <div className="cargo-table-header-cell">Выс./Диам., мм</div>
+          <div className="cargo-table-header-cell">Вес, кг</div>
+          <div className="cargo-table-header-cell">Кол-во</div>
+          <div className="cargo-table-header-cell">Штаб.</div>
+          <div className="cargo-table-header-cell">Точка загрузки</div>
+          <div className="cargo-table-header-cell">Точка выгрузки</div>
         </div>
-
-        {cargo.length === 0 ? (
-          <div style={{ padding: '20px', textAlign: 'center' }} className="text-muted">
-            Грузов пока нет. Нажмите «+ Добавить» или импортируйте CSV.
-          </div>
-        ) : (
-          <List
-            height={Math.min(cargo.length * ROW_HEIGHT, 320)}
-            itemCount={cargo.length}
-            itemSize={ROW_HEIGHT}
-            width="100%"
-            itemData={{ cargo, selectedIds, toggleSelect }}
-          >
-            {({ index, style, data }) => (
-              <div style={style}>
-                <CargoRow
-                  cargo={data.cargo[index]}
-                  selected={data.selectedIds.has(data.cargo[index].id)}
-                  onToggleSelect={data.toggleSelect}
-                />
-              </div>
-            )}
-          </List>
-        )}
       </div>
+
+      {cargo.length === 0 ? (
+        <div className="empty-state text-muted">
+          Грузов пока нет. Нажмите «+ Добавить» или импортируйте CSV.
+        </div>
+      ) : (
+        <List
+          height={Math.min(cargo.length * ROW_HEIGHT, 320)}
+          itemCount={cargo.length}
+          itemSize={ROW_HEIGHT}
+          width="100%"
+          itemData={{ cargo, selectedIds, toggleSelect }}
+        >
+          {({ index, style, data }) => (
+            <div style={style}>
+              <CargoRow
+                cargo={data.cargo[index]}
+                selected={data.selectedIds.has(data.cargo[index].id)}
+                onToggleSelect={data.toggleSelect}
+              />
+            </div>
+          )}
+        </List>
+      )}
     </div>
   );
 }
-
-/** Стиль ячейки заголовка таблицы */
-const headerCellStyle: CSSProperties = {
-  display: 'table-cell',
-  padding: '6px 8px',
-  fontSize: 12,
-  fontWeight: 700,
-  whiteSpace: 'nowrap',
-  borderBottom: '2px solid var(--border)',
-};

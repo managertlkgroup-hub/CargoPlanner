@@ -25,20 +25,23 @@ export default function VehicleSelector() {
         </button>
       </div>
 
-      <label>Модель кузова</label>
-      <select
-        style={{ width: '100%', marginBottom: 10 }}
-        value={selectedVehicleId}
-        onChange={(e) => selectVehicle(e.target.value)}
-      >
-        {vehicles.map((v) => (
-          <option key={v.id} value={v.id}>
-            {v.name} {v.isCustom ? '(пользовательский)' : ''}
-          </option>
-        ))}
-      </select>
+      <div className="form-group mb-1">
+        <label htmlFor="vehicle-select">Модель кузова</label>
+        <select
+          id="vehicle-select"
+          className="w-full"
+          value={selectedVehicleId}
+          onChange={(e) => selectVehicle(e.target.value)}
+        >
+          {vehicles.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.name} {v.isCustom ? '(пользовательский)' : ''}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <div className="metrics-grid" style={{ gridTemplateColumns: 'repeat(2,1fr)' }}>
+      <div className="metrics-grid vehicle-metrics">
         <div className="metric-card">
           <div className="metric-value">{vehicle.length}×{vehicle.width}×{vehicle.height}</div>
           <div className="metric-label">Размеры, мм</div>

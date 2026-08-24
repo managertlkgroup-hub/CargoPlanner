@@ -69,17 +69,14 @@ const App: React.FC = () => {
   };
 
   return (
-    <div
-      className="min-h-screen flex flex-col"
-      style={{ background: 'var(--bg)', color: 'var(--text)' }}
-    >
+    <div className="app-root">
       <Header onOpenSettings={() => setSettingsOpen(true)} />
 
       <main className="app-layout flex-1">
         <div className="left-panel">
           <VehicleSelector />
           <div className="section-divider" />
-          <div className="variant-tabs" style={{ marginBottom: 4 }}>
+          <div className="variant-tabs mb-1">
             <button
               type="button"
               className={`variant-tab ${leftTab === 'cargo' ? 'active' : ''}`}
@@ -100,8 +97,7 @@ const App: React.FC = () => {
           <button
             onClick={handleCalculate}
             disabled={isCalculating || cargo.length === 0}
-            className="btn btn-primary"
-            style={{ width: '100%', padding: '14px', fontSize: 16, fontWeight: 700 }}
+            className="btn btn-primary btn-calculate"
           >
             {isCalculating ? '⏳ Расчёт…' : '🧮 Рассчитать раскладку'}
           </button>
@@ -119,27 +115,12 @@ const App: React.FC = () => {
       </main>
 
       {error && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 16,
-            right: 16,
-            zIndex: 1200,
-            maxWidth: 360,
-            background: 'var(--danger)',
-            color: '#fff',
-            padding: '12px 16px',
-            borderRadius: 10,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-            whiteSpace: 'pre-line',
-            fontSize: 13,
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+        <div className="error-toast">
+          <div className="error-toast-content">
             <span>{error}</span>
             <button
               onClick={() => setError(null)}
-              style={{ color: '#fff', fontWeight: 700, fontSize: 16 }}
+              className="error-toast-close"
               aria-label="Закрыть"
             >
               ✕
