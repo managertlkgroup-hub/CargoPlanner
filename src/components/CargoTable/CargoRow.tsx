@@ -14,6 +14,8 @@ interface Props {
 
 export default function CargoRow({ cargo, selected, onToggleSelect }: Props) {
   const updateCargo = useAppStore((s) => s.updateCargo);
+  const loadingPoints = useAppStore((s) => s.loadingPoints);
+  const unloadingPoints = useAppStore((s) => s.unloadingPoints);
   const isCylinder = cargo.shape === 'cylinder';
 
   return (
@@ -91,6 +93,34 @@ export default function CargoRow({ cargo, selected, onToggleSelect }: Props) {
           checked={cargo.stackable}
           onChange={(e) => updateCargo(cargo.id, { stackable: e.target.checked })}
         />
+      </td>
+      <td>
+        <select
+          value={cargo.loadingPointId ?? ''}
+          style={{ maxWidth: 120 }}
+          onChange={(e) => updateCargo(cargo.id, { loadingPointId: e.target.value || undefined })}
+        >
+          <option value="">—</option>
+          {[...loadingPoints]
+            .sort((a, b) => a.order - b.order)
+            .map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+        </select>
+      </td>
+      <td>
+        <select
+          value={cargo.unloadingPointId ?? ''}
+          style={{ maxWidth: 120 }}
+          onChange={(e) => updateCargo(cargo.id, { unloadingPointId: e.target.value || undefined })}
+        >
+          <option value="">—</option>
+          {[...unloadingPoints]
+            .sort((a, b) => a.order - b.order)
+            .map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+        </select>
       </td>
     </tr>
   );
