@@ -326,15 +326,31 @@ html, body {
   margin-bottom: var(--spacing-md);
 }
 
-.cargo-table-header {
-  background: var(--bg-panel);
+.cargo-table-container {
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   overflow: hidden;
-  margin-bottom: var(--spacing-sm);
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
 }
 
-.cargo-table-header-row {
+.cargo-table-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.cargo-table-scroll-area {
+  overflow-x: auto;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.cargo-table-row {
   display: grid;
   grid-template-columns: 30px 1.2fr 60px 55px 55px 75px 55px 45px 45px 1fr 1fr;
   gap: var(--spacing-xs);
@@ -343,9 +359,10 @@ html, body {
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--text-muted);
+  min-width: 700px;
 }
 
-.cargo-table-header-cell {
+.cargo-table-cell {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -356,10 +373,11 @@ html, body {
   display: grid;
   grid-template-columns: 30px 1.2fr 60px 55px 55px 75px 55px 45px 45px 1fr 1fr;
   gap: var(--spacing-xs);
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: var(--spacing-xs) var(--spacing-sm);
   align-items: center;
   border-bottom: 1px solid var(--border);
   font-size: var(--font-size-xs);
+  min-width: 700px;
 }
 
 .cargo-row:last-child {
