@@ -67,15 +67,29 @@ function getOrientations(box: Box, mode: 'along' | 'across' | 'mixed'): Orientat
     return [{ dx: box.length, dy: box.height, dz: box.width, rotY: 0 }];
   }
   
+  // Определяем длинную и короткую стороны основания
+  const isLonger = box.length >= box.width;
+  
   // Для режимов 'along' и 'across' принудительно задаём ориентацию
   if (mode === 'along') {
     // Вдоль: длинная сторона груза вдоль оси X (длины кузова)
-    return [{ dx: box.length, dy: box.height, dz: box.width, rotY: 0 }];
+    if (isLonger) {
+      return [{ dx: box.length, dy: box.height, dz: box.width, rotY: 0 }];
+    } else {
+      // Если ширина больше длины, поворачиваем на 90° чтобы длинная сторона была вдоль X
+      return [{ dx: box.width, dy: box.height, dz: box.length, rotY: 90 }];
+    }
   }
   
   if (mode === 'across') {
-    // Поперёк: длинная сторона груза вдоль оси Z (ширины кузова), поворот на 90°
-    return [{ dx: box.width, dy: box.height, dz: box.length, rotY: 90 }];
+    // Поперёк: длинная сторона груза вдоль оси Z (ширины кузова)
+    if (isLonger) {
+      // Если длина больше ширины, поворачиваем на 90° чтобы длинная сторона была вдоль Z
+      return [{ dx: box.width, dy: box.height, dz: box.length, rotY: 90 }];
+    } else {
+      // Если ширина больше длины, оставляем как есть
+      return [{ dx: box.length, dy: box.height, dz: box.width, rotY: 0 }];
+    }
   }
   
   // Для 'mixed' разрешаем оба варианта для перебора лучшей ориентации
@@ -101,8 +115,18 @@ function packIntoBin(
 
   const points: { x: number; y: number; z: number }[] = [{ x: 0, y: 0, z: 0 }];
 
-  // Сортировка боксов по убыванию площади основания (крупные первыми) для лучшего заполнения
-  const sorted = [...boxes].sort((a, b) => (b.length * b.width) - (a.length * a.width));
+  // Сортировка боксов в зависимости от режима
+  let sorted: Box[];
+  if (sortMode === 'along') {
+    // Для режима 'along' сортируем по убыванию длины (самые длинные первыми)
+    sorted = [...boxes].sort((a, b) => b.length - a.length);
+  } else if (sortMode === 'across') {
+    // Для режима 'across' сортируем по убыванию ширины (самые широкие первыми)
+    sorted = [...boxes].sort((a, b) => b.width - a.width);
+  } else {
+    // Для 'mixed' сортируем по убыванию площади основания (крупные первыми)
+    sorted = [...boxes].sort((a, b) => (b.length * b.width) - (a.length * a.width));
+  }
   
   console.log(`[packIntoBin] Режим: ${sortMode}, грузов: ${sorted.length}, кузов: ${bin.length}x${bin.width}x${bin.height}`);
 
