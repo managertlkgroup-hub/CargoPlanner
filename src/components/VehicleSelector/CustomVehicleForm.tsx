@@ -61,9 +61,9 @@ export default function CustomVehicleForm({ onDone }: Props) {
         <label>Грузоподъёмность, кг</label>
         <input name="maxWeight" type="number" min={1} placeholder="15000" />
       </div>
-      {error && <div className="form-group full text-muted" style={{ color: 'var(--danger)' }}>{error}</div>}
+      {error && <div className="form-group full text-danger">{error}</div>}
       <div className="form-group full">
-        <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
+        <button type="submit" className="btn btn-primary w-full">
           Добавить автомобиль
         </button>
       </div>

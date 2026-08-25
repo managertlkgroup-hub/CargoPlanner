@@ -34,16 +34,16 @@ export default function SettingsModal({ onClose }: Props) {
             onChange={(e) => setMaxStackHeight(Number(e.target.value))}
           />
         </div>
-        <div className="form-group mb-2" style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+        <div className="form-row mb-2">
           <input
             type="checkbox"
+            id="allow-rotation"
             checked={allowRotation}
             onChange={(e) => setAllowRotation(e.target.checked)}
-            style={{ width: 16, height: 16 }}
           />
-          <span style={{ fontSize: 14 }}>Разрешить вращение грузов при упаковке</span>
+          <label htmlFor="allow-rotation" className="checkbox-label">Разрешить вращение грузов при упаковке</label>
         </div>
-        <div className="row" style={{ justifyContent: 'flex-end', marginTop: 16 }}>
+        <div className="row row-end mt-2">
           <button className="btn" onClick={onClose}>Отмена</button>
           <button className="btn btn-primary" onClick={handleSave}>Сохранить</button>
         </div>

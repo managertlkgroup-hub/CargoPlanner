@@ -114,7 +114,7 @@ const Scene3D: React.FC = () => {
         }}
         gl={{ antialias: true, preserveDrawingBuffer: true }}
         shadows
-        style={{ background: '#0f172a' }}
+        className="scene-canvas"
       >
         <ambientLight intensity={0.6} />
         <directionalLight position={[10, 20, 10]} intensity={1} castShadow />
@@ -160,14 +160,11 @@ const Scene3D: React.FC = () => {
       </Canvas>
 
       {/* Уголок с размерами кузова */}
-      <div
-        className="absolute top-2 left-2 text-xs text-white bg-black/50 px-2 py-1 rounded pointer-events-none"
-        style={{ zIndex: 10 }}
-      >
+      <div className="scene-overlay scene-dims">
         Кузов: {vehicle.length}×{vehicle.width}×{vehicle.height} мм
       </div>
 
-      <div className="absolute bottom-2 left-2 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 p-1 rounded shadow pointer-events-none">
+      <div className="scene-overlay scene-hint">
         Перетаскивайте грузы мышью · R — поворот · ЛКМ вращение · колесо — зум
       </div>
     </div>

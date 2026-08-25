@@ -1,3 +1,704 @@
+/* ==========================================================================
+   CargoPlanner — современный CSS с поддержкой светлой/тёмной темы
+   ========================================================================== */
+
+:root {
+  /* Цветовая палитра (светлая тема по умолчанию) */
+  --color-accent: #3b82f6;
+  --color-accent-hover: #2563eb;
+  --color-success: #10b981;
+  --color-success-hover: #059669;
+  --color-danger: #ef4444;
+  --color-danger-hover: #dc2626;
+  --color-warning: #f59e0b;
+  
+  /* Светлая тема */
+  --bg-body: #f3f4f6;
+  --bg-panel: #ffffff;
+  --bg-input: #ffffff;
+  --bg-header: #ffffff;
+  --bg-footer: #ffffff;
+  --text: #1f2937;
+  --text-muted: #6b7280;
+  --border: #e5e7eb;
+  --border-focus: #3b82f6;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  
+  /* Размеры */
+  --radius-card: 12px;
+  --radius-btn: 6px;
+  --radius-input: 6px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  
+  /* Шрифты */
+  --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+}
+
+[data-theme="dark"] {
+  --bg-body: #111827;
+  --bg-panel: #1f2937;
+  --bg-input: #374151;
+  --bg-header: #1f2937;
+  --bg-footer: #1f2937;
+  --text: #f9fafb;
+  --text-muted: #9ca3af;
+  --border: #374151;
+  --border-focus: #60a5fa;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+}
+
+/* ==========================================================================
+   Базовые стили
+   ========================================================================== */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  background: var(--bg-body);
+  color: var(--text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100%;
+}
+
+/* ==========================================================================
+   Утилиты
+   ========================================================================== */
+
+.flex { display: flex; }
+.flex-1 { flex: 1; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-1 { gap: var(--spacing-sm); }
+.gap-2 { gap: var(--spacing-md); }
+
+.mt-1 { margin-top: var(--spacing-sm); }
+.mt-2 { margin-top: var(--spacing-md); }
+.mb-1 { margin-bottom: var(--spacing-sm); }
+.mb-2 { margin-bottom: var(--spacing-md); }
+
+.w-full { width: 100%; }
+.text-muted { color: var(--text-muted); }
+.text-danger { color: var(--color-danger); }
+
+.hidden { display: none; }
+
+/* ==========================================================================
+   Панели и карточки
+   ========================================================================== */
+
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.section-divider {
+  height: 1px;
+  background: var(--border);
+  margin: var(--spacing-md) 0;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: var(--spacing-md);
+}
+
+/* ==========================================================================
+   Кнопки
+   ========================================================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--border);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #ffffff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
+
+.btn-success {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: #ffffff;
+}
+
+.btn-success:hover:not(:disabled) {
+  background: var(--color-success-hover);
+  border-color: var(--color-success-hover);
+}
+
+.btn-danger {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  color: #ffffff;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--color-danger-hover);
+  border-color: var(--color-danger-hover);
+}
+
+.btn-sm {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-xs);
+}
+
+.btn-file {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-file input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   Формы и инпуты
+   ========================================================================== */
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.form-group label {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.form-group input,
+.form-group select {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  color: var(--text);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.form-grid .full {
+  grid-column: 1 / -1;
+}
+
+.input-block {
+  width: 100%;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.input-compact {
+  width: 100%;
+  padding: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-input);
+  outline: none;
+}
+
+.input-compact:focus {
+  background: var(--bg-input);
+  border-color: var(--border);
+}
+
+.select-compact {
+  width: 100%;
+  padding: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-input);
+  outline: none;
+}
+
+.select-compact:focus {
+  background: var(--bg-input);
+  border-color: var(--border);
+}
+
+.hidden-input {
+  display: none;
+}
+
+/* ==========================================================================
+   Таблицы
+   ========================================================================== */
+
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.cargo-table-header {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  margin-bottom: var(--spacing-sm);
+}
+
+.cargo-table-header-row {
+  display: grid;
+  grid-template-columns: 30px 1fr 80px 80px 80px 100px 70px 60px 60px 1fr 1fr;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-body);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.cargo-table-header-cell {
+  white-space: nowrap;
+}
+
+.cargo-row {
+  display: grid;
+  grid-template-columns: 30px 1fr 80px 80px 80px 100px 70px 60px 60px 1fr 1fr;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--font-size-sm);
+}
+
+.cargo-row:last-child {
+  border-bottom: none;
+}
+
+.cargo-row-selected {
+  background: rgba(59, 130, 246, 0.05);
+}
+
+[data-theme="dark"] .cargo-row-selected {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.cargo-row-cell {
+  min-width: 0;
+}
+
+.cargo-name-cell input {
+  width: 100%;
+}
+
+.empty-state {
+  padding: var(--spacing-lg);
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   Метрики
+   ========================================================================== */
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.metric-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--spacing-md);
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.metric-value {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--color-accent);
+  margin-bottom: var(--spacing-xs);
+}
+
+.metric-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.vehicle-metrics {
+  margin-bottom: var(--spacing-md);
+}
+
+/* ==========================================================================
+   Вкладки
+   ========================================================================== */
+
+.variant-tabs {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.variant-tab {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--text-muted);
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.variant-tab:hover {
+  background: var(--bg-body);
+}
+
+.variant-tab.active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #ffffff;
+}
+
+/* ==========================================================================
+   Приложение (layout)
+   ========================================================================== */
+
+.app-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-body);
+}
+
+.app-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+}
+
+.left-panel {
+  width: 420px;
+  min-width: 420px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding-right: var(--spacing-sm);
+}
+
+.right-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  gap: var(--spacing-md);
+}
+
+.scene-container {
+  flex: 1;
+  min-height: 400px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   Header & Footer
+   ========================================================================== */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.app-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.app-footer {
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--bg-footer);
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   Theme Toggle
+   ========================================================================== */
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  font-size: var(--font-size-lg);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--border);
+}
+
+/* ==========================================================================
+   Route Editor
+   ========================================================================== */
+
+.point-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.route-point {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-body);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+}
+
+.route-point-info {
+  flex: 1;
+}
+
+.route-point-name {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.route-point-addr {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.row {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.row-sm {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.input-rotation {
+  width: 70px;
+  padding: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  color: var(--text);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  text-align: center;
+}
+
+/* ==========================================================================
+   Coordinates Editor
+   ========================================================================== */
+
+.cargo-table-wrap {
+  overflow-x: auto;
+  max-height: 300px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+
+.coords-scroll {
+  overflow-y: auto;
+}
+
+.cargo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.cargo-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-body);
+}
+
+.cargo-table th,
+.cargo-table td {
+  padding: var(--spacing-sm) var(--spacing-md);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.cargo-table th {
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.cargo-table tbody tr:hover {
+  background: rgba(59, 130, 246, 0.05);
+}
+
+[data-theme="dark"] .cargo-table tbody tr:hover {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.coords-name {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   Error Toast
+   ========================================================================== */
+
+.error-toast {
+  position: fixed;
+  bottom: var(--spacing-lg);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  max-width: 90%;
+  width: 500px;
+}
+
+.error-toast-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--color-danger);
+  color: #ffffff;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-lg);
+}
+
 .error-toast-close {
   color: #fff;
   font-weight: 700;
@@ -7,9 +708,18 @@
   cursor: pointer;
   padding: 0;
   line-height: 1;
+  opacity: 0.8;
+  transition: opacity 0.15s ease;
 }
 
-/* --- Модальные окна --- */
+.error-toast-close:hover {
+  opacity: 1;
+}
+
+/* ==========================================================================
+   Modal (существующие стили + дополнения)
+   ========================================================================== */
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -18,7 +728,7 @@
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.5);
-  padding: 16px;
+  padding: var(--spacing-md);
 }
 
 .modal {
@@ -26,7 +736,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-md);
-  padding: 20px;
+  padding: var(--spacing-lg);
   width: 100%;
   max-width: 480px;
   max-height: 90vh;
@@ -34,8 +744,139 @@
 }
 
 .modal h3 {
-  margin: 0 0 16px;
-  font-size: 17px;
+  margin: 0 0 var(--spacing-md);
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--text);
+}
+
+/* ==========================================================================
+   Button Calculate (специальный стиль)
+   ========================================================================== */
+
+.btn-calculate {
+  width: 100%;
+  padding: var(--spacing-md);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  margin-top: auto;
+}
+
+/* ==========================================================================
+   Scene Canvas & Overlays
+   ========================================================================== */
+
+.scene-canvas {
+  background: #0f172a;
+  border-radius: var(--radius-card);
+}
+
+[data-theme="dark"] .scene-canvas {
+  background: #020617;
+}
+
+.scene-overlay {
+  position: absolute;
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-xs);
+  border-radius: var(--radius-btn);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.scene-dims {
+  top: var(--spacing-md);
+  left: var(--spacing-md);
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.scene-hint {
+  bottom: var(--spacing-md);
+  left: var(--spacing-md);
+  color: var(--text-muted);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ==========================================================================
+   Session Modal
+   ========================================================================== */
+
+.sessions-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.session-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border);
+  gap: var(--spacing-sm);
+}
+
+.session-item:last-child {
+  border-bottom: none;
+}
+
+.session-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.input-flex {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  color: var(--text);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  outline: none;
+}
+
+.input-flex:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* ==========================================================================
+   Settings Modal
+   ========================================================================== */
+
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.checkbox-label {
+  font-size: var(--font-size-sm);
+  color: var(--text);
+}
+
+.row-end {
+  justify-content: flex-end;
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media (max-width: 900px) {
+  .app-layout {
+    flex-direction: column;
+  }
+  
+  .left-panel {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .scene-container {
+    min-height: 300px;
+  }
 }

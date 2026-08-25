@@ -32,7 +32,7 @@ export default function SessionModal({ onClose }: Props) {
             type="text"
             value={name}
             placeholder="Имя сессии"
-            style={{ flex: 1 }}
+            className="input-flex"
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
           />
@@ -42,21 +42,11 @@ export default function SessionModal({ onClose }: Props) {
         {sessions.length === 0 ? (
           <div className="text-muted">Сохранённых сессий нет.</div>
         ) : (
-          <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+          <div className="sessions-list">
             {sessions.map((s) => (
-              <div
-                key={s.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '10px',
-                  borderBottom: '1px solid var(--border)',
-                  gap: 8,
-                }}
-              >
+              <div key={s.id} className="session-item">
                 <div>
-                  <div style={{ fontWeight: 600 }}>{s.name}</div>
+                  <div className="session-name">{s.name}</div>
                   <div className="text-muted">
                     {s.vehicle.name} · {new Date(s.createdAt).toLocaleString('ru-RU')}
                   </div>
