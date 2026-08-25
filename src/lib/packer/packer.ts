@@ -113,6 +113,7 @@ function packIntoBin(
   const placed: PlacedBox[] = [];
   let usedWeight = 0;
 
+  // Список крайних точек, отсортированный по приоритету (y, x, z)
   const points: { x: number; y: number; z: number }[] = [{ x: 0, y: 0, z: 0 }];
 
   // Сортировка боксов в зависимости от режима
@@ -132,8 +133,16 @@ function packIntoBin(
 
   for (const box of sorted) {
     const orientations = getOrientations(box, sortMode);
-    let bestFit: { orientation: Orientation; point: { x: number; y: number; z: number } } | null = null;
+    let bestFit: { orientation: Orientation; point: { x: number; y: number; z: number }; score: number } | null = null;
     let bestScore = Infinity;
+
+    // Сортируем точки для приоритетного размещения: сначала по Y (ниже), затем по Z (ближе к передней стенке), затем по X (левее)
+    // Изменённый порядок (Z перед X) обеспечивает заполнение по ширине кузова before углубление по длине
+    points.sort((a, b) => {
+      if (a.y !== b.y) return a.y - b.y;
+      if (a.z !== b.z) return a.z - b.z;
+      return a.x - b.x;
+    });
 
     for (const point of points) {
       for (const orientation of orientations) {
@@ -174,15 +183,16 @@ function packIntoBin(
         // Проверка весового лимита
         if (usedWeight + box.weight > maxWeight) continue;
 
-        // Выбираем лучшую точку (минимизируем отступы для плотной упаковки)
+        // Эвристика: минимизируем Y (ниже), затем Z (ближе к передней стенке), затем X (левее)
+        // Это обеспечивает плотную упаковку от пола с заполнением по ширине before по длине
         const score =
-          point.y +
-          point.x / bin.length +
-          point.z / bin.width;
+          point.y * 1000000 +
+          point.z * 1000 +
+          point.x;
 
         if (score < bestScore) {
           bestScore = score;
-          bestFit = { orientation, point };
+          bestFit = { orientation, point, score };
         }
       }
     }
@@ -203,17 +213,40 @@ function packIntoBin(
       usedWeight += box.weight;
 
       // Добавляем новые крайние точки после размещения груза
-      points.push(
-        { x: point.x + placedBox.placedLength, y: point.y, z: point.z },
-        { x: point.x, y: point.y + placedBox.placedHeight, z: point.z },
-        { x: point.x, y: point.y, z: point.z + placedBox.placedWidth },
-      );
+      // Точка справа от груза (по оси X)
+      points.push({ x: point.x + placedBox.placedLength, y: point.y, z: point.z });
+      // Точка сверху от груза (по оси Y)
+      points.push({ x: point.x, y: point.y + placedBox.placedHeight, z: point.z });
+      // Точка сзади от груза (по оси Z)
+      points.push({ x: point.x, y: point.y, z: point.z + placedBox.placedWidth });
+      
+      // Удаляем дубликаты точек (с небольшой погрешностью)
+      const uniquePoints: { x: number; y: number; z: number }[] = [];
+      const epsilon = 0.001;
+      for (const p of points) {
+        const isDuplicate = uniquePoints.some(up => 
+          Math.abs(up.x - p.x) < epsilon && 
+          Math.abs(up.y - p.y) < epsilon && 
+          Math.abs(up.z - p.z) < epsilon
+        );
+        if (!isDuplicate) {
+          uniquePoints.push(p);
+        }
+      }
+      points.length = 0;
+      points.push(...uniquePoints);
     } else {
       console.log(`[packIntoBin] Не удалось разместить груз: ${box.name} (${box.length}x${box.width}x${box.height})`);
     }
   }
   
   console.log(`[packIntoBin] Размещено грузов: ${placed.length} из ${sorted.length}`);
+  if (placed.length > 0) {
+    console.log('[packIntoBin] Координаты размещённых грузов:');
+    placed.forEach((p, i) => {
+      console.log(`  ${i + 1}. ${p.name}: x=${p.x}, y=${p.y}, z=${p.z}, size=${p.placedLength}x${p.placedWidth}x${p.placedHeight}`);
+    });
+  }
 
   return placed;
 }
