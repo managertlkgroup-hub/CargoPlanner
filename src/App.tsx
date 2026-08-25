@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppStore, getCurrentVehicle } from './store/useAppStore';
 import { packItems } from './lib/packer/packer';
 import Header from './components/Layout/Header';
@@ -7,6 +7,7 @@ import VehicleSelector from './components/VehicleSelector/VehicleSelector';
 import CargoTable from './components/CargoTable/CargoTable';
 import RouteEditor from './components/RouteEditor/RouteEditor';
 import Scene3D from './components/Scene3D/Scene3D';
+import Scene2D from './components/Scene2D/Scene2D';
 import CoordinatesEditor from './components/Scene3D/CoordinatesEditor';
 import VariantTabs from './components/VariantTabs/VariantTabs';
 import MetricsPanel from './components/MetricsPanel/MetricsPanel';
@@ -30,6 +31,12 @@ const App: React.FC = () => {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [leftTab, setLeftTab] = useState<'cargo' | 'route'>('cargo');
+
+  // Сброс результатов при смене автомобиля
+  useEffect(() => {
+    setResult(null);
+    setActiveVariant(null);
+  }, [selectedVehicleId, setResult, setActiveVariant]);
 
   const handleCalculate = () => {
     if (cargo.length === 0) {
@@ -109,6 +116,7 @@ const App: React.FC = () => {
           <div className="scene-container">
             <Scene3D />
           </div>
+          <Scene2D width={800} height={400} />
           <ReportButton />
           <CoordinatesEditor />
         </div>
