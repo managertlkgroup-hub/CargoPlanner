@@ -9,7 +9,7 @@
 
 import * as XLSX from 'xlsx';
 import type { Cargo, LayoutVariant, Vehicle } from '../../types';
-import { getCargoSize, getCargoVolume, shapeLabel } from '../../types';
+import { getCargoVolume, shapeLabel } from '../../types';
 
 /** Массив строк (массив массивов) для одного листа */
 type SheetRows = (string | number)[][];
@@ -46,7 +46,6 @@ export function exportToXLSX(
     ['Название', 'Форма', 'Длина, мм', 'Ширина, мм', 'Высота/Диам., мм', 'Вес, кг', 'Кол-во', 'Объём, м³', 'Штабелируемый'],
   ];
   cargos.forEach((c) => {
-    const size = getCargoSize(c);
     cargoRows.push([
       c.name,
       shapeLabel(c.shape),

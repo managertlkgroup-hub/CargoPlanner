@@ -25,7 +25,6 @@ export default function Container3D({ vehicle }: Props) {
   // Каркас кузова через LineSegments (центрирован в начале координат)
   const halfL = l / 2;
   const halfW = w / 2;
-  const halfH = h / 2;
 
   const corners = [
     [-halfL, 0, -halfW], [halfL, 0, -halfW],

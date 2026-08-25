@@ -336,24 +336,26 @@ html, body {
 
 .cargo-table-header-row {
   display: grid;
-  grid-template-columns: 30px 1.5fr 70px 65px 65px 85px 65px 50px 50px 1fr 1fr;
+  grid-template-columns: 30px 1.2fr 60px 55px 55px 75px 55px 45px 45px 1fr 1fr;
   gap: var(--spacing-xs);
   padding: var(--spacing-sm) var(--spacing-md);
   background: var(--bg-body);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--text-muted);
+  table-layout: fixed;
 }
 
 .cargo-table-header-cell {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .cargo-row {
   display: grid;
-  grid-template-columns: 30px 1.5fr 70px 65px 65px 85px 65px 50px 50px 1fr 1fr;
+  grid-template-columns: 30px 1.2fr 60px 55px 55px 75px 55px 45px 45px 1fr 1fr;
   gap: var(--spacing-xs);
   padding: var(--spacing-sm) var(--spacing-md);
   align-items: center;
@@ -377,6 +379,14 @@ html, body {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cargo-row-cell input,
+.cargo-row-cell select {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .cargo-name-cell input {
@@ -497,7 +507,7 @@ html, body {
 
 .left-panel {
   width: 380px;
-  min-width: 320px;
+  min-width: 280px;
   max-width: 420px;
   display: flex;
   flex-direction: column;
@@ -506,6 +516,48 @@ html, body {
   padding-right: var(--spacing-sm);
   word-wrap: break-word;
   overflow-wrap: break-word;
+}
+
+.left-panel .panel {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+.left-panel .section-title {
+  font-size: var(--font-size-base);
+  flex-shrink: 0;
+}
+
+.left-panel .form-group label {
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.left-panel select {
+  max-width: 100%;
+  font-size: var(--font-size-sm);
+}
+
+.left-panel .vehicle-metrics {
+  margin-bottom: var(--spacing-md);
+}
+
+.left-panel .vehicle-metrics .metric-card {
+  padding: var(--spacing-sm);
+}
+
+.left-panel .vehicle-metrics .metric-value {
+  font-size: var(--font-size-base);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.left-panel .vehicle-metrics .metric-label {
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
 }
 
 .right-panel {

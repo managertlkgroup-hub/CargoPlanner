@@ -76,7 +76,7 @@ export default function CargoItem3D({
   const rotY = ((item.rotationY ?? item.rotation?.y ?? 0) * Math.PI) / 180;
 
   // --- Логика перетаскивания по горизонтальной плоскости ---
-  const startDrag = (e: React.PointerEvent) => {
+  const startDrag = (e: any) => {
     if (disabled) return;
     e.stopPropagation();
     if (onSelect) onSelect(item.id);
@@ -88,7 +88,7 @@ export default function CargoItem3D({
     gl.domElement.setPointerCapture(e.pointerId);
   };
 
-  const handlePointerMove = (e: React.PointerEvent) => {
+  const handlePointerMove = (e: any) => {
     if (!dragInfo.current || !dragging) return;
     e.stopPropagation();
     const { raycaster, plane } = dragInfo.current;
@@ -127,7 +127,7 @@ export default function CargoItem3D({
     }
   };
 
-  const endDrag = (e: React.PointerEvent) => {
+  const endDrag = (e: any) => {
     if (!dragInfo.current) return;
     e.stopPropagation();
     gl.domElement.releasePointerCapture(e.pointerId);
