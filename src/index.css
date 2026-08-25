@@ -1067,3 +1067,41 @@ html, body {
     padding: 2px 6px;
   }
 }
+
+/* ==========================================================================
+   View Tabs (переключение 3D/2D)
+   ========================================================================== */
+
+.view-tabs {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.view-tab {
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-tab:hover {
+  background: var(--bg-body);
+  color: var(--text);
+}
+
+.view-tab.active {
+  color: #fff;
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.view-tab:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}

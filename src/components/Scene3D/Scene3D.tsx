@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useAppStore, useActiveVariant, useSelectedVehicle } from '../../store/useAppStore';
@@ -20,10 +20,13 @@ const Scene3D: React.FC = () => {
   // Блокировка камеры во время перетаскивания груза
   const [isDragging, setIsDragging] = useState(false);
   
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
   // Обработка изменения размера окна для корректного рендеринга
   useEffect(() => {
     const handleResize = () => {
-      window.dispatchEvent(new Event('resize'));
+      // Three.js через @react-three/fiber автоматически обрабатывает resize
+      // но можно принудительно вызвать обновление если нужно
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -110,12 +113,13 @@ const Scene3D: React.FC = () => {
   // Камера: ставим так, чтобы кузов целиком попадал в кадр.
   // Для маленьких авто увеличиваем дистанцию для лучшего обзора
   const isSmallVehicle = maxDim < 5;
-  const camDistance = isSmallVehicle ? maxDim * 2.5 : maxDim * 1.8;
-  const camHeight = isSmallVehicle ? maxDim * 1.2 : maxDim * 0.8;
+  const camDistance = isSmallVehicle ? maxDim * 2.8 : maxDim * 1.6;
+  const camHeight = isSmallVehicle ? maxDim * 1.4 : maxDim * 0.9;
 
   return (
     <div id="scene-3d" className="w-full h-full relative">
       <Canvas
+        ref={canvasRef}
         camera={{
           position: [camDistance, camHeight, camDistance],
           fov: 45,
@@ -125,6 +129,12 @@ const Scene3D: React.FC = () => {
         gl={{ antialias: true, preserveDrawingBuffer: true }}
         shadows
         className="scene-canvas"
+        onCreated={({ gl }) => {
+          // Очистка ресурсов при размонтировании
+          return () => {
+            gl.dispose();
+          };
+        }}
       >
         <ambientLight intensity={0.6} />
         <directionalLight position={[10, 20, 10]} intensity={1} castShadow />

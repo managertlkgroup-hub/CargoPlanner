@@ -31,6 +31,7 @@ const App: React.FC = () => {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [leftTab, setLeftTab] = useState<'cargo' | 'route'>('cargo');
+  const [activeView, setActiveView] = useState<'3d' | '2d'>('3d');
 
   // Сброс результатов при смене автомобиля
   useEffect(() => {
@@ -113,10 +114,29 @@ const App: React.FC = () => {
         <div className="right-panel">
           <VariantTabs />
           <MetricsPanel />
-          <div className="scene-container">
-            <Scene3D />
+          
+          {/* Переключение между 3D и 2D видом */}
+          <div className="view-tabs mb-2">
+            <button
+              type="button"
+              className={`view-tab ${activeView === '3d' ? 'active' : ''}`}
+              onClick={() => setActiveView('3d')}
+            >
+              🧊 3D Вид
+            </button>
+            <button
+              type="button"
+              className={`view-tab ${activeView === '2d' ? 'active' : ''}`}
+              onClick={() => setActiveView('2d')}
+            >
+              📐 2D Вид (сверху)
+            </button>
           </div>
-          <Scene2D width={800} height={400} />
+          
+          <div className="scene-container">
+            {activeView === '3d' ? <Scene3D /> : <Scene2D />}
+          </div>
+          
           <ReportButton />
           <CoordinatesEditor />
         </div>

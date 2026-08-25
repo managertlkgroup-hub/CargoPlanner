@@ -1,17 +1,33 @@
 import React, { useEffect, useRef } from 'react';
 import { useActiveVariant, useSelectedVehicle } from '../../store/useAppStore';
 
-const SCALE = 0.001; // 1 мм = 0.001 единицы canvas
-
 interface Scene2DProps {
   width?: number;
   height?: number;
 }
 
-const Scene2D: React.FC<Scene2DProps> = ({ width = 600, height = 400 }) => {
+const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const variant = useActiveVariant();
   const vehicle = useSelectedVehicle();
+
+  // Адаптивный размер: если не заданы явно, используем размеры контейнера
+  const [dimensions, setDimensions] = React.useState({ w: 600, h: 400 });
+
+  useEffect(() => {
+    if (width && height) {
+      setDimensions({ w: width, h: height });
+    } else {
+      // Авто-размер от родителя
+      const parent = canvasRef.current?.parentElement;
+      if (parent) {
+        setDimensions({
+          w: parent.clientWidth || 600,
+          h: Math.max(300, parent.clientHeight - 50) || 400,
+        });
+      }
+    }
+  }, [width, height, variant]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -21,70 +37,105 @@ const Scene2D: React.FC<Scene2DProps> = ({ width = 600, height = 400 }) => {
     if (!ctx) return;
 
     // Очистка
-    ctx.clearRect(0, 0, width, height);
+    ctx.clearRect(0, 0, dimensions.w, dimensions.h);
     
     // Фон
     ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, dimensions.w, dimensions.h);
 
-    // Размеры кузова в пикселях
-    const containerW = vehicle.length * SCALE * 100; // длина по X
-    const containerH = vehicle.width * SCALE * 100;  // ширина по Z
+    // Размеры кузова в пикселях (масштабируем чтобы весь кузов помещался)
+    const padding = 40;
+    const availableW = dimensions.w - padding * 2;
+    const availableH = dimensions.h - padding * 2;
+    
+    const containerL = vehicle.length; // длина по X
+    const containerW = vehicle.width;  // ширина по Z
+    
+    // Вычисляем масштаб чтобы кузов поместился полностью
+    const scale = Math.min(availableW / containerL, availableH / containerW);
+    
+    const containerPxL = containerL * scale;
+    const containerPxW = containerW * scale;
 
     // Центрирование
-    const offsetX = (width - containerW) / 2;
-    const offsetY = (height - containerH) / 2;
+    const offsetX = (dimensions.w - containerPxL) / 2;
+    const offsetY = (dimensions.h - containerPxW) / 2;
 
     // Рисуем кузов (вид сверху: X - горизонтально, Z - вертикально)
     ctx.strokeStyle = '#3b82f6';
     ctx.lineWidth = 2;
-    ctx.strokeRect(offsetX, offsetY, containerW, containerH);
+    ctx.strokeRect(offsetX, offsetY, containerPxL, containerPxW);
     
     // Подпись размеров кузова
     ctx.fillStyle = '#3b82f6';
-    ctx.font = '12px system-ui';
-    ctx.fillText(`L: ${vehicle.length}мм`, offsetX + 5, offsetY + 15);
-    ctx.fillText(`W: ${vehicle.width}мм`, offsetX + 5, offsetY + 30);
+    ctx.font = 'bold 11px system-ui';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Кузов: ${vehicle.length}×${vehicle.width}×${vehicle.height} мм`, offsetX + 5, offsetY - 10);
+    
+    // Оси координат
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(offsetX, offsetY + containerPxW + 15);
+    ctx.lineTo(offsetX + containerPxL + 20, offsetY + containerPxW + 15);
+    ctx.stroke();
+    ctx.fillStyle = '#64748b';
+    ctx.font = '10px system-ui';
+    ctx.fillText('Длина (X)', offsetX + containerPxL / 2 - 25, offsetY + containerPxW + 28);
 
     // Рисуем грузы
     variant.items.forEach((item) => {
-      const itemW = item.dimensions.length * SCALE * 100;
-      const itemH = item.dimensions.width * SCALE * 100;
+      // Размеры груза с учётом масштаба и поворота
+      let itemL = item.dimensions.length * scale;
+      let itemW = item.dimensions.width * scale;
+      
+      // Если груз повёрнут на 90°, меняем местами длину и ширину для отображения
+      const rotY = item.rotationY ?? item.rotation?.y ?? 0;
+      if (Math.abs(rotY % 180) === 90) {
+        [itemL, itemW] = [itemW, itemL];
+      }
       
       // Позиция груза (преобразуем из координат пакера в canvas)
-      const itemX = offsetX + item.position.x * SCALE * 100;
-      const itemY = offsetY + item.position.z * SCALE * 100;
+      const itemX = offsetX + item.position.x * scale;
+      const itemY = offsetY + item.position.z * scale;
 
       // Фон груза
       ctx.fillStyle = item.color;
-      ctx.globalAlpha = 0.7;
-      ctx.fillRect(itemX, itemY, itemW, itemH);
+      ctx.globalAlpha = 0.75;
+      ctx.fillRect(itemX, itemY, itemL, itemW);
       ctx.globalAlpha = 1.0;
 
       // Обводка
       ctx.strokeStyle = '#1e293b';
       ctx.lineWidth = 1;
-      ctx.strokeRect(itemX, itemY, itemW, itemH);
+      ctx.strokeRect(itemX, itemY, itemL, itemW);
 
-      // Подпись (название)
+      // Подпись (название + размеры)
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 10px system-ui';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       
-      // Обрезаем текст если не помещается
-      let label = item.name;
-      if (ctx.measureText(label).width > itemW - 4) {
-        while (label.length > 0 && ctx.measureText(label + '..').width > itemW - 4) {
-          label = label.slice(0, -1);
-        }
-        label += '..';
-      }
+      // Формируем подпись
+      const label = `${item.name}\n${item.dimensions.length}×${item.dimensions.width}`;
+      const lines = label.split('\n');
       
-      ctx.fillText(label, itemX + itemW / 2, itemY + itemH / 2);
+      // Рисуем текст по центру с переносом
+      lines.forEach((line, idx) => {
+        // Обрезаем если не помещается
+        let text = line;
+        while (text.length > 0 && ctx.measureText(text).width > itemL - 8) {
+          text = text.slice(0, -1);
+        }
+        if (lines.length > 1) {
+          ctx.fillText(text, itemX + itemL / 2, itemY + itemW / 2 + idx * 10 - 5);
+        } else {
+          ctx.fillText(text, itemX + itemL / 2, itemY + itemW / 2);
+        }
+      });
     });
 
-  }, [variant, vehicle, width, height]);
+  }, [variant, vehicle, dimensions]);
 
   if (!vehicle || !variant) {
     return (
@@ -101,10 +152,10 @@ const Scene2D: React.FC<Scene2DProps> = ({ width = 600, height = 400 }) => {
       </div>
       <canvas
         ref={canvasRef}
-        width={width}
-        height={height}
+        width={dimensions.w}
+        height={dimensions.h}
         className="w-full border border-gray-200 dark:border-gray-700 rounded-lg"
-        style={{ maxHeight: '400px', objectFit: 'contain' }}
+        style={{ maxHeight: '450px', objectFit: 'contain' }}
       />
     </div>
   );
