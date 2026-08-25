@@ -60,16 +60,26 @@ function intersects(a: PlacedBox, b: PlacedBox): boolean {
 }
 
 /** Возможные ориентации бокса. Цилиндры не могут вращаться вертикально. */
-function getOrientations(box: Box, allowRotation: boolean): Orientation[] {
+function getOrientations(box: Box, mode: 'along' | 'across' | 'mixed'): Orientation[] {
   // Цилиндр: ось всегда вдоль X (длина), ширина = высота = диаметр.
   // Вертикальный поворот запрещён.
   if (box.shape === 'cylinder') {
     return [{ dx: box.length, dy: box.height, dz: box.width, rotY: 0 }];
   }
-  // Прямоугольник: если вращение разрешено — пробуем два поворота в плане (0 и 90°).
-  if (!allowRotation) {
+  
+  // Для режимов 'along' и 'across' принудительно задаём ориентацию
+  if (mode === 'along') {
+    // Вдоль: длинная сторона груза вдоль оси X (длины кузова)
     return [{ dx: box.length, dy: box.height, dz: box.width, rotY: 0 }];
   }
+  
+  if (mode === 'across') {
+    // Поперёк: длинная сторона груза вдоль оси Z (ширины кузова)
+    // Поворачиваем груз на 90°, чтобы длина стала вдоль Z
+    return [{ dx: box.width, dy: box.height, dz: box.length, rotY: 90 }];
+  }
+  
+  // Для 'mixed' разрешаем оба варианта
   return [
     { dx: box.length, dy: box.height, dz: box.width, rotY: 0 },
     { dx: box.width, dy: box.height, dz: box.length, rotY: 90 },
@@ -108,7 +118,7 @@ function packIntoBin(
   console.log(`[packIntoBin] Режим: ${sortMode}, грузов: ${sorted.length}, кузов: ${bin.length}x${bin.width}x${bin.height}`);
 
   for (const box of sorted) {
-    const orientations = getOrientations(box, settings.allowRotation);
+    const orientations = getOrientations(box, sortMode);
     let bestFit: { orientation: Orientation; point: { x: number; y: number; z: number } } | null = null;
     let bestScore = Infinity;
 
@@ -151,13 +161,11 @@ function packIntoBin(
         // Проверка весового лимита
         if (usedWeight + box.weight > maxWeight) continue;
 
-        // Выбираем лучшую точку (минимизируем "высоту" и занимаемую область)
+        // Выбираем лучшую точку (минимизируем отступы для плотной упаковки)
         const score =
           point.y +
           point.x / bin.length +
-          point.z / bin.width +
-          (point.x + placedLength) / bin.length +
-          (point.z + placedWidth) / bin.width;
+          point.z / bin.width;
 
         if (score < bestScore) {
           bestScore = score;
