@@ -67,28 +67,18 @@ function getOrientations(box: Box, mode: 'along' | 'across' | 'mixed'): Orientat
     return [{ dx: box.length, dy: box.height, dz: box.width, rotY: 0 }];
   }
   
-  const isLonger = box.length >= box.width;
-  
   // Для режимов 'along' и 'across' принудительно задаём ориентацию
   if (mode === 'along') {
     // Вдоль: длинная сторона груза вдоль оси X (длины кузова)
-    if (isLonger) {
-      return [{ dx: box.length, dy: box.height, dz: box.width, rotY: 0 }];
-    } else {
-      return [{ dx: box.width, dy: box.height, dz: box.length, rotY: 90 }];
-    }
+    return [{ dx: box.length, dy: box.height, dz: box.width, rotY: 0 }];
   }
   
   if (mode === 'across') {
-    // Поперёк: длинная сторона груза вдоль оси Z (ширины кузова)
-    if (isLonger) {
-      return [{ dx: box.width, dy: box.height, dz: box.length, rotY: 90 }];
-    } else {
-      return [{ dx: box.length, dy: box.height, dz: box.width, rotY: 0 }];
-    }
+    // Поперёк: длинная сторона груза вдоль оси Z (ширины кузова), поворот на 90°
+    return [{ dx: box.width, dy: box.height, dz: box.length, rotY: 90 }];
   }
   
-  // Для 'mixed' разрешаем оба варианта
+  // Для 'mixed' разрешаем оба варианта для перебора лучшей ориентации
   return [
     { dx: box.length, dy: box.height, dz: box.width, rotY: 0 },
     { dx: box.width, dy: box.height, dz: box.length, rotY: 90 },
@@ -111,18 +101,8 @@ function packIntoBin(
 
   const points: { x: number; y: number; z: number }[] = [{ x: 0, y: 0, z: 0 }];
 
-  // Сортировка боксов в зависимости от варианта
-  const sorted = [...boxes];
-  if (sortMode === 'along') {
-    // Вдоль: сначала длинные грузы
-    sorted.sort((a, b) => b.length - a.length);
-  } else if (sortMode === 'across') {
-    // Поперёк: сначала широкие грузы
-    sorted.sort((a, b) => b.width - a.width);
-  } else {
-    // Смешанный: по убыванию объёма для лучшего заполнения
-    sorted.sort((a, b) => (b.length * b.width * b.height) - (a.length * a.width * a.height));
-  }
+  // Сортировка боксов по убыванию площади основания (крупные первыми) для лучшего заполнения
+  const sorted = [...boxes].sort((a, b) => (b.length * b.width) - (a.length * a.width));
   
   console.log(`[packIntoBin] Режим: ${sortMode}, грузов: ${sorted.length}, кузов: ${bin.length}x${bin.width}x${bin.height}`);
 
