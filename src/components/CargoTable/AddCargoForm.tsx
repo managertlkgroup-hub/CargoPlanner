@@ -7,10 +7,12 @@ import type { FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import type { Cargo, CargoShape } from '../../types';
 import { uid } from '../../utils/helpers';
+import { getCargoPresets } from '../../lib/packer/presets';
 
 export default function AddCargoForm() {
   const addCargo = useAppStore((s) => s.addCargo);
   const [error, setError] = useState('');
+  const cargoPresets = getCargoPresets();
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -50,8 +52,39 @@ export default function AddCargoForm() {
 
   const [shape, setShape] = useState<CargoShape>('box');
 
+  const handlePresetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const presetIndex = Number(e.target.value);
+    if (presetIndex < 0) return;
+    const preset = cargoPresets[presetIndex];
+    // Находим форму и заполняем поля
+    const form = e.currentTarget.closest('form');
+    if (!form) return;
+    (form.querySelector('[name="name"]') as HTMLInputElement).value = preset.name;
+    (form.querySelector('[name="shape"]') as HTMLSelectElement).value = preset.shape;
+    setShape(preset.shape);
+    (form.querySelector('[name="length"]') as HTMLInputElement).value = String(preset.length);
+    if (preset.shape === 'box') {
+      (form.querySelector('[name="width"]') as HTMLInputElement).value = String(preset.width);
+      (form.querySelector('[name="height"]') as HTMLInputElement).value = String(preset.height);
+    } else {
+      (form.querySelector('[name="diameter"]') as HTMLInputElement).value = String(preset.diameter || preset.width);
+    }
+    (form.querySelector('[name="weight"]') as HTMLInputElement).value = String(preset.weight);
+  };
+
   return (
     <form className="form-grid mt-2" onSubmit={handleSubmit}>
+      <div className="form-group full">
+        <label>Быстрый выбор груза</label>
+        <select onChange={handlePresetChange} defaultValue="">
+          <option value="" disabled>-- Выберите пресет --</option>
+          {cargoPresets.map((preset, idx) => (
+            <option key={preset.name} value={idx}>
+              {preset.name} ({preset.length}×{preset.width}×{preset.height} мм, {preset.weight} кг)
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="form-group full">
         <label>Название</label>
         <input name="name" placeholder="Например, Европаллета" />
