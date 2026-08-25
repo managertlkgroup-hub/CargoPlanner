@@ -67,16 +67,25 @@ function getOrientations(box: Box, mode: 'along' | 'across' | 'mixed'): Orientat
     return [{ dx: box.length, dy: box.height, dz: box.width, rotY: 0 }];
   }
   
+  const isLonger = box.length >= box.width;
+  
   // Для режимов 'along' и 'across' принудительно задаём ориентацию
   if (mode === 'along') {
     // Вдоль: длинная сторона груза вдоль оси X (длины кузова)
-    return [{ dx: box.length, dy: box.height, dz: box.width, rotY: 0 }];
+    if (isLonger) {
+      return [{ dx: box.length, dy: box.height, dz: box.width, rotY: 0 }];
+    } else {
+      return [{ dx: box.width, dy: box.height, dz: box.length, rotY: 90 }];
+    }
   }
   
   if (mode === 'across') {
     // Поперёк: длинная сторона груза вдоль оси Z (ширины кузова)
-    // Поворачиваем груз на 90°, чтобы длина стала вдоль Z
-    return [{ dx: box.width, dy: box.height, dz: box.length, rotY: 90 }];
+    if (isLonger) {
+      return [{ dx: box.width, dy: box.height, dz: box.length, rotY: 90 }];
+    } else {
+      return [{ dx: box.length, dy: box.height, dz: box.width, rotY: 0 }];
+    }
   }
   
   // Для 'mixed' разрешаем оба варианта
