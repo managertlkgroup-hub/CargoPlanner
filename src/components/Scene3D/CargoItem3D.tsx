@@ -44,7 +44,6 @@ export default function CargoItem3D({
   onDragStart,
   onSelect,
   isSelected,
-  conflict,
   onBoundsViolation,
 }: Props) {
   const [hovered, setHovered] = useState(false);
@@ -56,7 +55,7 @@ export default function CargoItem3D({
 
   const isCylinder = item.shape === 'cylinder';
   const diameter = item.diameter ?? 0;
-
+  
   // Размеры в сценных единицах
   const { l, w, h } = useMemo(() => {
     return {
@@ -74,6 +73,10 @@ export default function CargoItem3D({
 
   // Поворот вокруг Y
   const rotY = ((item.rotationY ?? item.rotation?.y ?? 0) * Math.PI) / 180;
+  
+  // Подсветка для выбранного или наведённого груза
+  const highlight = hovered || isSelected;
+  const highlightIntensity = hovered || isSelected ? 0.25 : 0;
 
   // --- Логика перетаскивания по горизонтальной плоскости ---
   const startDrag = (e: any) => {
@@ -138,8 +141,6 @@ export default function CargoItem3D({
 
   // Позиция подписи
   const labelY = isCylinder ? h / 2 + 0.06 : h / 2 + 0.05;
-  const highlight = hovered || conflict || isSelected;
-  const highlightIntensity = conflict ? 0.5 : hovered || isSelected ? 0.25 : 0;
 
   return (
     <group
@@ -163,6 +164,13 @@ export default function CargoItem3D({
             emissive={highlight ? new THREE.Color('#ffffff') : new THREE.Color('#000000')}
             emissiveIntensity={highlightIntensity}
           />
+          {/* Обводка для выбранного груза */}
+          {isSelected && (
+            <lineSegments>
+              <edgesGeometry args={[new THREE.CylinderGeometry((diameter * SCALE) / 2, (diameter * SCALE) / 2, l, 32)]} />
+              <lineBasicMaterial color="#ffffff" linewidth={2} />
+            </lineSegments>
+          )}
         </mesh>
       ) : (
         <mesh>
@@ -174,6 +182,13 @@ export default function CargoItem3D({
             emissive={highlight ? new THREE.Color('#ffffff') : new THREE.Color('#000000')}
             emissiveIntensity={highlightIntensity}
           />
+          {/* Обводка для выбранного груза */}
+          {isSelected && (
+            <lineSegments>
+              <edgesGeometry args={[new THREE.BoxGeometry(l, h, w)]} />
+              <lineBasicMaterial color="#ffffff" linewidth={2} />
+            </lineSegments>
+          )}
         </mesh>
       )}
 

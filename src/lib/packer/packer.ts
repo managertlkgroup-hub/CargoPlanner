@@ -101,12 +101,11 @@ function packIntoBin(
     // Поперёк: сначала широкие грузы
     sorted.sort((a, b) => b.width - a.width);
   } else {
-    // Смешанный: по максимальному габариту (по убыванию)
-    sorted.sort(
-      (a, b) =>
-        Math.max(b.length, b.width, b.height) - Math.max(a.length, a.width, a.height),
-    );
+    // Смешанный: по убыванию объёма для лучшего заполнения
+    sorted.sort((a, b) => (b.length * b.width * b.height) - (a.length * a.width * a.height));
   }
+  
+  console.log(`[packIntoBin] Режим: ${sortMode}, грузов: ${sorted.length}, кузов: ${bin.length}x${bin.width}x${bin.height}`);
 
   for (const box of sorted) {
     const orientations = getOrientations(box, settings.allowRotation);
@@ -188,8 +187,12 @@ function packIntoBin(
         { x: point.x, y: point.y + placedBox.placedHeight, z: point.z },
         { x: point.x, y: point.y, z: point.z + placedBox.placedWidth },
       );
+    } else {
+      console.log(`[packIntoBin] Не удалось разместить груз: ${box.name} (${box.length}x${box.width}x${box.height})`);
     }
   }
+  
+  console.log(`[packIntoBin] Размещено грузов: ${placed.length} из ${sorted.length}`);
 
   return placed;
 }

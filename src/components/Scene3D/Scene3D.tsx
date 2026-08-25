@@ -19,6 +19,15 @@ const Scene3D: React.FC = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // Блокировка камеры во время перетаскивания груза
   const [isDragging, setIsDragging] = useState(false);
+  
+  // Обработка изменения размера окна для корректного рендеринга
+  useEffect(() => {
+    const handleResize = () => {
+      window.dispatchEvent(new Event('resize'));
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Диагностика: при изменении данных выводим каждый груз с его параметрами
   useEffect(() => {
@@ -44,15 +53,14 @@ const Scene3D: React.FC = () => {
   // Поворот выделенного груза клавишей R на +90°
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (
-        (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К') &&
-        selectedId &&
-        variant
-      ) {
-        const item = variant.items.find((it) => it.id === selectedId);
-        if (!item) return;
-        const current = item.rotationY ?? item.rotation?.y ?? 0;
-        rotateCargo(selectedId, current + 90);
+      if ((e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К') && variant) {
+        // Если есть выбранный груз — поворачиваем его
+        if (selectedId) {
+          const item = variant.items.find((it) => it.id === selectedId);
+          if (!item) return;
+          const current = item.rotationY ?? item.rotation?.y ?? 0;
+          rotateCargo(selectedId, current + 90);
+        }
       }
     },
     [selectedId, variant, rotateCargo],
@@ -100,8 +108,10 @@ const Scene3D: React.FC = () => {
   const packedItems = variant.items || [];
 
   // Камера: ставим так, чтобы кузов целиком попадал в кадр.
-  const camDistance = maxDim * 1.8;
-  const camHeight = maxDim * 0.8;
+  // Для маленьких авто увеличиваем дистанцию для лучшего обзора
+  const isSmallVehicle = maxDim < 5;
+  const camDistance = isSmallVehicle ? maxDim * 2.5 : maxDim * 1.8;
+  const camHeight = isSmallVehicle ? maxDim * 1.2 : maxDim * 0.8;
 
   return (
     <div id="scene-3d" className="w-full h-full relative">
