@@ -336,22 +336,24 @@ html, body {
 
 .cargo-table-header-row {
   display: grid;
-  grid-template-columns: 30px 1fr 80px 80px 80px 100px 70px 60px 60px 1fr 1fr;
+  grid-template-columns: 30px 1.5fr 70px 65px 65px 85px 65px 50px 50px 1fr 1fr;
   gap: var(--spacing-xs);
   padding: var(--spacing-sm) var(--spacing-md);
   background: var(--bg-body);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--text-muted);
 }
 
 .cargo-table-header-cell {
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cargo-row {
   display: grid;
-  grid-template-columns: 30px 1fr 80px 80px 80px 100px 70px 60px 60px 1fr 1fr;
+  grid-template-columns: 30px 1.5fr 70px 65px 65px 85px 65px 50px 50px 1fr 1fr;
   gap: var(--spacing-xs);
   padding: var(--spacing-sm) var(--spacing-md);
   align-items: center;
@@ -373,10 +375,16 @@ html, body {
 
 .cargo-row-cell {
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cargo-name-cell input {
   width: 100%;
+}
+
+.cargo-table-wrap {
+  overflow-x: auto;
 }
 
 .empty-state {
@@ -391,9 +399,21 @@ html, body {
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-md);
+}
+
+@media (max-width: 992px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .metric-card {
@@ -476,12 +496,16 @@ html, body {
 }
 
 .left-panel {
-  width: 420px;
-  min-width: 420px;
+  width: 380px;
+  min-width: 320px;
+  max-width: 420px;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: var(--spacing-sm);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .right-panel {
@@ -489,17 +513,22 @@ html, body {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overflow-x: hidden;
   gap: var(--spacing-md);
+  min-width: 0;
 }
 
 .scene-container {
   flex: 1;
   min-height: 400px;
+  height: 100%;
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-md);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ==========================================================================
@@ -799,6 +828,24 @@ html, body {
   box-shadow: var(--shadow-sm);
 }
 
+.rotate-hint {
+  position: absolute;
+  bottom: var(--spacing-md);
+  right: var(--spacing-md);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  pointer-events: none;
+  z-index: 10;
+}
+
+[data-theme="dark"] .rotate-hint {
+  background: rgba(31, 41, 55, 0.9);
+}
+
 /* ==========================================================================
    Session Modal
    ========================================================================== */
@@ -866,6 +913,24 @@ html, body {
    Responsive
    ========================================================================== */
 
+@media (max-width: 1200px) {
+  .left-panel {
+    width: 340px;
+    min-width: 280px;
+  }
+}
+
+@media (max-width: 992px) {
+  .app-layout {
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
+  }
+  
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 900px) {
   .app-layout {
     flex-direction: column;
@@ -874,9 +939,36 @@ html, body {
   .left-panel {
     width: 100%;
     min-width: auto;
+    max-width: none;
   }
   
   .scene-container {
     min-height: 300px;
+  }
+}
+
+@media (max-width: 768px) {
+  .cargo-table-header-row,
+  .cargo-row {
+    grid-template-columns: 30px 1fr 65px 65px 65px 75px 60px 45px 45px;
+  }
+  
+  .cargo-table-header-cell:nth-child(10),
+  .cargo-table-header-cell:nth-child(11),
+  .cargo-row-cell:nth-child(10),
+  .cargo-row-cell:nth-child(11) {
+    display: none;
+  }
+}
+
+@media (max-width: 576px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .scene-hint,
+  .rotate-hint {
+    font-size: 10px;
+    padding: 2px 6px;
   }
 }
