@@ -255,11 +255,12 @@ function packIntoBin(
       const uniquePoints: { x: number; y: number; z: number }[] = [];
       const epsilon = 0.001;
       for (const p of points) {
-        // Пропускаем точки внутри размещённых грузов
+        // Пропускаем точки строго ВНУТРИ размещённых грузов (не на границе!)
+        // Крайние точки генерируются на границах — их НЕЛЬЗЯ удалять
         const insidePlaced = placed.some(pl =>
-          p.x >= pl.x - epsilon && p.x <= pl.x + pl.placedLength + epsilon &&
-          p.y >= pl.y - epsilon && p.y <= pl.y + pl.placedHeight + epsilon &&
-          p.z >= pl.z - epsilon && p.z <= pl.z + pl.placedWidth + epsilon
+          p.x > pl.x + epsilon && p.x < pl.x + pl.placedLength - epsilon &&
+          p.y > pl.y + epsilon && p.y < pl.y + pl.placedHeight - epsilon &&
+          p.z > pl.z + epsilon && p.z < pl.z + pl.placedWidth - epsilon
         );
         if (insidePlaced) continue;
 
