@@ -133,8 +133,13 @@ const App: React.FC = () => {
             </button>
           </div>
           
-          <div className="scene-container">
-            {activeView === '3d' ? <Scene3D /> : <Scene2D />}
+          <div className="scene-container" style={{ position: 'relative' }}>
+            <div style={{ position: 'absolute', inset: 0, visibility: activeView === '3d' ? 'visible' : 'hidden', pointerEvents: activeView === '3d' ? 'auto' : 'none' }}>
+              <Scene3D />
+            </div>
+            <div style={{ position: 'absolute', inset: 0, visibility: activeView === '2d' ? 'visible' : 'hidden', pointerEvents: activeView === '2d' ? 'auto' : 'none' }}>
+              <Scene2D />
+            </div>
           </div>
           
           <ReportButton />

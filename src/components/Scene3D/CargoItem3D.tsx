@@ -143,32 +143,60 @@ export default function CargoItem3D({
     const clampedZ = Math.max(-halfW + halfZ, Math.min(halfW - halfZ, target.z));
 
     // Преобразуем обратно в координаты пакера (левый нижний угол, мм)
-    const packPos = sceneToPackPosition(
-      clampedX,
-      scenePos.y,
-      clampedZ,
-      item.dimensions,
-      vehicle,
-      SCALE,
-      item.rotationY,
-    );
-
-    // Проверка коллизии с другими грузами — ДО обновления позиции
-    if (checkCollision(packPos)) {
-      setConflict(true);
-      // Не перемещаем — груз остаётся на предыдущей позиции
+    const basePos = lastValidPos.current ?? item.position;
+    
+    // Попытка перемещения: полная позиция, затем по осям (для "скольжения" вдоль стенок)
+    const fullPackPos = sceneToPackPosition(clampedX, scenePos.y, clampedZ, item.dimensions, vehicle, SCALE, item.rotationY);
+    
+    // 1. Пробуем полное перемещение
+    if (!checkCollision(fullPackPos)) {
+      setConflict(false);
+      lastValidPos.current = fullPackPos;
+      onMove(item.id, fullPackPos);
+      if (groupRef.current) {
+        groupRef.current.position.set(clampedX, scenePos.y, clampedZ);
+      }
       return;
     }
-
-    // Коллизий нет — обновляем позицию
-    setConflict(false);
-    lastValidPos.current = packPos;
-    onMove(item.id, packPos);
-
-    // Обновляем визуальную позицию группы
-    if (groupRef.current) {
-      groupRef.current.position.set(clampedX, scenePos.y, clampedZ);
+    
+    // 2. Пробуем перемещение только по X (Z = старая позиция)
+    const xOnlyPackPos = sceneToPackPosition(clampedX, scenePos.y, lastValidPos.current ? (lastValidPos.current.z * SCALE + vehicle.width * SCALE / 2 - halfW * 2) : clampedZ, item.dimensions, vehicle, SCALE, item.rotationY);
+    xOnlyPackPos.z = basePos.z; // Фиксируем Z на старой позиции
+    if (!checkCollision(xOnlyPackPos)) {
+      setConflict(false);
+      lastValidPos.current = xOnlyPackPos;
+      onMove(item.id, xOnlyPackPos);
+      if (groupRef.current) {
+        // Вычисляем scene X из pack X
+        const { effLength } = (() => {
+          const rot = Math.round(((item.rotationY ?? 0) % 360) / 90) % 2;
+          return rot === 1 ? { effLength: item.dimensions.width } : { effLength: item.dimensions.length };
+        })();
+        const newSceneX = xOnlyPackPos.x * SCALE + (effLength * SCALE) / 2 - (vehicle.length * SCALE) / 2;
+        groupRef.current.position.set(newSceneX, scenePos.y, groupRef.current.position.z);
+      }
+      return;
     }
+    
+    // 3. Пробуем перемещение только по Z (X = старая позиция)
+    const zOnlyPackPos = { ...basePos, z: fullPackPos.z };
+    if (!checkCollision(zOnlyPackPos)) {
+      setConflict(false);
+      lastValidPos.current = zOnlyPackPos;
+      onMove(item.id, zOnlyPackPos);
+      if (groupRef.current) {
+        const { effWidth } = (() => {
+          const rot = Math.round(((item.rotationY ?? 0) % 360) / 90) % 2;
+          return rot === 1 ? { effWidth: item.dimensions.length } : { effWidth: item.dimensions.width };
+        })();
+        const newSceneZ = zOnlyPackPos.z * SCALE + (effWidth * SCALE) / 2 - (vehicle.width * SCALE) / 2;
+        groupRef.current.position.set(groupRef.current.position.x, scenePos.y, newSceneZ);
+      }
+      return;
+    }
+    
+    // 4. Все варианты приводят к коллизии — не перемещаем
+    setConflict(true);
 
     const wasClamped =
       Math.abs(clampedX - target.x) > 1e-6 || Math.abs(clampedZ - target.z) > 1e-6;

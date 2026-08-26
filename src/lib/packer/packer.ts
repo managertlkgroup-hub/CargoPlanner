@@ -152,11 +152,11 @@ function packIntoBin(
     points.sort((a, b) => {
       if (a.y !== b.y) return a.y - b.y;
       if (sortMode === 'along') {
-        // along: длинная сторона вдоль X → заполняем по Z (min Z, потом min X)
+        // along: длинная сторона вдоль X → заполняем по X (min Z, потом min X)
         if (a.z !== b.z) return a.z - b.z;
         return a.x - b.x;
       } else if (sortMode === 'across') {
-        // across: длинная сторона вдоль Z → заполняем по X (min X, потом min Z)
+        // across: длинная сторона вдоль Z → заполняем по Z (min X, потом min Z)
         if (a.x !== b.x) return a.x - b.x;
         return a.z - b.z;
       } else {
@@ -206,11 +206,11 @@ function packIntoBin(
         let score: number;
 
         if (sortMode === 'along') {
-          // along: длинная сторона вдоль X, заполняем по Z → min Z, потом min X
-          score = point.y * 1e9 + point.z * 1e6 + point.x;
-        } else if (sortMode === 'across') {
-          // across: длинная сторона вдоль Z, заполняем по X → min X, потом min Z
+          // along: длинная сторона вдоль X, заполняем по X → min X, потом min Z
           score = point.y * 1e9 + point.x * 1e6 + point.z;
+        } else if (sortMode === 'across') {
+          // across: длинная сторона вдоль Z, заполняем по Z → min Z, потом min X
+          score = point.y * 1e9 + point.z * 1e6 + point.x;
         } else {
           // mixed: минимизируем расстояние до начала
           score = point.y * 1e9 + (point.x + point.z) * 1e3;
