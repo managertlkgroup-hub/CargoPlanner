@@ -96,6 +96,7 @@ const App: React.FC = () => {
               type="button"
               className={`variant-tab ${leftTab === 'route' ? 'active' : ''}`}
               onClick={() => setLeftTab('route')}
+              title="Настройте точки загрузки и выгрузки, чтобы грузы укладывались по порядку маршрута"
             >
               🗺 Маршрут
             </button>

@@ -10,11 +10,18 @@ import CustomVehicleForm from './CustomVehicleForm';
 export default function VehicleSelector() {
   const selectedVehicleId = useAppStore((s) => s.selectedVehicleId);
   const selectVehicle = useAppStore((s) => s.selectVehicle);
+  const removeCustomVehicle = useAppStore((s) => s.removeCustomVehicle);
   const customVehicles = useAppStore((s) => s.customVehicles);
   const vehicles = useAllVehicles();
 
   const [showCustom, setShowCustom] = useState(false);
   const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
+
+  const handleDelete = (id: string) => {
+    if (window.confirm('Удалить пользовательский автомобиль?')) {
+      removeCustomVehicle(id);
+    }
+  };
 
   return (
     <div className="panel">
@@ -27,18 +34,30 @@ export default function VehicleSelector() {
 
       <div className="form-group mb-1">
         <label htmlFor="vehicle-select">Модель кузова</label>
-        <select
-          id="vehicle-select"
-          className="w-full"
-          value={selectedVehicleId}
-          onChange={(e) => selectVehicle(e.target.value)}
-        >
-          {vehicles.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.name} {v.isCustom ? '(пользовательский)' : ''}
-            </option>
-          ))}
-        </select>
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <select
+            id="vehicle-select"
+            style={{ flex: 1 }}
+            value={selectedVehicleId}
+            onChange={(e) => selectVehicle(e.target.value)}
+          >
+            {vehicles.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.name} {v.isCustom ? '(свой)' : ''}
+              </option>
+            ))}
+          </select>
+          {vehicle.isCustom && (
+            <button
+              className="btn btn-sm btn-danger"
+              onClick={() => handleDelete(vehicle.id)}
+              title="Удалить"
+              style={{ flexShrink: 0 }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="metrics-grid vehicle-metrics">

@@ -244,15 +244,18 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
           });
         };
         
+        // Snap to 10mm grid
+        const snap = (v: number) => Math.round(v / 10) * 10;
+        const snappedX = snap(clampedX);
+        const snappedZ = snap(clampedZ);
+        
         // Try full move first, then slide along axes
-        if (!checkCollision2D(clampedX, clampedZ)) {
-          updateCargoPosition(drag.itemId, { x: Math.round(clampedX), y: item.position.y, z: Math.round(clampedZ) });
-        } else if (!checkCollision2D(clampedX, item.position.z)) {
-          // Slide along X only (block Z)
-          updateCargoPosition(drag.itemId, { x: Math.round(clampedX), y: item.position.y, z: item.position.z });
-        } else if (!checkCollision2D(item.position.x, clampedZ)) {
-          // Slide along Z only (block X)
-          updateCargoPosition(drag.itemId, { x: item.position.x, y: item.position.y, z: Math.round(clampedZ) });
+        if (!checkCollision2D(snappedX, snappedZ)) {
+          updateCargoPosition(drag.itemId, { x: snappedX, y: item.position.y, z: snappedZ });
+        } else if (!checkCollision2D(snappedX, item.position.z)) {
+          updateCargoPosition(drag.itemId, { x: snappedX, y: item.position.y, z: item.position.z });
+        } else if (!checkCollision2D(item.position.x, snappedZ)) {
+          updateCargoPosition(drag.itemId, { x: item.position.x, y: item.position.y, z: snappedZ });
         }
         // else: both axes blocked, do nothing
       } else {

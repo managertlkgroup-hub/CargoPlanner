@@ -438,8 +438,21 @@ export function packItems(
       });
 
       const binVolume = bin.length * bin.width * bin.height;
-      const volumeFill = binVolume > 0 ? (totalVolume / binVolume) * 100 : 0;
       const weightFill = vehicle.maxWeight > 0 ? (totalWeight / vehicle.maxWeight) * 100 : 0;
+
+      // Габариты размещённого груза (bounding box)
+      let maxCargoX = 0, maxCargoZ = 0, maxCargoY = 0;
+      items.forEach((item) => {
+        const rotY = item.rotationY ?? 0;
+        const isOdd90 = Math.round(((rotY % 360) + 360) % 360 / 90) % 2 === 1;
+        const effL = isOdd90 ? item.dimensions.width : item.dimensions.length;
+        const effW = isOdd90 ? item.dimensions.length : item.dimensions.width;
+        maxCargoX = Math.max(maxCargoX, item.position.x + effL);
+        maxCargoZ = Math.max(maxCargoZ, item.position.z + effW);
+        maxCargoY = Math.max(maxCargoY, item.position.y + item.dimensions.height);
+      });
+      const cargoVolume = items.length > 0 ? maxCargoX * maxCargoZ * maxCargoY : 0;
+      const volumeFill = binVolume > 0 ? (cargoVolume / binVolume) * 100 : 0;
 
       return {
         id: mode,
@@ -448,8 +461,8 @@ export function packItems(
         volumeFill: Math.round(volumeFill * 10) / 10,
         weightFill: Math.round(weightFill * 10) / 10,
         totalWeight: Math.round(totalWeight),
-        totalVolume: Math.round(totalVolume),
-        freeVolume: Math.max(0, binVolume - totalVolume),
+        totalVolume: Math.round(cargoVolume),
+        freeVolume: Math.max(0, binVolume - cargoVolume),
         freeWeight: Math.max(0, vehicle.maxWeight - totalWeight),
       };
     });

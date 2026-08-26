@@ -144,9 +144,11 @@ export default function CargoItem3D({
 
     // Преобразуем обратно в координаты пакера (левый нижний угол, мм)
     const basePos = lastValidPos.current ?? item.position;
+    const snap10 = (v: number) => Math.round(v / 10) * 10;
     
     // Попытка перемещения: полная позиция, затем по осям (для "скольжения" вдоль стенок)
-    const fullPackPos = sceneToPackPosition(clampedX, scenePos.y, clampedZ, item.dimensions, vehicle, SCALE, item.rotationY);
+    const rawPackPos = sceneToPackPosition(clampedX, scenePos.y, clampedZ, item.dimensions, vehicle, SCALE, item.rotationY);
+    const fullPackPos = { x: snap10(rawPackPos.x), y: rawPackPos.y, z: snap10(rawPackPos.z) };
     
     // 1. Пробуем полное перемещение
     if (!checkCollision(fullPackPos)) {

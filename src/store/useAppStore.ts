@@ -49,6 +49,7 @@ interface AppState {
   customVehicles: Vehicle[];
   selectedVehicleId: string;
   addCustomVehicle: (v: Vehicle) => void;
+  removeCustomVehicle: (id: string) => void;
   selectVehicle: (id: string) => void;
 
   // Грузы
@@ -140,6 +141,20 @@ export const useAppStore = create<AppState>()(
         saveToStorage(KEYS.vehicles, list);
         saveToStorage(KEYS.vehicleId, v.id);
         set({ customVehicles: list, selectedVehicleId: v.id });
+        get().setResult(null);
+        get().setActiveVariant(null);
+      },
+      removeCustomVehicle: (id) => {
+        const list = get().customVehicles.filter((v) => v.id !== id);
+        saveToStorage(KEYS.vehicles, list);
+        // Если удалили текущий — переключаемся на первый стандартный
+        if (get().selectedVehicleId === id) {
+          const firstId = getDefaultVehicles()[0].id;
+          saveToStorage(KEYS.vehicleId, firstId);
+          set({ customVehicles: list, selectedVehicleId: firstId });
+        } else {
+          set({ customVehicles: list });
+        }
         get().setResult(null);
         get().setActiveVariant(null);
       },

@@ -94,6 +94,9 @@ export default function RouteEditor() {
       <div className="section-title">
         <span>🗺 Маршрут</span>
       </div>
+      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+        Настройте точки загрузки и выгрузки. Грузы с одинаковой точкой загрузки будут уложены рядом.
+      </div>
 
       <div className="variant-tabs mb-1">
         <button
