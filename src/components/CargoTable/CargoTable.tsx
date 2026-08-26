@@ -3,15 +3,11 @@
 // ============================================================================
 
 import { useState } from 'react';
-import { FixedSizeList as List } from 'react-window';
 import { useAppStore } from '../../store/useAppStore';
 import CargoRow from './CargoRow';
 import AddCargoForm from './AddCargoForm';
 import { exportCsv } from '../../lib/csv/exportCsv';
 import { importCsv } from '../../lib/csv/importCsv';
-
-/** Высота строки таблицы */
-const ROW_HEIGHT = 40;
 
 export default function CargoTable() {
   const cargo = useAppStore((s) => s.cargo);
@@ -114,46 +110,40 @@ export default function CargoTable() {
       {/* Форма добавления */}
       {showAdd && <AddCargoForm />}
 
-      {/* Заголовок таблицы */}
-      <div className="cargo-table-header">
-        <div className="cargo-table-header-row">
-          <div className="cargo-table-header-cell">✓</div>
-          <div className="cargo-table-header-cell">Название</div>
-          <div className="cargo-table-header-cell">Форма</div>
-          <div className="cargo-table-header-cell">Длина, мм</div>
-          <div className="cargo-table-header-cell">Ширина, мм</div>
-          <div className="cargo-table-header-cell">Выс./Диам., мм</div>
-          <div className="cargo-table-header-cell">Вес, кг</div>
-          <div className="cargo-table-header-cell">Кол-во</div>
-          <div className="cargo-table-header-cell">Штаб.</div>
-          <div className="cargo-table-header-cell">Точка загрузки</div>
-          <div className="cargo-table-header-cell">Точка выгрузки</div>
+      {/* Таблица с sticky-заголовком */}
+      <div className="cargo-table-container">
+        <div className="cargo-table-sticky-header">
+          <div className="cargo-table-header-row">
+            <div className="cargo-table-header-cell">✓</div>
+            <div className="cargo-table-header-cell">Название</div>
+            <div className="cargo-table-header-cell">Форма</div>
+            <div className="cargo-table-header-cell">Длина</div>
+            <div className="cargo-table-header-cell">Ширина</div>
+            <div className="cargo-table-header-cell">Выс.</div>
+            <div className="cargo-table-header-cell">Вес</div>
+            <div className="cargo-table-header-cell">Кол-во</div>
+            <div className="cargo-table-header-cell">Штаб.</div>
+            <div className="cargo-table-header-cell">Загрузка</div>
+            <div className="cargo-table-header-cell">Выгрузка</div>
+          </div>
+        </div>
+        <div className="cargo-table-scroll-area">
+          {cargo.length === 0 ? (
+            <div className="empty-state text-muted">
+              Грузов пока нет. Нажмите «+ Добавить» или импортируйте CSV.
+            </div>
+          ) : (
+            cargo.map((c) => (
+              <CargoRow
+                key={c.id}
+                cargo={c}
+                selected={selectedIds.has(c.id)}
+                onToggleSelect={toggleSelect}
+              />
+            ))
+          )}
         </div>
       </div>
-
-      {cargo.length === 0 ? (
-        <div className="empty-state text-muted">
-          Грузов пока нет. Нажмите «+ Добавить» или импортируйте CSV.
-        </div>
-      ) : (
-        <List
-          height={Math.min(cargo.length * ROW_HEIGHT, 320)}
-          itemCount={cargo.length}
-          itemSize={ROW_HEIGHT}
-          width="100%"
-          itemData={{ cargo, selectedIds, toggleSelect }}
-        >
-          {({ index, style, data }) => (
-            <div style={style}>
-              <CargoRow
-                cargo={data.cargo[index]}
-                selected={data.selectedIds.has(data.cargo[index].id)}
-                onToggleSelect={data.toggleSelect}
-              />
-            </div>
-          )}
-        </List>
-      )}
     </div>
   );
 }

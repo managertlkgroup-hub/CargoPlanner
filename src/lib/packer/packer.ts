@@ -183,12 +183,18 @@ function packIntoBin(
         // Проверка весового лимита
         if (usedWeight + box.weight > maxWeight) continue;
 
-        // Эвристика: минимизируем Y (ниже), затем Z (ближе к передней стенке), затем X (левее)
-        // Это обеспечивает плотную упаковку от пола с заполнением по ширине before по длине
-        const score =
-          point.y * 1000000 +
-          point.z * 1000 +
-          point.x;
+        // Эвристика зависит от режима:
+        // along: заполняем по ширине (Z) → минимизируем X, потом Z
+        // across: заполняем по длине (X) → минимизируем Z, потом X  
+        // mixed: сбалансированное заполнение
+        let score: number;
+        if (sortMode === 'along') {
+          score = point.y * 1000000 + point.x * 1000 + point.z;
+        } else if (sortMode === 'across') {
+          score = point.y * 1000000 + point.z * 1000 + point.x;
+        } else {
+          score = point.y * 1000000 + (point.x + point.z) * 500;
+        }
 
         if (score < bestScore) {
           bestScore = score;

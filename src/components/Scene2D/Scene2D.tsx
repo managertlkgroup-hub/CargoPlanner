@@ -15,18 +15,22 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
   const [dimensions, setDimensions] = React.useState({ w: 600, h: 400 });
 
   useEffect(() => {
-    if (width && height) {
-      setDimensions({ w: width, h: height });
-    } else {
-      // Авто-размер от родителя
-      const parent = canvasRef.current?.parentElement;
-      if (parent) {
-        setDimensions({
-          w: parent.clientWidth || 600,
-          h: Math.max(300, parent.clientHeight - 50) || 400,
-        });
+    const updateSize = () => {
+      if (width && height) {
+        setDimensions({ w: width, h: height });
+      } else {
+        const parent = canvasRef.current?.parentElement;
+        if (parent) {
+          setDimensions({
+            w: Math.max(400, parent.clientWidth || 600),
+            h: Math.max(300, parent.clientHeight - 50 || 400),
+          });
+        }
       }
-    }
+    };
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
   }, [width, height, variant]);
 
   useEffect(() => {
@@ -44,7 +48,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
     ctx.fillRect(0, 0, dimensions.w, dimensions.h);
 
     // Размеры кузова в пикселях (масштабируем чтобы весь кузов помещался)
-    const padding = 40;
+    const padding = 50;
     const availableW = dimensions.w - padding * 2;
     const availableH = dimensions.h - padding * 2;
     
@@ -110,29 +114,32 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
       ctx.lineWidth = 1;
       ctx.strokeRect(itemX, itemY, itemL, itemW);
 
-      // Подпись (название + размеры)
+      // Подпись (название + размеры) в две строки
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 10px system-ui';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       
-      // Формируем подпись
-      const label = `${item.name}\n${item.dimensions.length}×${item.dimensions.width}`;
-      const lines = label.split('\n');
+      const fontSize = Math.min(11, Math.max(7, Math.min(itemL, itemW) / 5));
+      ctx.font = `bold ${fontSize}px system-ui`;
       
-      // Рисуем текст по центру с переносом
-      lines.forEach((line, idx) => {
-        // Обрезаем если не помещается
-        let text = line;
-        while (text.length > 0 && ctx.measureText(text).width > itemL - 8) {
-          text = text.slice(0, -1);
-        }
-        if (lines.length > 1) {
-          ctx.fillText(text, itemX + itemL / 2, itemY + itemW / 2 + idx * 10 - 5);
-        } else {
-          ctx.fillText(text, itemX + itemL / 2, itemY + itemW / 2);
-        }
-      });
+      const line1 = item.name;
+      const line2 = `${Math.round(item.dimensions.length)}×${Math.round(item.dimensions.width)} мм`;
+      
+      const textY = itemY + itemW / 2;
+      
+      // Обрезаем если не помещается
+      let t1 = line1;
+      while (t1.length > 0 && ctx.measureText(t1).width > itemL - 6) t1 = t1.slice(0, -1);
+      let t2 = line2;
+      while (t2.length > 0 && ctx.measureText(t2).width > itemL - 6) t2 = t2.slice(0, -1);
+      
+      if (itemW > 30) {
+        ctx.fillText(t1, itemX + itemL / 2, textY - fontSize / 2 - 1);
+        ctx.font = `${fontSize - 1}px system-ui`;
+        ctx.fillText(t2, itemX + itemL / 2, textY + fontSize / 2 + 1);
+      } else {
+        ctx.fillText(t1, itemX + itemL / 2, textY);
+      }
     });
 
   }, [variant, vehicle, dimensions]);
@@ -146,16 +153,12 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
   }
 
   return (
-    <div className="panel mt-4">
-      <div className="section-title mb-2">
-        <span>📐 Вид сверху</span>
-      </div>
+    <div className="w-full h-full flex flex-col" style={{ minHeight: 0 }}>
       <canvas
         ref={canvasRef}
         width={dimensions.w}
         height={dimensions.h}
-        className="w-full border border-gray-200 dark:border-gray-700 rounded-lg"
-        style={{ maxHeight: '450px', objectFit: 'contain' }}
+        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
       />
     </div>
   );

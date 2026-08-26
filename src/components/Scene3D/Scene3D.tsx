@@ -17,6 +17,7 @@ const Scene3D: React.FC = () => {
   const vehicle = useSelectedVehicle();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [lastInteractedId, setLastInteractedId] = useState<string | null>(null);
   // Блокировка камеры во время перетаскивания груза
   const [isDragging, setIsDragging] = useState(false);
   
@@ -35,6 +36,7 @@ const Scene3D: React.FC = () => {
   // Диагностика: при изменении данных выводим каждый груз с его параметрами
   useEffect(() => {
     setSelectedId(null);
+    setLastInteractedId(null);
     const items = variant?.items ?? [];
     console.log('[Scene3D] Данные обновлены:', {
       variants: result?.variants?.length ?? 0,
@@ -53,20 +55,20 @@ const Scene3D: React.FC = () => {
     });
   }, [result, activeVariant, variant]);
 
-  // Поворот выделенного груза клавишей R на +90°
+  // Поворот груза клавишей R на +90° (по наведённому или выбранному)
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if ((e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К') && variant) {
-        // Если есть выбранный груз — поворачиваем его
-        if (selectedId) {
-          const item = variant.items.find((it) => it.id === selectedId);
+        const targetId = lastInteractedId || selectedId;
+        if (targetId) {
+          const item = variant.items.find((it) => it.id === targetId);
           if (!item) return;
           const current = item.rotationY ?? item.rotation?.y ?? 0;
-          rotateCargo(selectedId, current + 90);
+          rotateCargo(targetId, current + 90);
         }
       }
     },
-    [selectedId, variant, rotateCargo],
+    [lastInteractedId, selectedId, variant, rotateCargo],
   );
 
   useEffect(() => {
@@ -160,10 +162,12 @@ const Scene3D: React.FC = () => {
             vehicle={vehicle}
             isSelected={selectedId === item.id}
             onSelect={(id) => setSelectedId(id)}
+            onHover={(id) => setLastInteractedId(id)}
             onMove={(id, position) => updateCargoPosition(id, position)}
             onDragStart={() => setIsDragging(true)}
             onDragEnd={() => setIsDragging(false)}
             onBoundsViolation={(msg) => setError(msg)}
+            allItems={packedItems}
           />
         ))}
 
@@ -189,7 +193,7 @@ const Scene3D: React.FC = () => {
       </div>
 
       <div className="rotate-hint">
-        Выберите груз кликом, затем нажмите R для поворота
+        Наведите на груз и нажмите R для поворота на 90°
       </div>
     </div>
   );

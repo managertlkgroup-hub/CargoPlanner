@@ -27,12 +27,14 @@ interface Props {
   onDragStart?: (id: string) => void;
   /** Колбэк выбора груза (клик) — для поворота клавишей R */
   onSelect?: (id: string) => void;
+  /** Колбэк наведения — для поворота клавишей R */
+  onHover?: (id: string) => void;
   /** Выделен ли груз в данный момент */
   isSelected?: boolean;
-  /** Флаг конфликта (пересечение с другим грузом) */
-  conflict?: boolean;
   /** Сообщение при выходе за границы кузова */
   onBoundsViolation?: (msg: string) => void;
+  /** Все размещённые грузы для проверки коллизий */
+  allItems?: PackedItem[];
 }
 
 export default function CargoItem3D({
@@ -43,13 +45,17 @@ export default function CargoItem3D({
   onDragEnd,
   onDragStart,
   onSelect,
+  onHover,
   isSelected,
   onBoundsViolation,
+  allItems,
 }: Props) {
   const [hovered, setHovered] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [conflict, setConflict] = useState(false);
   const groupRef = useRef<THREE.Group>(null);
   const dragInfo = useRef<{ raycaster: THREE.Raycaster; plane: THREE.Plane } | null>(null);
+  const lastValidPos = useRef<{ x: number; y: number; z: number } | null>(null);
 
   const { camera, gl, pointer } = useThree();
 
@@ -65,6 +71,32 @@ export default function CargoItem3D({
     };
   }, [item.dimensions]);
 
+  // Проверка коллизии AABB
+  const checkCollision = (pos: { x: number; y: number; z: number }): boolean => {
+    if (!allItems) return false;
+    const rotY = item.rotationY ?? 0;
+    const isOdd90 = Math.round(((rotY % 360) + 360) % 360 / 90) % 2 === 1;
+    const xLen = isOdd90 ? item.dimensions.width : item.dimensions.length;
+    const zLen = isOdd90 ? item.dimensions.length : item.dimensions.width;
+    const yH = item.dimensions.height;
+    return allItems.some((other) => {
+      if (other.id === item.id) return false;
+      const otherRotY = other.rotationY ?? 0;
+      const otherOdd90 = Math.round(((otherRotY % 360) + 360) % 360 / 90) % 2 === 1;
+      const oXLen = otherOdd90 ? other.dimensions.width : other.dimensions.length;
+      const oZLen = otherOdd90 ? other.dimensions.length : other.dimensions.width;
+      const oYH = other.dimensions.height;
+      return (
+        pos.x < other.position.x + oXLen &&
+        pos.x + xLen > other.position.x &&
+        pos.y < other.position.y + oYH &&
+        pos.y + yH > other.position.y &&
+        pos.z < other.position.z + oZLen &&
+        pos.z + zLen > other.position.z
+      );
+    });
+  };
+
   // Позиция центра в сцене (левый нижний угол пакера -> центр сцены)
   const scenePos = useMemo(
     () => packToScenePosition(item.position, item.dimensions, vehicle, SCALE),
@@ -77,6 +109,7 @@ export default function CargoItem3D({
   // Подсветка для выбранного или наведённого груза
   const highlight = hovered || isSelected;
   const highlightIntensity = hovered || isSelected ? 0.25 : 0;
+  const displayColor = conflict ? '#ef4444' : item.color;
 
   // --- Логика перетаскивания по горизонтальной плоскости ---
   const startDrag = (e: any) => {
@@ -84,10 +117,12 @@ export default function CargoItem3D({
     e.stopPropagation();
     if (onSelect) onSelect(item.id);
     if (onDragStart) onDragStart(item.id);
+    lastValidPos.current = { ...item.position };
     const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -scenePos.y);
     const raycaster = new THREE.Raycaster();
     dragInfo.current = { raycaster, plane };
     setDragging(true);
+    setConflict(false);
     gl.domElement.setPointerCapture(e.pointerId);
   };
 
@@ -121,6 +156,16 @@ export default function CargoItem3D({
       vehicle,
       SCALE,
     );
+
+    // Проверка коллизии с другими грузами
+    if (checkCollision(packPos)) {
+      setConflict(true);
+      // Не перемещаем — оставляем на текущей позиции
+      return;
+    }
+
+    setConflict(false);
+    lastValidPos.current = packPos;
     onMove(item.id, packPos);
 
     const wasClamped =
@@ -150,7 +195,7 @@ export default function CargoItem3D({
       onPointerDown={startDrag}
       onPointerMove={handlePointerMove}
       onPointerUp={endDrag}
-      onPointerOver={(e) => { e.stopPropagation(); setHovered(true); }}
+      onPointerOver={(e) => { e.stopPropagation(); setHovered(true); if (onHover) onHover(item.id); }}
       onPointerOut={() => { if (!dragging) setHovered(false); }}
     >
       {/* Цилиндр: поворот на -π/2 вокруг Z, чтобы ось стала горизонтальной вдоль X */}
@@ -158,7 +203,7 @@ export default function CargoItem3D({
         <mesh rotation={[0, 0, -Math.PI / 2]}>
           <cylinderGeometry args={[(diameter * SCALE) / 2, (diameter * SCALE) / 2, l, 32]} />
           <meshStandardMaterial
-            color={item.color}
+            color={displayColor}
             transparent
             opacity={dragging ? 0.55 : 0.9}
             emissive={highlight ? new THREE.Color('#ffffff') : new THREE.Color('#000000')}
@@ -176,7 +221,7 @@ export default function CargoItem3D({
         <mesh>
           <boxGeometry args={[l, h, w]} />
           <meshStandardMaterial
-            color={item.color}
+            color={displayColor}
             transparent
             opacity={dragging ? 0.55 : 0.9}
             emissive={highlight ? new THREE.Color('#ffffff') : new THREE.Color('#000000')}

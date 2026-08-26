@@ -259,7 +259,19 @@ export const useAppStore = create<AppState>()(
         const result = patchActiveVariantItems(get().result, get().activeVariant, (item) => {
           if (item.id !== cargoId) return item;
           const norm = ((angle % 360) + 360) % 360;
-          return { ...item, rotationY: norm, rotation: { y: norm } };
+          const prevRot = item.rotationY ?? 0;
+          // Определяем, нужно ли менять местами длину и ширину
+          const prevOdd = Math.round(prevRot / 90) % 2 === 1;
+          const nextOdd = Math.round(norm / 90) % 2 === 1;
+          const shouldSwap = prevOdd !== nextOdd;
+          return {
+            ...item,
+            rotationY: norm,
+            rotation: { y: norm },
+            dimensions: shouldSwap
+              ? { length: item.dimensions.width, width: item.dimensions.length, height: item.dimensions.height }
+              : item.dimensions,
+          };
         });
         saveToStorage(KEYS.result, result);
         set({ result });
