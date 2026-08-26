@@ -142,11 +142,6 @@ export default function CargoItem3D({
     const clampedX = Math.max(-halfL + halfX, Math.min(halfL - halfX, target.x));
     const clampedZ = Math.max(-halfW + halfZ, Math.min(halfW - halfZ, target.z));
 
-    // Обновляем группу сразу для плавности
-    if (groupRef.current) {
-      groupRef.current.position.set(clampedX, scenePos.y, clampedZ);
-    }
-
     // Преобразуем обратно в координаты пакера (левый нижний угол, мм)
     const packPos = sceneToPackPosition(
       clampedX,
@@ -157,16 +152,22 @@ export default function CargoItem3D({
       SCALE,
     );
 
-    // Проверка коллизии с другими грузами
+    // Проверка коллизии с другими грузами — ДО обновления позиции
     if (checkCollision(packPos)) {
       setConflict(true);
-      // Не перемещаем — оставляем на текущей позиции
+      // Не перемещаем — груз остаётся на предыдущей позиции
       return;
     }
 
+    // Коллизий нет — обновляем позицию
     setConflict(false);
     lastValidPos.current = packPos;
     onMove(item.id, packPos);
+
+    // Обновляем визуальную позицию группы
+    if (groupRef.current) {
+      groupRef.current.position.set(clampedX, scenePos.y, clampedZ);
+    }
 
     const wasClamped =
       Math.abs(clampedX - target.x) > 1e-6 || Math.abs(clampedZ - target.z) > 1e-6;
