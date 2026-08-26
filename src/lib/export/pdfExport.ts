@@ -1,5 +1,6 @@
 // ============================================================================
 // Экспорт отчёта в PDF (jsPDF)
+// Используем латинские тексты для совместимости, с rotationY-aware views
 // ============================================================================
 
 import { jsPDF } from 'jspdf';
@@ -8,7 +9,15 @@ import { getCargoVolume } from '../../types';
 
 /** Форматирует объём мм^3 в м^3 */
 function volToM3(mm3: number): string {
-  return `${(mm3 / 1e9).toFixed(2)} м³`;
+  return `${(mm3 / 1e9).toFixed(2)} m3`;
+}
+
+/** Получает эффективные размеры основания груза с учётом поворота */
+function getEffectiveGround(item: { dimensions: { length: number; width: number }; rotationY?: number }) {
+  const rot = Math.round(((item.rotationY ?? 0) % 360) / 90) % 2;
+  return rot === 1
+    ? { effLength: item.dimensions.width, effWidth: item.dimensions.length }
+    : { effLength: item.dimensions.length, effWidth: item.dimensions.width };
 }
 
 /** Рисует 2D-вид сверху (XZ) раскладки */
@@ -28,14 +37,23 @@ function drawTopView(
   doc.rect(offsetX, offsetY, l, w);
 
   variant.items.forEach((item) => {
+    const { effLength, effWidth } = getEffectiveGround(item);
     const x = offsetX + item.position.x * scale;
     const z = offsetY + item.position.z * scale;
-    const iw = item.dimensions.length * scale;
-    const id = item.dimensions.width * scale;
+    const iw = effLength * scale;
+    const id = effWidth * scale;
     doc.setFillColor(59, 130, 246);
     doc.setDrawColor(30);
     doc.setLineWidth(0.4);
     doc.rect(x, z, iw, id, 'FD');
+
+    if (iw > 8 && id > 6) {
+      doc.setFontSize(5);
+      doc.setTextColor(255, 255, 255);
+      const label = `${Math.round(effLength)}x${Math.round(effWidth)}`;
+      doc.text(label, x + iw / 2, z + id / 2 + 1, { align: 'center' });
+      doc.setTextColor(0, 0, 0);
+    }
   });
 }
 
@@ -56,9 +74,10 @@ function drawSideView(
   doc.rect(offsetX, offsetY, l, h);
 
   variant.items.forEach((item) => {
+    const { effLength } = getEffectiveGround(item);
     const x = offsetX + item.position.x * scale;
     const y = offsetY + h - (item.position.y + item.dimensions.height) * scale;
-    const iw = item.dimensions.length * scale;
+    const iw = effLength * scale;
     const ih = item.dimensions.height * scale;
     doc.setFillColor(34, 197, 94);
     doc.setDrawColor(30);
@@ -82,41 +101,44 @@ export function generatePdfReport(
   // Заголовок
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text('Отчёт о загрузке автомобиля', margin, y);
+  doc.text('Load Report', margin, y);
+  y += 8;
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(120, 120, 120);
+  doc.text(`CargoPlanner - ${new Date().toLocaleDateString()}`, margin, y);
+  doc.setTextColor(0, 0, 0);
   y += 10;
 
   // Информация об авто
   doc.setFontSize(12);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Автомобиль: ${vehicle.name}`, margin, y);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Vehicle: ${vehicle.name}`, margin, y);
   y += 6;
+  doc.setFont('helvetica', 'normal');
   doc.text(
-    `Кузов: ${vehicle.length}×${vehicle.width}×${vehicle.height} мм · Грузоподъёмность: ${vehicle.maxWeight} кг`,
-    margin,
-    y,
+    `Body: ${vehicle.length}x${vehicle.width}x${vehicle.height} mm | Capacity: ${vehicle.maxWeight} kg`,
+    margin, y,
   );
   y += 10;
 
   // Метрики варианта
   doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
-  doc.text(`Вариант: ${variant.label}`, margin, y);
+  doc.text(`Layout: ${variant.label}`, margin, y);
   y += 6;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
-  doc.text(`Заполнение объёма: ${variant.volumeFill}%`, margin, y);
-  y += 5;
-  doc.text(`Заполнение по весу: ${variant.weightFill}%`, margin, y);
-  y += 5;
-  doc.text(`Суммарный вес: ${variant.totalWeight} кг`, margin, y);
-  y += 5;
-  doc.text(`Свободный объём: ${volToM3(variant.freeVolume)}`, margin, y);
-  y += 10;
+  doc.text(`Volume fill: ${variant.volumeFill}%`, margin, y); y += 5;
+  doc.text(`Weight fill: ${variant.weightFill}%`, margin, y); y += 5;
+  doc.text(`Total weight: ${variant.totalWeight} kg`, margin, y); y += 5;
+  doc.text(`Free volume: ${volToM3(variant.freeVolume)}`, margin, y); y += 5;
+  doc.text(`Items placed: ${variant.items.length}`, margin, y); y += 10;
 
   // 2D-схемы
   doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
-  doc.text('Схемы размещения:', margin, y);
+  doc.text('Layout Schemes:', margin, y);
   y += 4;
 
   // Вид сверху
@@ -124,10 +146,7 @@ export function generatePdfReport(
   drawTopView(doc, vehicle, variant, margin, y, viewScale);
   y += vehicle.width * viewScale + 14;
 
-  if (y > 240) {
-    doc.addPage();
-    y = 20;
-  }
+  if (y > 240) { doc.addPage(); y = 20; }
 
   // Вид сбоку
   const sideScale = Math.min(120 / vehicle.length, 60 / vehicle.height, 2);
@@ -135,21 +154,18 @@ export function generatePdfReport(
   y += vehicle.height * sideScale + 16;
 
   // Список грузов
-  if (y > 220) {
-    doc.addPage();
-    y = 20;
-  }
+  if (y > 220) { doc.addPage(); y = 20; }
   doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
-  doc.text('Список грузов:', margin, y);
+  doc.text('Cargo List:', margin, y);
   y += 6;
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('Название', margin, y);
-  doc.text('Кол-во', margin + 80, y);
-  doc.text('Размеры, мм', margin + 110, y);
-  doc.text('Вес, кг', margin + 160, y);
+  doc.text('Name', margin, y);
+  doc.text('Qty', margin + 80, y);
+  doc.text('Dimensions, mm', margin + 100, y);
+  doc.text('Weight, kg', margin + 155, y);
   y += 4;
   doc.setDrawColor(200);
   doc.line(margin, y, pageW - margin, y);
@@ -158,34 +174,40 @@ export function generatePdfReport(
   cargo.forEach((c) => {
     const size =
       c.shape === 'cylinder'
-        ? `Ø${c.diameter} × ${c.length}`
-        : `${c.length}×${c.width}×${c.height}`;
+        ? `D${c.diameter} x ${c.length}`
+        : `${c.length}x${c.width ?? 0}x${c.height ?? 0}`;
     const lines = doc.splitTextToSize(c.name, 75);
     doc.text(lines, margin, y);
     doc.text(String(c.quantity), margin + 80, y);
-    doc.text(size, margin + 110, y);
-    doc.text(String(c.weight), margin + 160, y);
+    doc.text(size, margin + 100, y);
+    doc.text(String(c.weight), margin + 155, y);
     y += lines.length * 4 + 2;
-    if (y > 275) {
-      doc.addPage();
-      y = 20;
-    }
+    if (y > 275) { doc.addPage(); y = 20; }
   });
 
   // Итоги
   y += 8;
-  if (y > 275) {
-    doc.addPage();
-    y = 20;
-  }
+  if (y > 275) { doc.addPage(); y = 20; }
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   const totalVolume = cargo.reduce((s, c) => s + getCargoVolume(c) * c.quantity, 0);
   doc.text(
-    `Итого: ${variant.totalWeight} кг · общий объём груза ${volToM3(totalVolume)}`,
-    margin,
-    y,
+    `Total: ${variant.totalWeight} kg | Cargo volume: ${volToM3(totalVolume)}`,
+    margin, y,
   );
+
+  // Футер
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.text(
+      `CargoPlanner | Page ${i}/${pageCount}`,
+      pageW / 2, 290, { align: 'center' },
+    );
+    doc.setTextColor(0, 0, 0);
+  }
 
   doc.save(`load-report-${Date.now()}.pdf`);
 }

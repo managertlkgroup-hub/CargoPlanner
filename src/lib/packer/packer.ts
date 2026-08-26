@@ -61,10 +61,20 @@ function intersects(a: PlacedBox, b: PlacedBox): boolean {
 
 /** Возможные ориентации бокса. Цилиндры не могут вращаться вертикально. */
 function getOrientations(box: Box, mode: 'along' | 'across' | 'mixed'): Orientation[] {
-  // Цилиндр: ось всегда вдоль X (длина), ширина = высота = диаметр.
-  // Вертикальный поворот запрещён.
+  // Цилиндр: горизонтальная ось (длина), ширина = высота = диаметр.
+  // Вертикальный поворот запрещён, горизонтальный — разрешён.
   if (box.shape === 'cylinder') {
-    return [{ dx: box.length, dy: box.height, dz: box.width, rotY: 0 }];
+    if (mode === 'along') {
+      return [{ dx: box.length, dy: box.height, dz: box.width, rotY: 0 }];
+    } else if (mode === 'across') {
+      return [{ dx: box.width, dy: box.height, dz: box.length, rotY: 90 }];
+    } else {
+      // mixed: обе горизонтальные ориентации
+      return [
+        { dx: box.length, dy: box.height, dz: box.width, rotY: 0 },
+        { dx: box.width, dy: box.height, dz: box.length, rotY: 90 },
+      ];
+    }
   }
   
   // Определяем длинную и короткую стороны основания
@@ -142,11 +152,11 @@ function packIntoBin(
     points.sort((a, b) => {
       if (a.y !== b.y) return a.y - b.y;
       if (sortMode === 'along') {
-        // along: длинная сторона вдоль X → заполняем по ширине Z (min X, потом min Z)
-        if (a.x !== b.x) return a.x - b.x;
-        return a.z - b.z;
+        // along: длинная сторона вдоль X → заполняем по Z (min Z, потом min X)
+        if (a.z !== b.z) return a.z - b.z;
+        return a.x - b.x;
       } else if (sortMode === 'across') {
-        // across: длинная сторона вдоль Z → заполняем по Z (min X, потом min Z)
+        // across: длинная сторона вдоль Z → заполняем по X (min X, потом min Z)
         if (a.x !== b.x) return a.x - b.x;
         return a.z - b.z;
       } else {
@@ -196,11 +206,11 @@ function packIntoBin(
         let score: number;
 
         if (sortMode === 'along') {
-          // along: длинная сторона вдоль X, заполняем по Z → min X, потом min Z
-          score = point.y * 1e9 + point.x * 1e6 + point.z;
-        } else if (sortMode === 'across') {
-          // across: длинная сторона вдоль Z, заполняем по Z → min Z, потом min X
+          // along: длинная сторона вдоль X, заполняем по Z → min Z, потом min X
           score = point.y * 1e9 + point.z * 1e6 + point.x;
+        } else if (sortMode === 'across') {
+          // across: длинная сторона вдоль Z, заполняем по X → min X, потом min Z
+          score = point.y * 1e9 + point.x * 1e6 + point.z;
         } else {
           // mixed: минимизируем расстояние до начала
           score = point.y * 1e9 + (point.x + point.z) * 1e3;
