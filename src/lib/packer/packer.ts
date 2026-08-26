@@ -322,12 +322,27 @@ function packIntoBin(
   return placed;
 }
 
+/** Осветляет/затемняет hex-цвет на указанный процент (положительный — светлее, отрицательный — темнее) */
+function shadeColor(hex: string, percent: number): string {
+  let r = parseInt(hex.slice(1, 3), 16);
+  let g = parseInt(hex.slice(3, 5), 16);
+  let b = parseInt(hex.slice(5, 7), 16);
+  r = Math.min(255, Math.max(0, Math.round(r + (255 - r) * percent / 100)));
+  g = Math.min(255, Math.max(0, Math.round(g + (255 - g) * percent / 100)));
+  b = Math.min(255, Math.max(0, Math.round(b + (255 - b) * percent / 100)));
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
 /** Преобразует размещённый бокс в PackedItem (формат store / сцены) */
-function toPackedItem(p: PlacedBox): PackedItem {
+function toPackedItem(p: PlacedBox, layerIndex: number): PackedItem {
   const dims =
     p.rotY === 90
       ? { length: p.placedWidth, width: p.placedLength, height: p.placedHeight }
       : { length: p.placedLength, width: p.placedWidth, height: p.placedHeight };
+
+  // Грузы разных слоёв — разные оттенки цвета
+  // 0-й слой: оригинальный цвет, 1-й: +20% светлее, 2-й: +40% и т.д.
+  const color = layerIndex === 0 ? p.color : shadeColor(p.color, layerIndex * 20);
 
   return {
     id: `${p.id}-${p.x}-${p.y}-${p.z}`,
@@ -338,7 +353,7 @@ function toPackedItem(p: PlacedBox): PackedItem {
     weight: p.weight,
     position: { x: p.x, y: p.y, z: p.z },
     rotationY: p.rotY,
-    color: p.color,
+    color,
     stackable: p.stackable,
   };
 }
@@ -406,7 +421,11 @@ export function packItems(
         } else {
           totalVolume += p.placedLength * p.placedWidth * p.placedHeight;
         }
-        return toPackedItem(p);
+        // Вычисляем индекс слоя по высоте Y
+        const layerIndex = p.y > 0 && p.placedHeight > 0
+          ? Math.round(p.y / p.placedHeight)
+          : 0;
+        return toPackedItem(p, layerIndex);
       });
 
       const binVolume = bin.length * bin.width * bin.height;
