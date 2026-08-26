@@ -206,11 +206,13 @@ function packIntoBin(
         let score: number;
 
         if (sortMode === 'along') {
-          // along: длинная сторона вдоль X, заполняем по X → min X, потом min Z
-          score = point.y * 1e9 + point.x * 1e6 + point.z;
-        } else if (sortMode === 'across') {
-          // across: длинная сторона вдоль Z, заполняем по Z → min Z, потом min X
+          // along: длинная сторона вдоль X, заполняем ВСЕ X на текущем Z → min Z, потом min X
+          // Это заполняет горизонтальные ряды (по X) перед переходом на следующий ряд (по Z)
           score = point.y * 1e9 + point.z * 1e6 + point.x;
+        } else if (sortMode === 'across') {
+          // across: длинная сторона вдоль Z, заполняем ВСЕ Z на текущем X → min X, потом min Z
+          // Это заполняет вертикальные столбцы (по Z) перед переходом на следующий столбец (по X)
+          score = point.y * 1e9 + point.x * 1e6 + point.z;
         } else {
           // mixed: минимизируем расстояние до начала
           score = point.y * 1e9 + (point.x + point.z) * 1e3;
