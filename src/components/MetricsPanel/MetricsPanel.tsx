@@ -3,10 +3,9 @@ import { useActiveVariant } from '../../store/useAppStore';
 import { formatNumber, volumeToM3 } from '../../utils/helpers';
 
 export default function MetricsPanel() {
+  // Все хуки ДО любого раннего возврата
   const variant = useActiveVariant();
-  if (!variant) return null;
 
-  // Подсчёт количества слоёв
   const layerCount = useMemo(() => {
     if (!variant || variant.items.length === 0) return 0;
     const layers = new Set<number>();
@@ -16,6 +15,9 @@ export default function MetricsPanel() {
     });
     return layers.size;
   }, [variant]);
+
+  // Ранний возврат — после всех хуков
+  if (!variant) return null;
 
   return (
     <div className="metrics-grid">
