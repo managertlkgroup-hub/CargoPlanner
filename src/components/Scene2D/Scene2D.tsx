@@ -28,16 +28,28 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
       } else {
         const parent = canvasRef.current?.parentElement;
         if (parent) {
+          const rect = parent.getBoundingClientRect();
           setDimensions({
-            w: Math.max(400, parent.clientWidth || 600),
-            h: Math.max(300, parent.clientHeight - 50 || 400),
+            w: Math.max(400, Math.floor(rect.width) || 600),
+            h: Math.max(300, Math.floor(rect.height) || 400),
           });
         }
       }
     };
     updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
+    // Use ResizeObserver for accurate container size tracking
+    const parent = canvasRef.current?.parentElement;
+    let observer: ResizeObserver | null = null;
+    if (parent) {
+      observer = new ResizeObserver(updateSize);
+      observer.observe(parent);
+    } else {
+      window.addEventListener('resize', updateSize);
+    }
+    return () => {
+      if (observer) observer.disconnect();
+      else window.removeEventListener('resize', updateSize);
+    };
   }, [width, height, variant]);
 
   const layoutRef = useRef<{ scale: number; offsetX: number; offsetY: number }>({ scale: 1, offsetX: 0, offsetY: 0 });
@@ -281,12 +293,12 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
   }
 
   return (
-    <div className="w-full h-full flex flex-col" style={{ minHeight: 0 }}>
+    <div style={{ width: '100%', height: '100%', minHeight: 0, position: 'relative' }}>
       <canvas
         ref={canvasRef}
         width={dimensions.w}
         height={dimensions.h}
-        style={{ width: '100%', height: '100%', objectFit: 'contain', cursor: 'default' }}
+        style={{ width: '100%', height: '100%', display: 'block', cursor: 'default' }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
