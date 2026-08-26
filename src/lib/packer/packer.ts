@@ -131,17 +131,32 @@ function packIntoBin(
   
   console.log(`[packIntoBin] Режим: ${sortMode}, грузов: ${sorted.length}, кузов: ${bin.length}x${bin.width}x${bin.height}`);
 
-  for (const box of sorted) {
+  for (let boxIdx = 0; boxIdx < sorted.length; boxIdx++) {
+    const box = sorted[boxIdx];
     const orientations = getOrientations(box, sortMode);
-    let bestFit: { orientation: Orientation; point: { x: number; y: number; z: number }; score: number } | null = null;
+    let bestFit: { orientation: Orientation; point: { x: number; y: number; z: number }; score: number; secondary: number } | null = null;
     let bestScore = Infinity;
+    let bestSecondary = Infinity;
 
-    // Сортируем точки для приоритетного размещения: сначала по Y (ниже), затем по Z (ближе к передней стенке), затем по X (левее)
-    // Изменённый порядок (Z перед X) обеспечивает заполнение по ширине кузова before углубление по длине
+    // Сортируем точки для приоритетного размещения:
+    // along: сначала по Y, потом по X, потом по Z (заполняем по Z вдоль X)
+    // across: сначала по Y, потом по Z, потом по X (заполняем по X вдоль Z)
+    // mixed: сначала по Y, потом по min(X,Z), потом по max(X,Z)
     points.sort((a, b) => {
       if (a.y !== b.y) return a.y - b.y;
-      if (a.z !== b.z) return a.z - b.z;
-      return a.x - b.x;
+      if (sortMode === 'along') {
+        if (a.x !== b.x) return a.x - b.x;
+        return a.z - b.z;
+      } else if (sortMode === 'across') {
+        if (a.z !== b.z) return a.z - b.z;
+        return a.x - b.x;
+      } else {
+        // mixed: заполняем по той оси, где больше оставшегося места
+        const sumA = a.x + a.z;
+        const sumB = b.x + b.z;
+        if (sumA !== sumB) return sumA - sumB;
+        return a.x - b.x;
+      }
     });
 
     for (const point of points) {
@@ -184,21 +199,29 @@ function packIntoBin(
         if (usedWeight + box.weight > maxWeight) continue;
 
         // Эвристика зависит от режима:
-        // along: заполняем по ширине (Z) → минимизируем X, потом Z
-        // across: заполняем по длине (X) → минимизируем Z, потом X  
-        // mixed: сбалансированное заполнение
+        // along: длинная сторона вдоль X, заполняем Z-строки → минимизируем X, потом Z
+        // across: длинная сторона вдоль Z, заполняем X-строки → минимизируем Z, потом X
+        // mixed: для каждой точки перебираем обе ориентации, выбираем по плотности
         let score: number;
+        let secondary = 0;
         if (sortMode === 'along') {
           score = point.y * 1000000 + point.x * 1000 + point.z;
         } else if (sortMode === 'across') {
           score = point.y * 1000000 + point.z * 1000 + point.x;
         } else {
+          // mixed: минимизируем «Bounding Box» — чем компактнее размещение, тем лучше
           score = point.y * 1000000 + (point.x + point.z) * 500;
+          // Вторичный критерий: минимизируем дисбаланс оставшегося пространства
+          // (ориентация, оставляющая более симметричное пространство, лучше)
+          const remainX = bin.length - point.x - placedLength;
+          const remainZ = bin.width - point.z - placedWidth;
+          secondary = Math.abs(remainX - remainZ);
         }
 
-        if (score < bestScore) {
+        if (score < bestScore || (score === bestScore && secondary < bestSecondary)) {
           bestScore = score;
-          bestFit = { orientation, point, score };
+          bestSecondary = secondary;
+          bestFit = { orientation, point, score, secondary };
         }
       }
     }
