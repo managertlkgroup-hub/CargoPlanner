@@ -20,6 +20,9 @@ const Scene3D: React.FC = () => {
   const [lastInteractedId, setLastInteractedId] = useState<string | null>(null);
   // Блокировка камеры во время перетаскивания груза
   const [isDragging, setIsDragging] = useState(false);
+  // Вид сверху по нажатию T
+  const [topView, setTopView] = useState(false);
+  const controlsRef = useRef<any>(null);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -55,7 +58,7 @@ const Scene3D: React.FC = () => {
     });
   }, [result, activeVariant, variant]);
 
-  // Поворот груза клавишей R на +90° (по наведённому или выбранному)
+  // Поворот груза клавишей R на +90° и переключение вида сверху клавишей T
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if ((e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К') && variant) {
@@ -66,6 +69,10 @@ const Scene3D: React.FC = () => {
           const current = item.rotationY ?? item.rotation?.y ?? 0;
           rotateCargo(targetId, current + 90);
         }
+      }
+      // T — переключить вид сверху
+      if (e.key === 't' || e.key === 'T' || e.key === 'е' || e.key === 'Е') {
+        setTopView((prev) => !prev);
       }
     },
     [lastInteractedId, selectedId, variant, rotateCargo],
@@ -113,18 +120,22 @@ const Scene3D: React.FC = () => {
   const packedItems = variant.items || [];
 
   // Камера: ставим так, чтобы кузов целиком попадал в кадр.
-  // Для маленьких авто увеличиваем дистанцию для лучшего обзора
   const isSmallVehicle = maxDim < 5;
   const camDistance = isSmallVehicle ? maxDim * 2.8 : maxDim * 1.6;
   const camHeight = isSmallVehicle ? maxDim * 1.4 : maxDim * 0.9;
+
+  // Позиция камеры с учётом topView
+  const camPosition: [number, number, number] = topView
+    ? [0, maxDim * 2.5, 0.01] // Вид сверху
+    : [camDistance, camHeight, camDistance]; // Обычный вид
 
   return (
     <div id="scene-3d" className="w-full h-full relative">
       <Canvas
         ref={canvasRef}
         camera={{
-          position: [camDistance, camHeight, camDistance],
-          fov: 45,
+          position: camPosition,
+          fov: topView ? 60 : 45,
           near: 0.01,
           far: 1000,
         }}
@@ -173,6 +184,7 @@ const Scene3D: React.FC = () => {
 
         {/* Камера заблокирована во время перетаскивания груза */}
         <OrbitControls
+          ref={controlsRef}
           makeDefault
           enabled={!isDragging}
           enablePan
@@ -193,7 +205,7 @@ const Scene3D: React.FC = () => {
       </div>
 
       <div className="rotate-hint">
-        Наведите на груз и нажмите R для поворота на 90°
+        Наведите на груз и нажмите R для поворота на 90° · T — вид сверху
       </div>
     </div>
   );

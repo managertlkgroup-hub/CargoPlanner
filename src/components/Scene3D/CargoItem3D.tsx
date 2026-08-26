@@ -160,37 +160,25 @@ export default function CargoItem3D({
     }
     
     // 2. Пробуем перемещение только по X (Z = старая позиция)
-    const xOnlyPackPos = sceneToPackPosition(clampedX, scenePos.y, lastValidPos.current ? (lastValidPos.current.z * SCALE + vehicle.width * SCALE / 2 - halfW * 2) : clampedZ, item.dimensions, vehicle, SCALE, item.rotationY);
-    xOnlyPackPos.z = basePos.z; // Фиксируем Z на старой позиции
+    const xOnlyPackPos = { x: fullPackPos.x, y: basePos.y, z: basePos.z };
     if (!checkCollision(xOnlyPackPos)) {
       setConflict(false);
       lastValidPos.current = xOnlyPackPos;
       onMove(item.id, xOnlyPackPos);
       if (groupRef.current) {
-        // Вычисляем scene X из pack X
-        const { effLength } = (() => {
-          const rot = Math.round(((item.rotationY ?? 0) % 360) / 90) % 2;
-          return rot === 1 ? { effLength: item.dimensions.width } : { effLength: item.dimensions.length };
-        })();
-        const newSceneX = xOnlyPackPos.x * SCALE + (effLength * SCALE) / 2 - (vehicle.length * SCALE) / 2;
-        groupRef.current.position.set(newSceneX, scenePos.y, groupRef.current.position.z);
+        groupRef.current.position.set(clampedX, scenePos.y, groupRef.current.position.z);
       }
       return;
     }
     
     // 3. Пробуем перемещение только по Z (X = старая позиция)
-    const zOnlyPackPos = { ...basePos, z: fullPackPos.z };
+    const zOnlyPackPos = { x: basePos.x, y: basePos.y, z: fullPackPos.z };
     if (!checkCollision(zOnlyPackPos)) {
       setConflict(false);
       lastValidPos.current = zOnlyPackPos;
       onMove(item.id, zOnlyPackPos);
       if (groupRef.current) {
-        const { effWidth } = (() => {
-          const rot = Math.round(((item.rotationY ?? 0) % 360) / 90) % 2;
-          return rot === 1 ? { effWidth: item.dimensions.length } : { effWidth: item.dimensions.width };
-        })();
-        const newSceneZ = zOnlyPackPos.z * SCALE + (effWidth * SCALE) / 2 - (vehicle.width * SCALE) / 2;
-        groupRef.current.position.set(groupRef.current.position.x, scenePos.y, newSceneZ);
+        groupRef.current.position.set(groupRef.current.position.x, scenePos.y, clampedZ);
       }
       return;
     }

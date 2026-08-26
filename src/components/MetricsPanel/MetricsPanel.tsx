@@ -16,6 +16,27 @@ export default function MetricsPanel() {
     return layers.size;
   }, [variant]);
 
+  // Габариты размещённого груза
+  const cargoDimensions = useMemo(() => {
+    if (!variant || variant.items.length === 0) return null;
+    let maxX = 0, maxZ = 0, maxY = 0;
+    variant.items.forEach((item) => {
+      const rotY = item.rotationY ?? 0;
+      const isOdd90 = Math.round(((rotY % 360) + 360) % 360 / 90) % 2 === 1;
+      const effL = isOdd90 ? item.dimensions.width : item.dimensions.length;
+      const effW = isOdd90 ? item.dimensions.length : item.dimensions.width;
+      maxX = Math.max(maxX, item.position.x + effL);
+      maxZ = Math.max(maxZ, item.position.z + effW);
+      maxY = Math.max(maxY, item.position.y + item.dimensions.height);
+    });
+    return {
+      length: Math.round(maxX),
+      width: Math.round(maxZ),
+      height: Math.round(maxY),
+      volume: (maxX * maxZ * maxY / 1e9).toFixed(2),
+    };
+  }, [variant]);
+
   // Ранний возврат — после всех хуков
   if (!variant) return null;
 
@@ -50,6 +71,20 @@ export default function MetricsPanel() {
           <div className="metric-value">{layerCount}</div>
           <div className="metric-label">Слоёв штабеля</div>
         </div>
+      )}
+      {cargoDimensions && (
+        <>
+          <div className="metric-card">
+            <div className="metric-value" style={{ fontSize: '14px' }}>
+              {cargoDimensions.length}×{cargoDimensions.width}×{cargoDimensions.height}
+            </div>
+            <div className="metric-label">Габариты, мм</div>
+          </div>
+          <div className="metric-card">
+            <div className="metric-value">{cargoDimensions.volume} м³</div>
+            <div className="metric-label">Объём груза</div>
+          </div>
+        </>
       )}
     </div>
   );

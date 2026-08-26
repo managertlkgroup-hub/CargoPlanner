@@ -133,7 +133,26 @@ export function generatePdfReport(
   doc.text(`Weight fill: ${variant.weightFill}%`, margin, y); y += 5;
   doc.text(`Total weight: ${variant.totalWeight} kg`, margin, y); y += 5;
   doc.text(`Free volume: ${volToM3(variant.freeVolume)}`, margin, y); y += 5;
-  doc.text(`Items placed: ${variant.items.length}`, margin, y); y += 10;
+  doc.text(`Items placed: ${variant.items.length}`, margin, y); y += 8;
+
+  // Габариты размещённого груза
+  if (variant.items.length > 0) {
+    let maxX = 0, maxZ = 0, maxY = 0;
+    variant.items.forEach((item) => {
+      const { effLength, effWidth } = getEffectiveGround(item);
+      maxX = Math.max(maxX, item.position.x + effLength);
+      maxZ = Math.max(maxZ, item.position.z + effWidth);
+      maxY = Math.max(maxY, item.position.y + item.dimensions.height);
+    });
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Cargo Dimensions:', margin, y); y += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Length: ${Math.round(maxX)} mm`, margin + 4, y); y += 4;
+    doc.text(`Width: ${Math.round(maxZ)} mm`, margin + 4, y); y += 4;
+    doc.text(`Height: ${Math.round(maxY)} mm`, margin + 4, y); y += 4;
+    doc.text(`Volume: ${(maxX * maxZ * maxY / 1e9).toFixed(2)} m3`, margin + 4, y); y += 8;
+  }
 
   // 2D-схемы
   doc.setFontSize(13);

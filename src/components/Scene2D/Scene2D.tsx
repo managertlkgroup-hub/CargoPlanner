@@ -216,27 +216,33 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
         const clampedZ = Math.max(0, Math.min(vehicle.width - itemW, rawPackZ));
         
         // Проверка коллизий AABB в 2D
-        const hasCollision = variant.items.some((other) => {
-          if (other.id === item.id) return false;
-          let oL = other.dimensions.length;
-          let oW = other.dimensions.width;
-          const oRot = other.rotationY ?? other.rotation?.y ?? 0;
-          if (Math.abs(oRot % 180) === 90) { [oL, oW] = [oW, oL]; }
-          return (
-            clampedX < other.position.x + oL &&
-            clampedX + itemL > other.position.x &&
-            clampedZ < other.position.z + oW &&
-            clampedZ + itemW > other.position.z
-          );
-        });
-        
-        if (!hasCollision) {
-          updateCargoPosition(drag.itemId, {
-            x: Math.round(clampedX),
-            y: item.position.y,
-            z: Math.round(clampedZ),
+        const checkCollision2D = (cx: number, cz: number) => {
+          return variant.items.some((other) => {
+            if (other.id === item.id) return false;
+            let oL = other.dimensions.length;
+            let oW = other.dimensions.width;
+            const oRot = other.rotationY ?? other.rotation?.y ?? 0;
+            if (Math.abs(oRot % 180) === 90) { [oL, oW] = [oW, oL]; }
+            return (
+              cx < other.position.x + oL &&
+              cx + itemL > other.position.x &&
+              cz < other.position.z + oW &&
+              cz + itemW > other.position.z
+            );
           });
+        };
+        
+        // Try full move first, then slide along axes
+        if (!checkCollision2D(clampedX, clampedZ)) {
+          updateCargoPosition(drag.itemId, { x: Math.round(clampedX), y: item.position.y, z: Math.round(clampedZ) });
+        } else if (!checkCollision2D(clampedX, item.position.z)) {
+          // Slide along X only (block Z)
+          updateCargoPosition(drag.itemId, { x: Math.round(clampedX), y: item.position.y, z: item.position.z });
+        } else if (!checkCollision2D(item.position.x, clampedZ)) {
+          // Slide along Z only (block X)
+          updateCargoPosition(drag.itemId, { x: item.position.x, y: item.position.y, z: Math.round(clampedZ) });
         }
+        // else: both axes blocked, do nothing
       } else {
         const item = hitTest(mx, my);
         canvas.style.cursor = item ? 'grab' : 'default';
