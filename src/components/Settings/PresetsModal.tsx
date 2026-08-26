@@ -55,13 +55,18 @@ export default function PresetsModal({ onClose }: Props) {
 function VehiclesTab() {
   const customVehicles = useAppStore((s) => s.customVehicles);
   const removeCustomVehicle = useAppStore((s) => s.removeCustomVehicle);
-  const selectVehicle = useAppStore((s) => s.selectVehicle);
-  const selectedVehicleId = useAppStore((s) => s.selectedVehicleId);
   const [showAdd, setShowAdd] = useState(false);
+  const [hiddenBuiltIn, setHiddenBuiltIn] = useState<Set<string>>(new Set());
 
   const builtIn = getDefaultVehicles();
 
-  const handleDelete = (id: string) => {
+  const handleDeleteBuiltIn = (id: string) => {
+    if (window.confirm('Скрыть стандартный пресет? (можно восстановить перезагрузкой)')) {
+      setHiddenBuiltIn((prev) => new Set(prev).add(id));
+    }
+  };
+
+  const handleDeleteCustom = (id: string) => {
     if (window.confirm('Удалить пользовательский автомобиль?')) {
       removeCustomVehicle(id);
     }
@@ -74,19 +79,26 @@ function VehiclesTab() {
         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>
           Стандартные
         </div>
-        {builtIn.map((v) => (
+        {builtIn.filter((v) => !hiddenBuiltIn.has(v.id)).map((v) => (
           <div
             key={v.id}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '6px 8px', borderRadius: 6, marginBottom: 2,
-              background: selectedVehicleId === v.id ? 'rgba(59,130,246,0.1)' : 'transparent',
-              cursor: 'pointer', fontSize: 13,
+              padding: '6px 8px', borderRadius: 6, marginBottom: 2, fontSize: 13,
             }}
-            onClick={() => selectVehicle(v.id)}
           >
             <span>{v.name} — {v.length}×{v.width}×{v.height} мм, {v.maxWeight} кг</span>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>✓</span>
+            <button
+              type="button"
+              onClick={() => handleDeleteBuiltIn(v.id)}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--color-danger)', fontWeight: 700, fontSize: 14, padding: '0 4px',
+              }}
+              title="Скрыть"
+            >
+              ✕
+            </button>
           </div>
         ))}
 
@@ -101,16 +113,13 @@ function VehiclesTab() {
                 key={v.id}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '6px 8px', borderRadius: 6, marginBottom: 2,
-                  background: selectedVehicleId === v.id ? 'rgba(59,130,246,0.1)' : 'transparent',
-                  cursor: 'pointer', fontSize: 13,
+                  padding: '6px 8px', borderRadius: 6, marginBottom: 2, fontSize: 13,
                 }}
-                onClick={() => selectVehicle(v.id)}
               >
                 <span>{v.name} — {v.length}×{v.width}×{v.height} мм, {v.maxWeight} кг</span>
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); handleDelete(v.id); }}
+                  onClick={() => handleDeleteCustom(v.id)}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
                     color: 'var(--color-danger)', fontWeight: 700, fontSize: 14, padding: '0 4px',
@@ -142,6 +151,7 @@ function CargoTab() {
   const removeCustomCargoPreset = useAppStore((s) => s.removeCustomCargoPreset);
   const builtInPresets = CARGO_PRESETS;
   const [showAdd, setShowAdd] = useState(false);
+  const [hiddenBuiltIn, setHiddenBuiltIn] = useState<Set<number>>(new Set());
 
   return (
     <div>
@@ -151,7 +161,32 @@ function CargoTab() {
           Стандартные
         </div>
         {builtInPresets.map((p, idx) => (
-          <PresetRow key={p.name + idx} preset={p} />
+          hiddenBuiltIn.has(idx) ? null : (
+            <div
+              key={p.name + idx}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '6px 8px', borderRadius: 6, marginBottom: 2, fontSize: 13,
+              }}
+            >
+              <span>{p.name} — {p.length}×{p.width}×{p.height} мм, {p.weight} кг</span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm('Скрыть стандартный пресет?')) {
+                    setHiddenBuiltIn((prev) => new Set(prev).add(idx));
+                  }
+                }}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--color-danger)', fontWeight: 700, fontSize: 14, padding: '0 4px',
+                }}
+                title="Скрыть"
+              >
+                ✕
+              </button>
+            </div>
+          )
         ))}
 
         {/* Custom presets */}
@@ -198,17 +233,7 @@ function CargoTab() {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function PresetRow({ preset }: { preset: CargoPreset }) {
-  return (
-    <div
-      style={{
-        padding: '6px 8px', borderRadius: 6, marginBottom: 2, fontSize: 13,
-      }}
-    >
-      {preset.name} — {preset.length}×{preset.width}×{preset.height} мм, {preset.weight} кг
-    </div>
-  );
-}
+
 
 function AddCargoPresetForm({ onDone }: { onDone: () => void }) {
   const addCustomCargoPreset = useAppStore((s) => s.addCustomCargoPreset);

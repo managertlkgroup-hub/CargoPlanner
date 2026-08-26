@@ -89,12 +89,14 @@ function drawTopView(
     ctx.lineWidth = 1;
     ctx.strokeRect(x, y, iw, ih);
 
-    if (iw > 20 && ih > 14) {
+    if (iw > 14 && ih > 14) {
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 9px system-ui, sans-serif';
+      ctx.font = 'bold 11px system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`${Math.round(effLength)}×${Math.round(effWidth)}`, x + iw / 2, y + ih / 2);
+      // Порядковый номер груза (1-based)
+      const itemIdx = variant.items.indexOf(item) + 1;
+      ctx.fillText(String(itemIdx), x + iw / 2, y + ih / 2);
     }
   });
 
@@ -125,51 +127,7 @@ function drawTopView(
   }
 }
 
-/** Рисует 2D-вид сбоку (XY) раскладки */
-function drawSideView(
-  ctx: CanvasRenderingContext2D,
-  vehicle: Vehicle,
-  variant: LayoutVariant,
-  offsetX: number,
-  offsetY: number,
-  scale: number,
-) {
-  const vh = vehicle.height * scale;
-  const vw = vehicle.length * scale;
 
-  ctx.strokeStyle = '#475569';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(offsetX, offsetY, vw, vh);
-  ctx.fillStyle = '#f1f5f9';
-  ctx.fillRect(offsetX, offsetY, vw, vh);
-
-  variant.items.forEach((item) => {
-    const { effLength } = getEffectiveGround(item);
-    const x = offsetX + item.position.x * scale;
-    const y = offsetY + vh - (item.position.y + item.dimensions.height) * scale;
-    const iw = effLength * scale;
-    const ih = item.dimensions.height * scale;
-
-    // Используем цвет груза для визуального различия слоёв
-    ctx.fillStyle = item.color || '#22c55e';
-    ctx.globalAlpha = 0.75;
-    ctx.fillRect(x, y, iw, ih);
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x, y, iw, ih);
-
-    // Подпись с размерами (если груз достаточно большой)
-    if (iw > 16 && ih > 12) {
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 7px system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      const label = `${Math.round(effLength)}×${Math.round(item.dimensions.height)}`;
-      ctx.fillText(label, x + iw / 2, y + ih / 2);
-    }
-  });
-}
 
 /** Рисует таблицу грузов */
 function drawCargoTable(
@@ -294,20 +252,23 @@ export function generatePdfReport(
   y += 8;
   const topScale = Math.min(300 / vehicle.length, 180 / vehicle.width, 1.5);
   drawTopView(ctx, vehicle, variant, 30, y, topScale);
-  y += vehicle.width * topScale + 20;
+  y += vehicle.width * topScale + 14;
 
-  // Side view - skip if no room
-  if (y > 700) {
-    // No room on this page, draw below cargo table
-  }
-  ctx.fillStyle = '#1e293b';
-  ctx.font = 'bold 13px system-ui, sans-serif';
+  // Легенда номеров (номер → название груза)
+  ctx.fillStyle = '#64748b';
+  ctx.font = '9px system-ui, sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText('Вид сбоку:', 30, y);
-  y += 8;
-  const sideScale = Math.min(300 / vehicle.length, 150 / vehicle.height, 1.5);
-  drawSideView(ctx, vehicle, variant, 30, y, sideScale);
-  y += vehicle.height * sideScale + 20;
+  ctx.textBaseline = 'top';
+  const legendCols = 3;
+  const colWidth = (baseW - 60) / legendCols;
+  variant.items.forEach((item, idx) => {
+    const col = idx % legendCols;
+    const row = Math.floor(idx / legendCols);
+    const lx = 30 + col * colWidth;
+    const ly = y + row * 14;
+    ctx.fillText(`${idx + 1}. ${item.name}`, lx, ly);
+  });
+  y += Math.ceil(variant.items.length / legendCols) * 14 + 8;
 
   // Cargo table
   ctx.fillStyle = '#1e293b';

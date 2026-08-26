@@ -73,7 +73,7 @@ export function exportToXLSX(
       ['Суммарный вес, кг', variant.totalWeight, '', ''],
       ['Свободный объём, м³', round2(variant.freeVolume / 1e9), '', ''],
       ['', '', '', ''],
-      ['Название', 'Форма', 'Позиция (X, Y, Z), мм', 'Размер (Д×Ш×В), мм'],
+      ['Название', 'Форма', 'Размер (Д×Ш×В), мм', 'Вес, кг'],
     ];
 
     variant.items.forEach((item) => {
@@ -84,13 +84,13 @@ export function exportToXLSX(
       rows.push([
         item.name,
         shapeLabel(item.shape),
-        `${Math.round(item.position.x)}, ${Math.round(item.position.y)}, ${Math.round(item.position.z)}`,
         sizeText,
+        item.weight,
       ]);
     });
 
     const wsVariant = XLSX.utils.aoa_to_sheet(rows);
-    wsVariant['!cols'] = [{ wch: 28 }, { wch: 14 }, { wch: 26 }, { wch: 30 }];
+    wsVariant['!cols'] = [{ wch: 28 }, { wch: 14 }, { wch: 30 }, { wch: 10 }];
     XLSX.utils.book_append_sheet(wb, wsVariant, sheetName);
   });
 

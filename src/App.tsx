@@ -8,7 +8,6 @@ import CargoTable from './components/CargoTable/CargoTable';
 import RouteEditor from './components/RouteEditor/RouteEditor';
 import Scene3D from './components/Scene3D/Scene3D';
 import Scene2D from './components/Scene2D/Scene2D';
-import CoordinatesEditor from './components/Scene3D/CoordinatesEditor';
 import VariantTabs from './components/VariantTabs/VariantTabs';
 import MetricsPanel from './components/MetricsPanel/MetricsPanel';
 import SettingsModal from './components/Settings/SettingsModal';
@@ -118,7 +117,24 @@ const App: React.FC = () => {
               onChange={(e) => {
                 const checked = e.target.checked;
                 setStacking(checked);
-                setSettings({ ...settings, maxStackHeight: checked ? settings.maxStackHeight || 2000 : 0 });
+                const newSettings = { ...settings, maxStackHeight: checked ? settings.maxStackHeight || 2000 : 0 };
+                setSettings(newSettings);
+                // Автоматический пересчёт при включении/выключении штабелирования
+                if (cargo.length > 0) {
+                  const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
+                  setCalculating(true);
+                  try {
+                    const result = packItems(vehicle, cargo, newSettings, loadingPoints);
+                    if (!result.error) {
+                      setResult(result);
+                      const pristineMap: Record<string, typeof result.variants[number]['items']> = {};
+                      result.variants.forEach((v) => { pristineMap[v.id] = v.items; });
+                      setPristine(pristineMap);
+                      setActiveVariant(result.variants[0].id);
+                    }
+                  } catch (_) { /* ignore */ }
+                  finally { setCalculating(false); }
+                }
               }}
             />
             <label htmlFor="stacking-toggle" style={{ fontSize: 13, color: 'var(--text)' }}>
@@ -166,7 +182,6 @@ const App: React.FC = () => {
           </div>
           
           <ReportButton />
-          <CoordinatesEditor />
         </div>
       </main>
 
