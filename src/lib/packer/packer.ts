@@ -168,6 +168,14 @@ function packIntoBin(
       }
     });
 
+    // Compute current bounding box of placed items for compactness scoring
+    let currentMaxX = 0;
+    let currentMaxZ = 0;
+    for (const p of placed) {
+      currentMaxX = Math.max(currentMaxX, p.x + p.placedLength);
+      currentMaxZ = Math.max(currentMaxZ, p.z + p.placedWidth);
+    }
+
     for (const point of points) {
       for (const orientation of orientations) {
         const placedLength = orientation.dx;
@@ -202,20 +210,25 @@ function packIntoBin(
         }
         if (usedWeight + box.weight > maxWeight) continue;
 
-        // === SCORING ===
+        // === SCORING WITH COMPACTNESS ===
+        // Compute bounding box after hypothetical placement
+        const newMaxX = Math.max(currentMaxX, point.x + placedLength);
+        const newMaxZ = Math.max(currentMaxZ, point.z + placedWidth);
+        // Compactness: minimize the larger dimension of the bounding box
+        // This favors 5×2 (max=6000) over 10×1 (max=12000)
+        const footprintMax = Math.max(newMaxX, newMaxZ);
+
         let score: number;
 
         if (sortMode === 'along') {
-          // along: длинная сторона вдоль X, заполняем ВСЕ X на текущем Z → min Z, потом min X
-          // Это заполняет горизонтальные ряды (по X) перед переходом на следующий ряд (по Z)
-          score = point.y * 1e9 + point.z * 1e6 + point.x;
+          // along: compactness first, then prefer row-filling (min Z, then min X)
+          score = point.y * 1e9 + footprintMax * 1e6 + point.z * 100 + point.x;
         } else if (sortMode === 'across') {
-          // across: длинная сторона вдоль Z, заполняем ВСЕ Z на текущем X → min X, потом min Z
-          // Это заполняет вертикальные столбцы (по Z) перед переходом на следующий столбец (по X)
-          score = point.y * 1e9 + point.x * 1e6 + point.z;
+          // across: compactness first, then prefer column-filling (min X, then min Z)
+          score = point.y * 1e9 + footprintMax * 1e6 + point.x * 100 + point.z;
         } else {
-          // mixed: минимизируем расстояние до начала
-          score = point.y * 1e9 + (point.x + point.z) * 1e3;
+          // mixed: compactness + balanced footprint + orientation alternation
+          score = point.y * 1e9 + footprintMax * 1e6 + (newMaxX + newMaxZ) * 10;
           // Бонус за чередование ориентаций (смешиваем вдоль/поперёк)
           const isAlong = orientation.rotY === 0;
           const dominated = isAlong ? alongCount : acrossCount;
@@ -225,12 +238,6 @@ function packIntoBin(
             score += diff * 1e4; // штраф за «лишнюю» ориентацию
           } else if (diff < 0) {
             score -= Math.abs(diff) * 1e4; // бонус за «недостающую» ориентацию
-          }
-          // Вторичный критерий: при равном количестве — предпочитаем более компактное размещение
-          // (минимизируем максимальную координату, чтобы оставить больше места)
-          if (diff === 0) {
-            const maxCoord = Math.max(point.x + placedLength, point.z + placedWidth);
-            score += maxCoord * 0.1; // лёгкий штраф за менее компактное размещение
           }
         }
 
