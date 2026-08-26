@@ -178,7 +178,18 @@ function packIntoBin(
           rotY: orientation.rotY,
         };
 
-        if (placed.some((p) => intersects(candidate, p))) continue;
+        if (placed.some((p) => intersects(candidate, p))) {
+          const collider = placed.find((p) => intersects(candidate, p));
+          if (collider) {
+            console.warn(
+              `[packIntoBin] Коллизия: ${box.name} (point=(${point.x},${point.y},${point.z}), ` +
+              `size=${placedLength}x${placedWidth}) с ` +
+              `${collider.name} (x=${collider.x}, z=${collider.z}, ` +
+              `size=${collider.placedLength}x${collider.placedWidth}) — пропуск`
+            );
+          }
+          continue;
+        }
         if (usedWeight + box.weight > maxWeight) continue;
 
         // === SCORING ===
@@ -240,10 +251,18 @@ function packIntoBin(
       // Точка сзади от груза (по оси Z)
       points.push({ x: point.x, y: point.y, z: point.z + placedBox.placedWidth });
       
-      // Удаляем дубликаты точек (с небольшой погрешностью)
+      // Удаляем дубликаты и точки, попавшие внутрь уже размещённых грузов
       const uniquePoints: { x: number; y: number; z: number }[] = [];
       const epsilon = 0.001;
       for (const p of points) {
+        // Пропускаем точки внутри размещённых грузов
+        const insidePlaced = placed.some(pl =>
+          p.x >= pl.x - epsilon && p.x <= pl.x + pl.placedLength + epsilon &&
+          p.y >= pl.y - epsilon && p.y <= pl.y + pl.placedHeight + epsilon &&
+          p.z >= pl.z - epsilon && p.z <= pl.z + pl.placedWidth + epsilon
+        );
+        if (insidePlaced) continue;
+
         const isDuplicate = uniquePoints.some(up => 
           Math.abs(up.x - p.x) < epsilon && 
           Math.abs(up.y - p.y) < epsilon && 
@@ -266,6 +285,20 @@ function packIntoBin(
     placed.forEach((p, i) => {
       console.log(`  ${i + 1}. ${p.name}: x=${p.x}, y=${p.y}, z=${p.z}, size=${p.placedLength}x${p.placedWidth}x${p.placedHeight}`);
     });
+
+    // Пост-проверка: убеждаемся что нет пересечений между размещёнными грузами
+    for (let i = 0; i < placed.length; i++) {
+      for (let j = i + 1; j < placed.length; j++) {
+        if (intersects(placed[i], placed[j])) {
+          console.warn(
+            `[packIntoBin] ⚠️ КОЛЛИЗИЯ: ${placed[i].name} (x=${placed[i].x}, z=${placed[i].z}, ` +
+            `size=${placed[i].placedLength}x${placed[i].placedWidth}) и ` +
+            `${placed[j].name} (x=${placed[j].x}, z=${placed[j].z}, ` +
+            `size=${placed[j].placedLength}x${placed[j].placedWidth})`
+          );
+        }
+      }
+    }
   }
 
   return placed;
