@@ -259,18 +259,13 @@ export const useAppStore = create<AppState>()(
         const result = patchActiveVariantItems(get().result, get().activeVariant, (item) => {
           if (item.id !== cargoId) return item;
           const norm = ((angle % 360) + 360) % 360;
-          const prevRot = item.rotationY ?? 0;
-          // Определяем, нужно ли менять местами длину и ширину
-          const prevOdd = Math.round(prevRot / 90) % 2 === 1;
-          const nextOdd = Math.round(norm / 90) % 2 === 1;
-          const shouldSwap = prevOdd !== nextOdd;
+          // НЕ меняем dimensions — packer уже установил оригинальные размеры,
+          // rotationY определяет визуальную ориентацию через группу вращения в 3D
+          // и проверку Math.abs(rotY % 180) === 90 в Scene2D.
           return {
             ...item,
             rotationY: norm,
             rotation: { y: norm },
-            dimensions: shouldSwap
-              ? { length: item.dimensions.width, width: item.dimensions.length, height: item.dimensions.height }
-              : item.dimensions,
           };
         });
         saveToStorage(KEYS.result, result);

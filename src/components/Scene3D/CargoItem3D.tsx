@@ -99,8 +99,8 @@ export default function CargoItem3D({
 
   // Позиция центра в сцене (левый нижний угол пакера -> центр сцены)
   const scenePos = useMemo(
-    () => packToScenePosition(item.position, item.dimensions, vehicle, SCALE),
-    [item.position, item.dimensions, vehicle],
+    () => packToScenePosition(item.position, item.dimensions, vehicle, SCALE, item.rotationY),
+    [item.position, item.dimensions, vehicle, item.rotationY],
   );
 
   // Поворот вокруг Y
@@ -150,6 +150,7 @@ export default function CargoItem3D({
       item.dimensions,
       vehicle,
       SCALE,
+      item.rotationY,
     );
 
     // Проверка коллизии с другими грузами — ДО обновления позиции

@@ -142,13 +142,13 @@ function packIntoBin(
     points.sort((a, b) => {
       if (a.y !== b.y) return a.y - b.y;
       if (sortMode === 'along') {
-        // along: длинная сторона вдоль X → заполняем по Z (min X, потом min Z)
+        // along: длинная сторона вдоль X → заполняем по ширине Z (min X, потом min Z)
         if (a.x !== b.x) return a.x - b.x;
         return a.z - b.z;
       } else if (sortMode === 'across') {
-        // across: длинная сторона вдоль Z → заполняем по X (min Z, потом min X)
-        if (a.z !== b.z) return a.z - b.z;
-        return a.x - b.x;
+        // across: длинная сторона вдоль Z → заполняем по Z (min X, потом min Z)
+        if (a.x !== b.x) return a.x - b.x;
+        return a.z - b.z;
       } else {
         // mixed: min(X+Z) — равномерное заполнение
         const sumA = a.x + a.z;
@@ -196,22 +196,29 @@ function packIntoBin(
         let score: number;
 
         if (sortMode === 'along') {
-          // along: длинная сторона вдоль X, заполняем Z → min X, потом min Z
+          // along: длинная сторона вдоль X, заполняем по Z → min X, потом min Z
           score = point.y * 1e9 + point.x * 1e6 + point.z;
         } else if (sortMode === 'across') {
-          // across: длинная сторона вдоль Z, заполняем по X → min Z, потом min X
+          // across: длинная сторона вдоль Z, заполняем по Z → min Z, потом min X
           score = point.y * 1e9 + point.z * 1e6 + point.x;
         } else {
-          // mixed: минимизируем расстояние до начала + штраф за перекос
+          // mixed: минимизируем расстояние до начала
           score = point.y * 1e9 + (point.x + point.z) * 1e3;
           // Бонус за чередование ориентаций (смешиваем вдоль/поперёк)
           const isAlong = orientation.rotY === 0;
           const dominated = isAlong ? alongCount : acrossCount;
           const other = isAlong ? acrossCount : alongCount;
-          if (dominated > other) {
-            score += (dominated - other) * 1e4; // штраф за «лишнюю» ориентацию
-          } else {
-            score -= 1; // лёгкий бонус за «недостающую» ориентацию
+          const diff = dominated - other;
+          if (diff > 0) {
+            score += diff * 1e4; // штраф за «лишнюю» ориентацию
+          } else if (diff < 0) {
+            score -= Math.abs(diff) * 1e4; // бонус за «недостающую» ориентацию
+          }
+          // Вторичный критерий: при равном количестве — предпочитаем более компактное размещение
+          // (минимизируем максимальную координату, чтобы оставить больше места)
+          if (diff === 0) {
+            const maxCoord = Math.max(point.x + placedLength, point.z + placedWidth);
+            score += maxCoord * 0.1; // лёгкий штраф за менее компактное размещение
           }
         }
 
