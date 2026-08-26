@@ -2,62 +2,36 @@
 // Выбор автомобиля (пресет или пользовательский)
 // ============================================================================
 
-import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { getCurrentVehicle, useAllVehicles } from '../../store/useAppStore';
-import CustomVehicleForm from './CustomVehicleForm';
 
 export default function VehicleSelector() {
   const selectedVehicleId = useAppStore((s) => s.selectedVehicleId);
   const selectVehicle = useAppStore((s) => s.selectVehicle);
-  const removeCustomVehicle = useAppStore((s) => s.removeCustomVehicle);
   const customVehicles = useAppStore((s) => s.customVehicles);
   const vehicles = useAllVehicles();
 
-  const [showCustom, setShowCustom] = useState(false);
   const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
-
-  const handleDelete = (id: string) => {
-    if (window.confirm('Удалить пользовательский автомобиль?')) {
-      removeCustomVehicle(id);
-    }
-  };
 
   return (
     <div className="panel">
       <div className="section-title">
         <span>🚚 Автомобиль</span>
-        <button className="btn btn-sm" onClick={() => setShowCustom((v) => !v)}>
-          {showCustom ? 'Закрыть' : '+ Свой авто'}
-        </button>
       </div>
 
       <div className="form-group mb-1">
         <label htmlFor="vehicle-select">Модель кузова</label>
-        <div style={{ display: 'flex', gap: '4px' }}>
-          <select
-            id="vehicle-select"
-            style={{ flex: 1 }}
-            value={selectedVehicleId}
-            onChange={(e) => selectVehicle(e.target.value)}
-          >
-            {vehicles.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.name} {v.isCustom ? '(свой)' : ''}
-              </option>
-            ))}
-          </select>
-          {vehicle.isCustom && (
-            <button
-              className="btn btn-sm btn-danger"
-              onClick={() => handleDelete(vehicle.id)}
-              title="Удалить"
-              style={{ flexShrink: 0 }}
-            >
-              ✕
-            </button>
-          )}
-        </div>
+        <select
+          id="vehicle-select"
+          value={selectedVehicleId}
+          onChange={(e) => selectVehicle(e.target.value)}
+        >
+          {vehicles.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.name} {v.isCustom ? '(свой)' : ''}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="metrics-grid vehicle-metrics">
@@ -70,8 +44,6 @@ export default function VehicleSelector() {
           <div className="metric-label">Грузоподъёмность, кг</div>
         </div>
       </div>
-
-      {showCustom && <CustomVehicleForm onDone={() => setShowCustom(false)} />}
     </div>
   );
 }

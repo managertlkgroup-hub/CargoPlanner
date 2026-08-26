@@ -99,15 +99,7 @@ function drawTopView(
   });
 
   // Подпись осей
-  ctx.fillStyle = '#64748b';
-  ctx.font = '11px system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('X (длина)', offsetX + vw / 2, offsetY + vh + 18);
-  ctx.save();
-  ctx.translate(offsetX - 18, offsetY + vh / 2);
-  ctx.rotate(-Math.PI / 2);
-  ctx.fillText('Z (ширина)', 0, 0);
-  ctx.restore();
+
 }
 
 /** Рисует 2D-вид сбоку (XY) раскладки */
@@ -143,15 +135,7 @@ function drawSideView(
     ctx.strokeRect(x, y, iw, ih);
   });
 
-  ctx.fillStyle = '#64748b';
-  ctx.font = '11px system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('X (длина)', offsetX + vw / 2, offsetY + vh + 18);
-  ctx.save();
-  ctx.translate(offsetX - 18, offsetY + vh / 2);
-  ctx.rotate(-Math.PI / 2);
-  ctx.fillText('Y (высота)', 0, 0);
-  ctx.restore();
+
 }
 
 /** Рисует таблицу грузов */
@@ -222,7 +206,7 @@ export function generatePdfReport(
 
   // Header
   y = drawHeader(ctx, canvasW, y);
-  y += 10;
+  y += 14;
 
   // Vehicle info
   y = drawSection(ctx, 30, y, canvasW, [
@@ -230,7 +214,7 @@ export function generatePdfReport(
     `Кузов: ${vehicle.length}×${vehicle.width}×${vehicle.height} мм`,
     `Грузоподъёмность: ${vehicle.maxWeight} кг`,
   ], { bold: false, fontSize: 13 });
-  y += 5;
+  y += 8;
 
   // Metrics
   y = drawSection(ctx, 30, y, canvasW, [
@@ -243,7 +227,7 @@ export function generatePdfReport(
     `Свободный объём: ${volToM3(variant.freeVolume)}`,
     `Размещено грузов: ${variant.items.length} шт.`,
   ], { fontSize: 12 });
-  y += 5;
+  y += 8;
 
   // Cargo dimensions
   if (variant.items.length > 0) {
@@ -262,7 +246,7 @@ export function generatePdfReport(
       `  Объём: ${(maxX * maxZ * maxY / 1e9).toFixed(2)} м³`,
     ], { fontSize: 12 });
   }
-  y += 10;
+  y += 14;
 
   // Top view
   ctx.fillStyle = '#1e293b';
@@ -272,11 +256,11 @@ export function generatePdfReport(
   y += 8;
   const topScale = Math.min(300 / vehicle.length, 180 / vehicle.width, 1.5);
   drawTopView(ctx, vehicle, variant, 30, y, topScale);
-  y += vehicle.width * topScale + 30;
+  y += vehicle.width * topScale + 20;
 
-  // Side view
-  if (y > 750) {
-    // new page for side view + table
+  // Side view - skip if no room
+  if (y > 700) {
+    // No room on this page, draw below cargo table
   }
   ctx.fillStyle = '#1e293b';
   ctx.font = 'bold 13px system-ui, sans-serif';
@@ -285,7 +269,7 @@ export function generatePdfReport(
   y += 8;
   const sideScale = Math.min(300 / vehicle.length, 150 / vehicle.height, 1.5);
   drawSideView(ctx, vehicle, variant, 30, y, sideScale);
-  y += vehicle.height * sideScale + 30;
+  y += vehicle.height * sideScale + 20;
 
   // Cargo table
   ctx.fillStyle = '#1e293b';

@@ -10,6 +10,7 @@ import { getCurrentVehicle } from '../../store/useAppStore';
 import { useActiveVariant } from '../../store/useAppStore';
 import ThemeToggle from '../Settings/ThemeToggle';
 import SessionModal from '../Settings/SessionModal';
+import PresetsModal from '../Settings/PresetsModal';
 
 interface HeaderProps {
   onOpenSettings: () => void;
@@ -28,6 +29,7 @@ export default function Header({ onOpenSettings }: HeaderProps) {
   const activeVariant = useActiveVariant();
 
   const [sessionOpen, setSessionOpen] = useState(false);
+  const [presetsOpen, setPresetsOpen] = useState(false);
 
   const handlePdf = () => {
     if (!result || !activeVariant) {
@@ -63,6 +65,9 @@ export default function Header({ onOpenSettings }: HeaderProps) {
       </div>
 
       <div className="header-actions">
+        <button className="btn btn-sm" onClick={() => setPresetsOpen(true)}>
+          📦 Пресеты
+        </button>
         <button className="btn btn-sm" onClick={() => setSessionOpen(true)}>
           💾 Сессии
         </button>
@@ -79,6 +84,7 @@ export default function Header({ onOpenSettings }: HeaderProps) {
       </div>
 
       {sessionOpen && <SessionModal onClose={() => setSessionOpen(false)} />}
+      {presetsOpen && <PresetsModal onClose={() => setPresetsOpen(false)} />}
     </header>
   );
 }

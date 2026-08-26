@@ -26,12 +26,14 @@ const App: React.FC = () => {
   const setPristine = useAppStore((s) => s.setPristine);
   const setActiveVariant = useAppStore((s) => s.setActiveVariant);
   const setCalculating = useAppStore((s) => s.setCalculating);
+  const setSettings = useAppStore((s) => s.setSettings);
   const error = useAppStore((s) => s.error);
   const setError = useAppStore((s) => s.setError);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [leftTab, setLeftTab] = useState<'cargo' | 'route'>('cargo');
   const [activeView, setActiveView] = useState<'3d' | '2d'>('3d');
+  const [stacking, setStacking] = useState(false);
 
   // Сброс результатов при смене автомобиля
   useEffect(() => {
@@ -103,6 +105,21 @@ const App: React.FC = () => {
           </div>
           {leftTab === 'cargo' ? <CargoTable /> : <RouteEditor />}
           <div className="section-divider" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+            <input
+              type="checkbox"
+              id="stacking-toggle"
+              checked={stacking}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setStacking(checked);
+                setSettings({ ...settings, maxStackHeight: checked ? settings.maxStackHeight || 2000 : 0 });
+              }}
+            />
+            <label htmlFor="stacking-toggle" style={{ fontSize: 13, color: 'var(--text)' }}>
+              📦 Штабелирование
+            </label>
+          </div>
           <button
             onClick={handleCalculate}
             disabled={isCalculating || cargo.length === 0}

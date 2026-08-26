@@ -1,6 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useActiveVariant, useSelectedVehicle, useAppStore } from '../../store/useAppStore';
 
+// Scene2D supports keyboard shortcuts:
+// R — rotate hovered/selected item by 90°
+// T — not handled here (kept in Scene3D for top-view toggle)
+
 interface Scene2DProps {
   width?: number;
   height?: number;
@@ -20,6 +24,9 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
     offsetX: number;
     offsetZ: number;
   } | null>(null);
+
+  // Track last hovered item for R key rotation
+  const lastHoveredIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const updateSize = () => {
@@ -261,6 +268,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
       } else {
         const item = hitTest(mx, my);
         canvas.style.cursor = item ? 'grab' : 'default';
+        updateHoveredId(mx, my);
       }
     },
     [hitTest, vehicle, variant, updateCargoPosition],
@@ -270,6 +278,30 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
     if (canvasRef.current) canvasRef.current.style.cursor = 'default';
     dragRef.current = null;
   }, []);
+
+  // R key rotation handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К') {
+        const targetId = lastHoveredIdRef.current;
+        if (targetId && variant) {
+          const item = variant.items.find((it) => it.id === targetId);
+          if (item) {
+            const current = item.rotationY ?? item.rotation?.y ?? 0;
+            rotateCargo(item.id, current + 90);
+          }
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [variant, rotateCargo]);
+
+  // Track hovered item for R key
+  const updateHoveredId = useCallback((mx: number, my: number) => {
+    const item = hitTest(mx, my);
+    lastHoveredIdRef.current = item?.id ?? null;
+  }, [hitTest]);
 
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -309,7 +341,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
         onDoubleClick={handleDoubleClick}
       />
       <div style={{ fontSize: 10, color: '#9ca3af', textAlign: 'center', padding: 2 }}>
-        Drag to move | Double-click to rotate
+        Перетаскивайте мышью · Двойной клик или R — поворот
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useAppStore, useActiveVariant, useSelectedVehicle } from '../../store/useAppStore';
@@ -7,17 +7,13 @@ import Container3D from './Container3D';
 import { SCALE } from './Container3D';
 
 const Scene3D: React.FC = () => {
-  const rotateCargo = useAppStore((s) => s.rotateCargo);
-
   const result = useAppStore((s) => s.result);
   const activeVariant = useAppStore((s) => s.activeVariant);
   const variant = useActiveVariant();
   const vehicle = useSelectedVehicle();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [lastInteractedId, setLastInteractedId] = useState<string | null>(null);
-  // Вид сверху по нажатию T
-  const [topView, setTopView] = useState(false);
+  const [topView] = useState(false);
   const controlsRef = useRef<any>(null);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -35,7 +31,6 @@ const Scene3D: React.FC = () => {
   // Диагностика: при изменении данных выводим каждый груз с его параметрами
   useEffect(() => {
     setSelectedId(null);
-    setLastInteractedId(null);
     const items = variant?.items ?? [];
     console.log('[Scene3D] Данные обновлены:', {
       variants: result?.variants?.length ?? 0,
@@ -54,30 +49,7 @@ const Scene3D: React.FC = () => {
     });
   }, [result, activeVariant, variant]);
 
-  // Поворот груза клавишей R на +90° и переключение вида сверху клавишей T
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if ((e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К') && variant) {
-        const targetId = lastInteractedId || selectedId;
-        if (targetId) {
-          const item = variant.items.find((it) => it.id === targetId);
-          if (!item) return;
-          const current = item.rotationY ?? item.rotation?.y ?? 0;
-          rotateCargo(targetId, current + 90);
-        }
-      }
-      // T — переключить вид сверху
-      if (e.key === 't' || e.key === 'T' || e.key === 'е' || e.key === 'Е') {
-        setTopView((prev) => !prev);
-      }
-    },
-    [lastInteractedId, selectedId, variant, rotateCargo],
-  );
 
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
 
   // Габариты кузова в сценных единицах
   const containerSize = useMemo(() => {
@@ -169,7 +141,7 @@ const Scene3D: React.FC = () => {
             vehicle={vehicle}
             isSelected={selectedId === item.id}
             onSelect={(id) => setSelectedId(id)}
-            onHover={(id) => setLastInteractedId(id)}
+            onHover={() => {}}
             allItems={packedItems}
           />
         ))}
@@ -193,11 +165,7 @@ const Scene3D: React.FC = () => {
       </div>
 
       <div className="scene-overlay scene-hint">
-        ЛКМ вращение · колесо — зум · R — поворот · T — вид сверху
-      </div>
-
-      <div className="rotate-hint">
-        Наведите на груз и нажмите R для поворота на 90° · T — вид сверху
+        ЛКМ вращение · колесо — зум
       </div>
     </div>
   );

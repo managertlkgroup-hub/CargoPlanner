@@ -8,13 +8,10 @@ import { useAppStore } from '../../store/useAppStore';
 import type { Cargo, CargoShape } from '../../types';
 import { uid } from '../../utils/helpers';
 import { getCargoPresets } from '../../lib/packer/presets';
-import type { CargoPreset } from '../../lib/packer/presets';
 
 export default function AddCargoForm() {
   const addCargo = useAppStore((s) => s.addCargo);
   const customCargoPresets = useAppStore((s) => s.customCargoPresets);
-  const addCustomCargoPreset = useAppStore((s) => s.addCustomCargoPreset);
-  const removeCustomCargoPreset = useAppStore((s) => s.removeCustomCargoPreset);
   const [error, setError] = useState('');
   const builtInPresets = getCargoPresets();
   const cargoPresets = [...builtInPresets, ...customCargoPresets];
@@ -146,64 +143,11 @@ export default function AddCargoForm() {
         <input name="quantity" type="number" min={1} defaultValue={1} />
       </div>
       {error && <div className="form-group full text-muted text-danger">{error}</div>}
-      <div className="form-group full" style={{ display: 'flex', gap: 8 }}>
-        <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
+      <div className="form-group full">
+        <button type="submit" className="btn btn-primary w-full">
           + Добавить груз
         </button>
-        <button
-          type="button"
-          className="btn btn-sm"
-          title="Сохранить текущие параметры как пресет"
-          onClick={() => {
-            const form = document.querySelector('.form-grid') as HTMLFormElement;
-            if (!form) return;
-            const fd = new FormData(form);
-            const name = String(fd.get('name') || '').trim();
-            if (!name) { setError('Укажите название для пресета.'); return; }
-            const preset: CargoPreset = {
-              name,
-              shape: (fd.get('shape') as CargoShape) || 'box',
-              length: Number(fd.get('length')) || 0,
-              width: Number(fd.get('width')) || 0,
-              height: Number(fd.get('height')) || 0,
-              weight: Number(fd.get('weight')) || 0,
-              diameter: Number(fd.get('diameter')) || undefined,
-            };
-            addCustomCargoPreset(preset);
-            setError('');
-          }}
-        >
-          💾 Сохранить пресет
-        </button>
       </div>
-      {customCargoPresets.length > 0 && (
-        <div className="form-group full">
-          <label>Мои пресеты</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {customCargoPresets.map((p, idx) => (
-              <span
-                key={p.name + idx}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  padding: '2px 8px', fontSize: 11,
-                  background: 'var(--bg-body)', border: '1px solid var(--border)',
-                  borderRadius: 4, cursor: 'default',
-                }}
-              >
-                {p.name}
-                <button
-                  type="button"
-                  onClick={() => removeCustomCargoPreset(idx)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontWeight: 700, fontSize: 12, padding: 0 }}
-                  title="Удалить пресет"
-                >
-                  ✕
-                </button>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
     </form>
   );
 }
