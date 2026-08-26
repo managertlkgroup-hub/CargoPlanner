@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import { getDefaultVehicles, type CargoPreset } from '../../lib/packer/presets';
+import { getDefaultVehicles, CARGO_PRESETS, type CargoPreset } from '../../lib/packer/presets';
 import type { CargoShape } from '../../types';
 import CustomVehicleForm from '../VehicleSelector/CustomVehicleForm';
 
@@ -140,7 +140,7 @@ function VehiclesTab() {
 function CargoTab() {
   const customCargoPresets = useAppStore((s) => s.customCargoPresets);
   const removeCustomCargoPreset = useAppStore((s) => s.removeCustomCargoPreset);
-  const builtInPresets = getCargoPresetsList();
+  const builtInPresets = CARGO_PRESETS;
   const [showAdd, setShowAdd] = useState(false);
 
   return (
@@ -283,7 +283,4 @@ function AddCargoPresetForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-function getCargoPresetsList(): CargoPreset[] {
-  const { CARGO_PRESETS } = require('../../lib/packer/presets');
-  return CARGO_PRESETS;
-}
+
