@@ -7,9 +7,7 @@ import Container3D from './Container3D';
 import { SCALE } from './Container3D';
 
 const Scene3D: React.FC = () => {
-  const updateCargoPosition = useAppStore((s) => s.updateCargoPosition);
   const rotateCargo = useAppStore((s) => s.rotateCargo);
-  const setError = useAppStore((s) => s.setError);
 
   const result = useAppStore((s) => s.result);
   const activeVariant = useAppStore((s) => s.activeVariant);
@@ -18,8 +16,6 @@ const Scene3D: React.FC = () => {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [lastInteractedId, setLastInteractedId] = useState<string | null>(null);
-  // Блокировка камеры во время перетаскивания груза
-  const [isDragging, setIsDragging] = useState(false);
   // Вид сверху по нажатию T
   const [topView, setTopView] = useState(false);
   const controlsRef = useRef<any>(null);
@@ -174,10 +170,6 @@ const Scene3D: React.FC = () => {
             isSelected={selectedId === item.id}
             onSelect={(id) => setSelectedId(id)}
             onHover={(id) => setLastInteractedId(id)}
-            onMove={(id, position) => updateCargoPosition(id, position)}
-            onDragStart={() => setIsDragging(true)}
-            onDragEnd={() => setIsDragging(false)}
-            onBoundsViolation={(msg) => setError(msg)}
             allItems={packedItems}
           />
         ))}
@@ -186,7 +178,7 @@ const Scene3D: React.FC = () => {
         <OrbitControls
           ref={controlsRef}
           makeDefault
-          enabled={!isDragging}
+          enabled={true}
           enablePan
           enableZoom
           target={[0, containerSize.height / 2, 0]}
@@ -201,7 +193,7 @@ const Scene3D: React.FC = () => {
       </div>
 
       <div className="scene-overlay scene-hint">
-        Перетаскивайте грузы мышью · ЛКМ вращение · колесо — зум
+        ЛКМ вращение · колесо — зум · R — поворот · T — вид сверху
       </div>
 
       <div className="rotate-hint">

@@ -608,7 +608,7 @@ html, body {
   gap: var(--spacing-sm);
   min-width: 0;
   min-height: 0;
-  padding-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-xl);
 }
 
 .scene-container {

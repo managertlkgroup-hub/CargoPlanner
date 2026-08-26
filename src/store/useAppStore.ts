@@ -15,12 +15,13 @@ import type {
   UnloadingPoint,
   Vehicle,
 } from '../types';
-import { getDefaultVehicles } from '../lib/packer/presets';
+import { getDefaultVehicles, type CargoPreset } from '../lib/packer/presets';
 import { loadFromStorage, saveToStorage, uid } from '../utils/helpers';
 
 /** Ключи localStorage */
 const KEYS = {
   vehicles: 'mlp:custom-vehicles',
+  customCargoPresets: 'mlp:custom-cargo-presets',
   cargo: 'mlp:cargo',
   vehicleId: 'mlp:vehicle-id',
   result: 'mlp:result',
@@ -44,6 +45,11 @@ interface AppState {
   // Тема
   theme: Theme;
   toggleTheme: () => void;
+
+  // Пользовательские пресеты грузов
+  customCargoPresets: CargoPreset[];
+  addCustomCargoPreset: (p: CargoPreset) => void;
+  removeCustomCargoPreset: (idx: number) => void;
 
   // Автомобили
   customVehicles: Vehicle[];
@@ -131,6 +137,19 @@ export const useAppStore = create<AppState>()(
         set({ theme: next });
         saveToStorage(KEYS.theme, next);
         document.documentElement.setAttribute('data-theme', next);
+      },
+
+      // --- Пользовательские пресеты грузов ---
+      customCargoPresets: loadFromStorage<CargoPreset[]>(KEYS.customCargoPresets, []),
+      addCustomCargoPreset: (p) => {
+        const list = [...get().customCargoPresets, p];
+        saveToStorage(KEYS.customCargoPresets, list);
+        set({ customCargoPresets: list });
+      },
+      removeCustomCargoPreset: (idx) => {
+        const list = get().customCargoPresets.filter((_, i) => i !== idx);
+        saveToStorage(KEYS.customCargoPresets, list);
+        set({ customCargoPresets: list });
       },
 
       // --- Автомобили ---
@@ -372,6 +391,7 @@ export const useAppStore = create<AppState>()(
       name: 'mlp-store',
       partialize: (s) => ({
         theme: s.theme,
+        customCargoPresets: s.customCargoPresets,
         customVehicles: s.customVehicles,
         selectedVehicleId: s.selectedVehicleId,
         cargo: s.cargo,

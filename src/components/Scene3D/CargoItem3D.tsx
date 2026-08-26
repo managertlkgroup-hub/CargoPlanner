@@ -1,39 +1,28 @@
 // ============================================================================
 // Отдельный груз в 3D-сцене: параллелепипед или цилиндр с подписью и тултипом
 //
-// Поддерживает ручное перетаскивание мышью по горизонтальной плоскости (XZ)
-// с ограничением по границам кузова. Высота (Y) при перетаскивании фиксируется.
-// Выбор груза кликом позволяет поворачивать его клавишей R.
+// 3D — ТОЛЬКО для отображения. Перетаскивание и поворот — только в 2D.
+// Клик по грузу позволяет выбирать его (для поворота клавишей R).
 // ============================================================================
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import * as THREE from 'three';
 import { Html, Text } from '@react-three/drei';
-import { useThree } from '@react-three/fiber';
 import type { PackedItem, Vehicle } from '../../types';
 import { SCALE } from './Container3D';
-import { packToScenePosition, sceneToPackPosition, halfExtentX, halfExtentZ } from './coords';
 
 interface Props {
   item: PackedItem;
   vehicle: Vehicle;
   /** true, если сейчас идёт расчёт или отключено редактирование */
   disabled?: boolean;
-  /** Колбэк при перетаскивании (реальное обновление состояния) */
-  onMove: (id: string, position: { x: number; y: number; z: number }) => void;
-  /** Колбэк окончания перетаскивания */
-  onDragEnd?: (id: string) => void;
-  /** Колбэк начала перетаскивания */
-  onDragStart?: (id: string) => void;
   /** Колбэк выбора груза (клик) — для поворота клавишей R */
   onSelect?: (id: string) => void;
-  /** Колбэк наведения — для поворота клавишей R */
+  /** Колбэк наведения — для подсветки */
   onHover?: (id: string) => void;
   /** Выделен ли груз в данный момент */
   isSelected?: boolean;
-  /** Сообщение при выходе за границы кузова */
-  onBoundsViolation?: (msg: string) => void;
-  /** Все размещённые грузы для проверки коллизий */
+  /** Все размещённые грузы (unused, kept for API compat) */
   allItems?: PackedItem[];
 }
 
@@ -41,27 +30,16 @@ export default function CargoItem3D({
   item,
   vehicle,
   disabled,
-  onMove,
-  onDragEnd,
-  onDragStart,
   onSelect,
   onHover,
   isSelected,
-  onBoundsViolation,
-  allItems,
+  allItems: _allItems,
 }: Props) {
   const [hovered, setHovered] = useState(false);
-  const [dragging, setDragging] = useState(false);
-  const [conflict, setConflict] = useState(false);
-  const groupRef = useRef<THREE.Group>(null);
-  const dragInfo = useRef<{ raycaster: THREE.Raycaster; plane: THREE.Plane } | null>(null);
-  const lastValidPos = useRef<{ x: number; y: number; z: number } | null>(null);
-
-  const { camera, gl, pointer } = useThree();
 
   const isCylinder = item.shape === 'cylinder';
   const diameter = item.diameter ?? 0;
-  
+
   // Размеры в сценных единицах
   const { l, w, h } = useMemo(() => {
     return {
@@ -71,37 +49,15 @@ export default function CargoItem3D({
     };
   }, [item.dimensions]);
 
-  // Проверка коллизии AABB
-  const checkCollision = (pos: { x: number; y: number; z: number }): boolean => {
-    if (!allItems) return false;
-    const rotY = item.rotationY ?? 0;
-    const isOdd90 = Math.round(((rotY % 360) + 360) % 360 / 90) % 2 === 1;
-    const xLen = isOdd90 ? item.dimensions.width : item.dimensions.length;
-    const zLen = isOdd90 ? item.dimensions.length : item.dimensions.width;
-    const yH = item.dimensions.height;
-    return allItems.some((other) => {
-      if (other.id === item.id) return false;
-      const otherRotY = other.rotationY ?? 0;
-      const otherOdd90 = Math.round(((otherRotY % 360) + 360) % 360 / 90) % 2 === 1;
-      const oXLen = otherOdd90 ? other.dimensions.width : other.dimensions.length;
-      const oZLen = otherOdd90 ? other.dimensions.length : other.dimensions.width;
-      const oYH = other.dimensions.height;
-      return (
-        pos.x < other.position.x + oXLen &&
-        pos.x + xLen > other.position.x &&
-        pos.y < other.position.y + oYH &&
-        pos.y + yH > other.position.y &&
-        pos.z < other.position.z + oZLen &&
-        pos.z + zLen > other.position.z
-      );
-    });
-  };
-
-  // Позиция центра в сцене (левый нижний угол пакера -> центр сцены)
-  const scenePos = useMemo(
-    () => packToScenePosition(item.position, item.dimensions, vehicle, SCALE, item.rotationY),
-    [item.position, item.dimensions, vehicle, item.rotationY],
-  );
+  // Позиция центра в сцене
+  const rot90 = item.rotationY === 90 || item.rotationY === 270;
+  const halfLen = rot90 ? item.dimensions.width / 2 : item.dimensions.length / 2;
+  const halfWid = rot90 ? item.dimensions.length / 2 : item.dimensions.width / 2;
+  const scenePos = useMemo(() => ({
+    x: (item.position.x + halfLen - vehicle.length / 2) * SCALE,
+    y: (item.position.y + item.dimensions.height / 2) * SCALE,
+    z: (item.position.z + halfWid - vehicle.width / 2) * SCALE,
+  }), [item.position.x, item.position.y, item.position.z, item.dimensions, vehicle, halfLen, halfWid]);
 
   // Поворот вокруг Y
   const rotY = ((item.rotationY ?? item.rotation?.y ?? 0) * Math.PI) / 180;
@@ -109,123 +65,33 @@ export default function CargoItem3D({
   // Подсветка для выбранного или наведённого груза
   const highlight = hovered || isSelected;
   const highlightIntensity = hovered || isSelected ? 0.25 : 0;
-  const displayColor = conflict ? '#ef4444' : item.color;
-
-  // --- Логика перетаскивания по горизонтальной плоскости ---
-  const startDrag = (e: any) => {
-    if (disabled) return;
-    e.stopPropagation();
-    if (onSelect) onSelect(item.id);
-    if (onDragStart) onDragStart(item.id);
-    lastValidPos.current = { ...item.position };
-    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -scenePos.y);
-    const raycaster = new THREE.Raycaster();
-    dragInfo.current = { raycaster, plane };
-    setDragging(true);
-    setConflict(false);
-    gl.domElement.setPointerCapture(e.pointerId);
-  };
-
-  const handlePointerMove = (e: any) => {
-    if (!dragInfo.current || !dragging) return;
-    e.stopPropagation();
-    const { raycaster, plane } = dragInfo.current;
-    raycaster.setFromCamera(pointer, camera);
-    const target = new THREE.Vector3();
-    if (!raycaster.ray.intersectPlane(plane, target)) return;
-
-    // Ограничение по границам кузова (с учётом текущих габаритов и поворота)
-    const halfX = halfExtentX(item, SCALE);
-    const halfZ = halfExtentZ(item, SCALE);
-    const halfL = (vehicle.length * SCALE) / 2;
-    const halfW = (vehicle.width * SCALE) / 2;
-    const clampedX = Math.max(-halfL + halfX, Math.min(halfL - halfX, target.x));
-    const clampedZ = Math.max(-halfW + halfZ, Math.min(halfW - halfZ, target.z));
-
-    // Преобразуем обратно в координаты пакера (левый нижний угол, мм)
-    const basePos = lastValidPos.current ?? item.position;
-    const snap10 = (v: number) => Math.round(v / 10) * 10;
-    
-    // Попытка перемещения: полная позиция, затем по осям (для "скольжения" вдоль стенок)
-    const rawPackPos = sceneToPackPosition(clampedX, scenePos.y, clampedZ, item.dimensions, vehicle, SCALE, item.rotationY);
-    const fullPackPos = { x: snap10(rawPackPos.x), y: rawPackPos.y, z: snap10(rawPackPos.z) };
-    
-    // 1. Пробуем полное перемещение
-    if (!checkCollision(fullPackPos)) {
-      setConflict(false);
-      lastValidPos.current = fullPackPos;
-      onMove(item.id, fullPackPos);
-      if (groupRef.current) {
-        groupRef.current.position.set(clampedX, scenePos.y, clampedZ);
-      }
-      return;
-    }
-    
-    // 2. Пробуем перемещение только по X (Z = старая позиция)
-    const xOnlyPackPos = { x: fullPackPos.x, y: basePos.y, z: basePos.z };
-    if (!checkCollision(xOnlyPackPos)) {
-      setConflict(false);
-      lastValidPos.current = xOnlyPackPos;
-      onMove(item.id, xOnlyPackPos);
-      if (groupRef.current) {
-        groupRef.current.position.set(clampedX, scenePos.y, groupRef.current.position.z);
-      }
-      return;
-    }
-    
-    // 3. Пробуем перемещение только по Z (X = старая позиция)
-    const zOnlyPackPos = { x: basePos.x, y: basePos.y, z: fullPackPos.z };
-    if (!checkCollision(zOnlyPackPos)) {
-      setConflict(false);
-      lastValidPos.current = zOnlyPackPos;
-      onMove(item.id, zOnlyPackPos);
-      if (groupRef.current) {
-        groupRef.current.position.set(groupRef.current.position.x, scenePos.y, clampedZ);
-      }
-      return;
-    }
-    
-    // 4. Все варианты приводят к коллизии — не перемещаем
-    setConflict(true);
-
-    const wasClamped =
-      Math.abs(clampedX - target.x) > 1e-6 || Math.abs(clampedZ - target.z) > 1e-6;
-    if (wasClamped && onBoundsViolation) {
-      onBoundsViolation(`Груз «${item.name}» упёрся в стенку кузова.`);
-    }
-  };
-
-  const endDrag = (e: any) => {
-    if (!dragInfo.current) return;
-    e.stopPropagation();
-    gl.domElement.releasePointerCapture(e.pointerId);
-    dragInfo.current = null;
-    setDragging(false);
-    if (onDragEnd) onDragEnd(item.id);
-  };
 
   // Позиция подписи
   const labelY = isCylinder ? h / 2 + 0.06 : h / 2 + 0.05;
 
   return (
     <group
-      ref={groupRef}
       position={[scenePos.x, scenePos.y, scenePos.z]}
       rotation={[0, rotY, 0]}
-      onPointerDown={startDrag}
-      onPointerMove={handlePointerMove}
-      onPointerUp={endDrag}
-      onPointerOver={(e) => { e.stopPropagation(); setHovered(true); if (onHover) onHover(item.id); }}
-      onPointerOut={() => { if (!dragging) setHovered(false); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!disabled && onSelect) onSelect(item.id);
+      }}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        setHovered(true);
+        if (onHover) onHover(item.id);
+      }}
+      onPointerOut={() => setHovered(false)}
     >
       {/* Цилиндр: поворот на -π/2 вокруг Z, чтобы ось стала горизонтальной вдоль X */}
       {isCylinder ? (
         <mesh rotation={[0, 0, -Math.PI / 2]}>
           <cylinderGeometry args={[(diameter * SCALE) / 2, (diameter * SCALE) / 2, l, 32]} />
           <meshStandardMaterial
-            color={displayColor}
+            color={item.color}
             transparent
-            opacity={dragging ? 0.55 : 0.9}
+            opacity={0.9}
             emissive={highlight ? new THREE.Color('#ffffff') : new THREE.Color('#000000')}
             emissiveIntensity={highlightIntensity}
           />
@@ -241,9 +107,9 @@ export default function CargoItem3D({
         <mesh>
           <boxGeometry args={[l, h, w]} />
           <meshStandardMaterial
-            color={displayColor}
+            color={item.color}
             transparent
-            opacity={dragging ? 0.55 : 0.9}
+            opacity={0.9}
             emissive={highlight ? new THREE.Color('#ffffff') : new THREE.Color('#000000')}
             emissiveIntensity={highlightIntensity}
           />
@@ -270,7 +136,7 @@ export default function CargoItem3D({
       </Text>
 
       {/* Тултип при наведении */}
-      {(hovered || dragging) && (
+      {hovered && (
         <Html position={[0, labelY + 0.3, 0]} center style={{ pointerEvents: 'none' }}>
           <div className="tooltip-box">
             <strong>{item.name}</strong>
