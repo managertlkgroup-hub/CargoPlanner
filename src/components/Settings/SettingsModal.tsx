@@ -13,11 +13,10 @@ export default function SettingsModal({ onClose }: Props) {
   const settings = useAppStore((s) => s.settings);
   const setSettings = useAppStore((s) => s.setSettings);
 
-  const [maxStackHeight, setMaxStackHeight] = useState(settings.maxStackHeight);
   const [allowRotation, setAllowRotation] = useState(settings.allowRotation);
 
   const handleSave = () => {
-    setSettings({ maxStackHeight: Number(maxStackHeight) || 0, allowRotation });
+    setSettings({ maxStackHeight: settings.maxStackHeight, allowRotation });
     onClose();
   };
 
@@ -25,15 +24,6 @@ export default function SettingsModal({ onClose }: Props) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h3>⚙️ Настройки расчёта</h3>
-        <div className="form-group mb-2">
-          <label>Максимальная высота штабеля, мм (0 — без ограничений)</label>
-          <input
-            type="number"
-            min={0}
-            value={maxStackHeight}
-            onChange={(e) => setMaxStackHeight(Number(e.target.value))}
-          />
-        </div>
         <div className="form-row mb-2">
           <input
             type="checkbox"

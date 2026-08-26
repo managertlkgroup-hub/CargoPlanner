@@ -5,7 +5,6 @@ import Header from './components/Layout/Header';
 import Footer from './components/Layout/Footer';
 import VehicleSelector from './components/VehicleSelector/VehicleSelector';
 import CargoTable from './components/CargoTable/CargoTable';
-import RouteEditor from './components/RouteEditor/RouteEditor';
 import Scene3D from './components/Scene3D/Scene3D';
 import Scene2D from './components/Scene2D/Scene2D';
 import VariantTabs from './components/VariantTabs/VariantTabs';
@@ -30,7 +29,7 @@ const App: React.FC = () => {
   const setError = useAppStore((s) => s.setError);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [leftTab, setLeftTab] = useState<'cargo' | 'route'>('cargo');
+
   const [activeView, setActiveView] = useState<'3d' | '2d'>('3d');
   const [stacking, setStacking] = useState(settings.maxStackHeight > 0);
 
@@ -90,24 +89,7 @@ const App: React.FC = () => {
         <div className="left-panel">
           <VehicleSelector />
           <div className="section-divider" />
-          <div className="variant-tabs mb-1">
-            <button
-              type="button"
-              className={`variant-tab ${leftTab === 'cargo' ? 'active' : ''}`}
-              onClick={() => setLeftTab('cargo')}
-            >
-              📦 Грузы
-            </button>
-            <button
-              type="button"
-              className={`variant-tab ${leftTab === 'route' ? 'active' : ''}`}
-              onClick={() => setLeftTab('route')}
-              title="Настройте точки загрузки и выгрузки, чтобы грузы укладывались по порядку маршрута"
-            >
-              🗺 Маршрут
-            </button>
-          </div>
-          {leftTab === 'cargo' ? <CargoTable /> : <RouteEditor />}
+          <CargoTable />
           <div className="section-divider" />
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
             <input
