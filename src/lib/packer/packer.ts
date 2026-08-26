@@ -189,6 +189,20 @@ function packIntoBin(
         if (settings.maxStackHeight > 0 && point.y + placedHeight > settings.maxStackHeight) continue;
         if (!box.stackable && point.y !== 0) continue;
 
+        // Проверка опоры: груз на слое > 0 должен стоять на грузе снизу
+        if (point.y > 0) {
+          const hasSupport = placed.some((p) => {
+            // Опора — груз прямо под этим (Y заканчивается на уровне point.y)
+            const isBelow = Math.abs(p.y + p.placedHeight - point.y) < 0.01;
+            if (!isBelow) return false;
+            // Пересечение по XZ (груз сверху должен хотя бы частично опираться)
+            const overlapX = point.x < p.x + p.placedLength && point.x + placedLength > p.x;
+            const overlapZ = point.z < p.z + p.placedWidth && point.z + placedWidth > p.z;
+            return overlapX && overlapZ;
+          });
+          if (!hasSupport) continue;
+        }
+
         const candidate: PlacedBox = {
           ...box,
           x: point.x, y: point.y, z: point.z,
@@ -430,10 +444,8 @@ export function packItems(
         } else {
           totalVolume += p.placedLength * p.placedWidth * p.placedHeight;
         }
-        // Вычисляем индекс слоя по высоте Y
-        const layerIndex = p.y > 0 && p.placedHeight > 0
-          ? Math.round(p.y / p.placedHeight)
-          : 0;
+        // Вычисляем индекс слоя: ищем максимальный Y нижнего края среди уже обработанных
+        const layerIndex = Math.round(p.y / Math.max(1, p.placedHeight));
         return toPackedItem(p, layerIndex);
       });
 
