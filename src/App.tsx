@@ -33,7 +33,12 @@ const App: React.FC = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [leftTab, setLeftTab] = useState<'cargo' | 'route'>('cargo');
   const [activeView, setActiveView] = useState<'3d' | '2d'>('3d');
-  const [stacking, setStacking] = useState(false);
+  const [stacking, setStacking] = useState(settings.maxStackHeight > 0);
+
+  // Синхронизация чекбокса с настройками
+  useEffect(() => {
+    setStacking(settings.maxStackHeight > 0);
+  }, [settings.maxStackHeight]);
 
   // Сброс результатов при смене автомобиля
   useEffect(() => {
