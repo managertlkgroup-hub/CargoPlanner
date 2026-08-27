@@ -111,34 +111,40 @@ export default function CargoTable() {
       {showAdd && <AddCargoForm />}
 
       {/* Таблица с sticky-заголовком */}
-      <div className="cargo-table-container">
-        <div className="cargo-table-sticky-header">
-          <div className="cargo-table-header-row">
-            <div className="cargo-table-header-cell">✓</div>
-            <div className="cargo-table-header-cell" title="Можно ставить сверху">Штаб</div>
-            <div className="cargo-table-header-cell cargo-name-cell">Название</div>
-            <div className="cargo-table-header-cell">Форма</div>
-            <div className="cargo-table-header-cell">Длина</div>
-            <div className="cargo-table-header-cell">Ширина</div>
-            <div className="cargo-table-header-cell">Выс.</div>
-            <div className="cargo-table-header-cell">Вес</div>
-            <div className="cargo-table-header-cell">Кол-во</div>
-          </div>
-        </div>
-        {cargo.length === 0 ? (
-          <div className="empty-state text-muted">
-            Грузов пока нет. Нажмите «+ Добавить» или импортируйте CSV.
-          </div>
-        ) : (
-          cargo.map((c) => (
-            <CargoRow
-              key={c.id}
-              cargo={c}
-              selected={selectedIds.has(c.id)}
-              onToggleSelect={toggleSelect}
-            />
-          ))
-        )}
+      <div className="cargo-table-wrap">
+        <table className="cargo-html-table">
+          <thead>
+            <tr>
+              <th className="cargo-th-check">✓</th>
+              <th className="cargo-th-stack" title="Можно ставить сверху">Штаб</th>
+              <th className="cargo-th-name">Название</th>
+              <th className="cargo-th-shape">Форма</th>
+              <th className="cargo-th-num">Длина</th>
+              <th className="cargo-th-num">Ширина</th>
+              <th className="cargo-th-num">Выс.</th>
+              <th className="cargo-th-num">Вес</th>
+              <th className="cargo-th-num">Кол-во</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cargo.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="empty-state text-muted">
+                  Грузов пока нет. Нажмите «+ Добавить» или импортируйте CSV.
+                </td>
+              </tr>
+            ) : (
+              cargo.map((c) => (
+                <CargoRow
+                  key={c.id}
+                  cargo={c}
+                  selected={selectedIds.has(c.id)}
+                  onToggleSelect={toggleSelect}
+                />
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

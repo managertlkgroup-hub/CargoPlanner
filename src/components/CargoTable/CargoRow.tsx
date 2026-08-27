@@ -39,29 +39,29 @@ export default function CargoRow({ cargo, selected, onToggleSelect }: Props) {
   };
 
   return (
-    <div className={`cargo-row ${selected ? 'cargo-row-selected' : ''}`}>
-      <div className="cargo-row-cell">
+    <tr className={selected ? 'cargo-tr-selected' : ''}>
+      <td className="cargo-td-check">
         <input
           type="checkbox"
           checked={selected}
           onChange={() => onToggleSelect(cargo.id)}
         />
-      </div>
-      <div className="cargo-row-cell">
+      </td>
+      <td className="cargo-td-check">
         <input
           type="checkbox"
           checked={cargo.stackable}
           onChange={(e) => updateCargo(cargo.id, { stackable: e.target.checked })}
           title="Можно ставить сверху"
         />
-      </div>
-      <div className="cargo-row-cell cargo-name-cell">
+      </td>
+      <td className="cargo-td-name">
         {editingName ? (
           <input
             ref={inputRef}
             type="text"
             value={editValue}
-            className="input-block"
+            className="cargo-name-input"
             maxLength={100}
             onChange={(e) => setEditValue(e.target.value)}
             onBlur={commitName}
@@ -79,65 +79,65 @@ export default function CargoRow({ cargo, selected, onToggleSelect }: Props) {
             {cargo.name}
           </div>
         )}
-      </div>
-      <div className="cargo-row-cell">{shapeLabel(cargo.shape)}</div>
-      <div className="cargo-row-cell">
+      </td>
+      <td className="cargo-td-shape">{shapeLabel(cargo.shape)}</td>
+      <td className="cargo-td-num">
         <input
           type="number"
           value={cargo.length}
-          className="input-compact"
+          className="cargo-num-input"
           onChange={(e) => updateCargo(cargo.id, { length: Number(e.target.value) })}
         />
-      </div>
+      </td>
       {isCylinder ? (
         <>
-          <div className="cargo-row-cell">—</div>
-          <div className="cargo-row-cell">
+          <td className="cargo-td-num">—</td>
+          <td className="cargo-td-num">
             <input
               type="number"
               value={cargo.diameter ?? 0}
-              className="input-compact"
+              className="cargo-num-input"
               onChange={(e) => updateCargo(cargo.id, { diameter: Number(e.target.value) })}
             />
-          </div>
+          </td>
         </>
       ) : (
         <>
-          <div className="cargo-row-cell">
+          <td className="cargo-td-num">
             <input
               type="number"
               value={cargo.width}
-              className="input-compact"
+              className="cargo-num-input"
               onChange={(e) => updateCargo(cargo.id, { width: Number(e.target.value) })}
             />
-          </div>
-          <div className="cargo-row-cell">
+          </td>
+          <td className="cargo-td-num">
             <input
               type="number"
               value={cargo.height}
-              className="input-compact"
+              className="cargo-num-input"
               onChange={(e) => updateCargo(cargo.id, { height: Number(e.target.value) })}
             />
-          </div>
+          </td>
         </>
       )}
-      <div className="cargo-row-cell">
+      <td className="cargo-td-num">
         <input
           type="number"
           value={cargo.weight}
-          className="input-compact"
+          className="cargo-num-input"
           onChange={(e) => updateCargo(cargo.id, { weight: Number(e.target.value) })}
         />
-      </div>
-      <div className="cargo-row-cell">
+      </td>
+      <td className="cargo-td-num">
         <input
           type="number"
           min={1}
           value={cargo.quantity}
-          className="input-compact"
+          className="cargo-num-input"
           onChange={(e) => updateCargo(cargo.id, { quantity: Math.max(1, Math.floor(Number(e.target.value) || 1)) })}
         />
-      </div>
-    </div>
+      </td>
+    </tr>
   );
 }

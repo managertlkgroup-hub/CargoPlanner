@@ -335,93 +335,77 @@ html, body {
   max-height: 400px;
 }
 
-.cargo-table-sticky-header {
+/* ==========================================================================
+   Cargo Table — единый HTML <table> с sticky thead
+   ========================================================================== */
+
+.cargo-table-wrap {
+  overflow: auto;
+  max-height: 400px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+
+.cargo-html-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  min-width: 500px;
+}
+
+.cargo-html-table thead {
   position: sticky;
   top: 0;
   z-index: 10;
   background: var(--bg-panel);
-  border-bottom: 2px solid var(--border);
-  overflow: visible;
 }
 
-.cargo-table-scroll-area {
-  overflow-x: auto;
-  overflow-y: visible;
-}
-
-.cargo-table-header-row {
-  display: grid;
-  grid-template-columns: 28px 32px 1.8fr 60px 60px 60px 60px 50px 45px;
-  gap: 2px;
-  padding: 2px 4px;
-  background: var(--bg-panel);
-  font-size: var(--font-size-xs);
+.cargo-html-table th {
+  padding: 4px 6px;
   font-weight: 600;
   color: var(--text-muted);
-  min-width: 550px;
-}
-
-.cargo-table-header-cell {
-  white-space: nowrap;
-  overflow: visible;
-  text-overflow: clip;
-  min-width: 0;
-  padding: 3px 4px;
+  border-bottom: 2px solid var(--border);
   border-right: 1px solid var(--border);
+  white-space: nowrap;
+  text-align: left;
   font-size: 11px;
 }
 
-.cargo-table-header-cell:last-child {
+.cargo-html-table th:last-child {
   border-right: none;
 }
 
-.cargo-row {
-  display: grid;
-  grid-template-columns: 28px 32px 1.8fr 60px 60px 60px 60px 50px 45px;
-  gap: 2px;
-  padding: 2px 4px;
-  align-items: center;
+.cargo-html-table td {
+  padding: 4px 6px;
   border-bottom: 1px solid var(--border);
-  font-size: var(--font-size-xs);
-  min-width: 550px;
-  min-height: 40px;
+  border-right: 1px solid var(--border);
+  vertical-align: middle;}
+
+.cargo-html-table td:last-child {
+  border-right: none;
 }
 
-.cargo-row:last-child {
+.cargo-html-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.cargo-row-selected {
-  background: rgba(59, 130, 246, 0.05);
-}
+/* Ширина колонок */
+.cargo-th-check, .cargo-td-check { width: 30px; text-align: center; }
+.cargo-th-stack, .cargo-td-check:nth-child(2) { width: 34px; text-align: center; }
+.cargo-th-name, .cargo-td-name { min-width: 120px; }
+.cargo-th-shape, .cargo-td-shape { width: 50px; text-align: center; }
+.cargo-th-num, .cargo-td-num { width: 55px; text-align: right; }
 
-[data-theme="dark"] .cargo-row-selected {
-  background: rgba(59, 130, 246, 0.15);
-}
-
-.cargo-row-cell {
-  min-width: 0;
-  overflow: visible;
-  text-overflow: clip;
-  white-space: nowrap;
-  padding: 3px 4px;
-  border-right: 1px solid var(--border);
-  font-size: 11px;
-}
-
-.cargo-row-cell:last-child {
-  border-right: none;
-}
+/* Выделение строки */
+.cargo-tr-selected { background: rgba(59, 130, 246, 0.05); }
+[data-theme="dark"] .cargo-tr-selected { background: rgba(59, 130, 246, 0.15); }
 
 /* Колонка «Название» — перенос текста */
-.cargo-row-cell.cargo-name-cell,
-.cargo-table-header-cell.cargo-name-cell {
-  white-space: normal !important;
-  word-wrap: break-word !important;
-  overflow: visible !important;
-  max-height: none !important;
+.cargo-td-name {
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
   line-height: 1.2;
-  padding: 4px 6px;
 }
 
 .cargo-name-display {
@@ -440,25 +424,41 @@ html, body {
   outline: 1px dashed var(--border);
 }
 
-.cargo-row-cell input,
-.cargo-row-cell select {
+.cargo-name-input {
   width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  font-size: inherit;
   padding: 2px 4px;
+  font-size: 11px;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--bg-input);
+  border: 1px solid var(--border-focus);
+  border-radius: var(--radius-input);
+  outline: none;
+  box-sizing: border-box;
 }
 
-.cargo-name-cell input {
+.cargo-num-input {
   width: 100%;
+  padding: 2px 4px;
+  font-size: 11px;
+  font-family: inherit;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-input);
+  text-align: right;
+  outline: none;
+  box-sizing: border-box;
 }
 
-.cargo-table-wrap {
-  overflow-x: auto;
-  max-height: 400px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
+.cargo-num-input:focus {
+  background: var(--bg-input);
+  border-color: var(--border);
 }
+
+
+
+
 
 .empty-state {
   padding: var(--spacing-lg);
@@ -1220,10 +1220,6 @@ html, body {
 }
 
 @media (max-width: 768px) {
-  .cargo-table-header-row,
-  .cargo-row {
-    grid-template-columns: 26px 30px 1.8fr 50px 50px 50px 50px 44px 38px;
-  }
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr);
   }
