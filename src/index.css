@@ -352,8 +352,8 @@ html, body {
 .cargo-table-header-row {
   display: grid;
   grid-template-columns: 30px 40px 1fr 60px 55px 55px 45px 55px 45px;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-xs) var(--spacing-sm);
+  gap: 0;
+  padding: var(--spacing-xs) 0;
   background: var(--bg-panel);
   font-size: var(--font-size-xs);
   font-weight: 600;
@@ -366,13 +366,19 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+  padding: 4px 6px;
+  border-right: 1px solid var(--border);
+}
+
+.cargo-table-header-cell:last-child {
+  border-right: none;
 }
 
 .cargo-row {
   display: grid;
   grid-template-columns: 30px 40px 1fr 60px 55px 55px 45px 55px 45px;
-  gap: var(--spacing-xs);
-  padding: 4px var(--spacing-sm);
+  gap: 0;
+  padding: 4px 0;
   align-items: center;
   border-bottom: 1px solid var(--border);
   font-size: var(--font-size-xs);
@@ -397,6 +403,12 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  padding: 4px 6px;
+  border-right: 1px solid var(--border);
+}
+
+.cargo-row-cell:last-child {
+  border-right: none;
 }
 
 .cargo-row-cell input,

@@ -251,10 +251,19 @@ function packIntoBin(
           // across: compactness first, then prefer column-filling (min X, then min Z)
           score = point.y * yMult + footprintMax * 1e6 + point.x * 100 + point.z;
         } else {
-          // mixed: floor-first + compactness + balanced footprint + alternation
-          // When stacking enabled, strongly prefer filling floor (y=0) before stacking
-          const floorBonus = (settings.maxStackHeight > 0 && point.y === 0) ? -5e6 : 0;
-          score = point.y * yMult + footprintMax * 1e6 + (newMaxX + newMaxZ) * 10 + floorBonus;
+          // mixed: compactness + balanced footprint + alternation + stacking preference
+          score = point.y * yMult + footprintMax * 1e6 + (newMaxX + newMaxZ) * 10;
+          // Бонус за стекинг: если груз ставится ровно на такой же по XZ — минимизируем footprint
+          if (point.y > 0 && settings.maxStackHeight > 0) {
+            const stackBonus = placed.some(p =>
+              Math.abs(p.x - point.x) < 0.01 &&
+              Math.abs(p.z - point.z) < 0.01 &&
+              Math.abs(p.y + p.placedHeight - point.y) < 0.01 &&
+              Math.abs(p.placedLength - placedLength) < 0.01 &&
+              Math.abs(p.placedWidth - placedWidth) < 0.01
+            ) ? -1e7 : 0; // сильный бонус за стекинг идентичного груза
+            score += stackBonus;
+          }
           // Бонус за чередование ориентаций (смешиваем вдоль/поперёк)
           const isAlong = orientation.rotY === 0;
           const dominated = isAlong ? alongCount : acrossCount;
@@ -445,6 +454,14 @@ export function packItems(
 
     const variants: LayoutVariant[] = modes.map(({ mode, label }) => {
       const placed = packIntoBin(bin, vehicle.maxWeight, boxes, resolvedSettings, mode);
+
+      // Debug: layer counts for stacking verification
+      if (resolvedSettings.maxStackHeight > 0) {
+        const layer0 = placed.filter(p => p.y < 0.01).length;
+        const layer1 = placed.filter(p => p.y >= 0.01 && p.y < 2000).length;
+        const layer2 = placed.filter(p => p.y >= 2000).length;
+        console.log(`[packer] ${label}: размещено ${placed.length} из ${boxes.length}, слои: 0=${layer0}, 1=${layer1}, 2=${layer2}`);
+      }
 
       let totalWeight = 0;
       let totalVolume = 0;
