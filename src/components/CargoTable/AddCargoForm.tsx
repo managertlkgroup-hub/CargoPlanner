@@ -227,6 +227,7 @@ export default function AddCargoForm() {
         <input
           name="length"
           type="number"
+          step="any"
           min={FIELDS.length.min}
           max={FIELDS.length.max}
           placeholder="1200"
@@ -246,6 +247,7 @@ export default function AddCargoForm() {
             <input
               name="width"
               type="number"
+              step="any"
               min={FIELDS.width.min}
               max={FIELDS.width.max}
               placeholder="800"
@@ -263,6 +265,7 @@ export default function AddCargoForm() {
             <input
               name="height"
               type="number"
+              step="any"
               min={FIELDS.height.min}
               max={FIELDS.height.max}
               placeholder="150"
@@ -282,6 +285,7 @@ export default function AddCargoForm() {
           <input
             name="diameter"
             type="number"
+            step="any"
             min={FIELDS.diameter.min}
             max={FIELDS.diameter.max}
             placeholder="200"
@@ -300,6 +304,7 @@ export default function AddCargoForm() {
         <input
           name="weight"
           type="number"
+          step="any"
           min={FIELDS.weight.min}
           max={FIELDS.weight.max}
           placeholder="20"

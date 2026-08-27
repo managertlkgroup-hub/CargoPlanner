@@ -476,10 +476,22 @@ function drawCargoTable(p: PdfCtx, cargo: Cargo[], items: LayoutVariant['items']
     cx += w;
   }
 
-  // Сортируем грузы по слою
+  // Сортируем грузы по слою.
+  // cargo — исходный список (с quantity), items — развёрнутый (quantity штук).
+  // Строим маппинг: cargo[i] → все items с таким же id.
+  const itemLayersByCargoId = new Map<string, number[]>();
+  items.forEach(item => {
+    const id = item.id.split('-')[0]; // PackedItem id = `${p.id}-${x}-${y}-${z}`
+    const arr = itemLayersByCargoId.get(id) || [];
+    arr.push(layerOf(item));
+    itemLayersByCargoId.set(id, arr);
+  });
+
   const sorted = cargo.map(c => {
-    const match = items.find(it => it.name === c.name);
-    return { c, layer: match ? layerOf(match) : 0 };
+    const layers = itemLayersByCargoId.get(c.id) || [];
+    // Берём минимум слоя для этого типа груза
+    const layer = layers.length > 0 ? Math.min(...layers) : 0;
+    return { c, layer };
   }).sort((a, b) => a.layer - b.layer);
 
   // Проверяем помещается ли таблица
