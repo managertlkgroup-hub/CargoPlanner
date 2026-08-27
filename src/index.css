@@ -540,7 +540,8 @@ html, body {
   flex-shrink: 0 !important;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  max-height: 100% !important;
+  overflow-y: auto !important;
   overflow-x: hidden !important;
   padding-right: var(--spacing-sm);
   word-wrap: break-word;
