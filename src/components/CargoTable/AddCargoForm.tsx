@@ -17,8 +17,9 @@ function validateField(
   label: string,
 ): string | null {
   if (!value || value <= 0) return `${label} обязательно`;
-  if (value < min) return `${label} должна быть от ${min} до ${max}`;
-  if (value > max) return `${label} должна быть от ${min} до ${max}`;
+  if (value < min) { const err = `${label} должна быть от ${min} до ${max}`; console.log('[VAL-CARGO]', label, value, err); return err; }
+  if (value > max) { const err = `${label} должна быть от ${min} до ${max}`; console.log('[VAL-CARGO]', label, value, err); return err; }
+  console.log('[VAL-CARGO]', label, value, 'OK');
   return null;
 }
 
@@ -50,8 +51,35 @@ export default function AddCargoForm() {
     return e;
   }, [values]);
 
-  const hasErrors = Object.keys(errors).length > 0 || !values.name?.trim();
+  const hasErrors = !values.name?.trim();
   const isInvalid = (key: string) => touched[key] && errors[key];
+
+  // Validate on submit (not on every keystroke, since DOM may have values not in React state)
+  const validateOnSubmit = (fd: FormData) => {
+    const allErrors: string[] = [];
+    const name = String(fd.get('name') || '').trim();
+    if (!name) { allErrors.push('Укажите название'); }
+    const length = Number(fd.get('length'));
+    const width = Number(fd.get('width'));
+    const height = Number(fd.get('height'));
+    const diameter = Number(fd.get('diameter'));
+    const weight = Number(fd.get('weight'));
+    const shape = fd.get('shape') as CargoShape;
+    const lengthErr = validateField(length, FIELDS.length.min, FIELDS.length.max, 'Длина');
+    if (lengthErr) allErrors.push(lengthErr);
+    const weightErr = validateField(weight, FIELDS.weight.min, FIELDS.weight.max, 'Вес');
+    if (weightErr) allErrors.push(weightErr);
+    if (shape === 'box') {
+      const wErr = validateField(width, FIELDS.width.min, FIELDS.width.max, 'Ширина');
+      if (wErr) allErrors.push(wErr);
+      const hErr = validateField(height, FIELDS.height.min, FIELDS.height.max, 'Высота');
+      if (hErr) allErrors.push(hErr);
+    } else {
+      const dErr = validateField(diameter, FIELDS.diameter.min, FIELDS.diameter.max, 'Диаметр');
+      if (dErr) allErrors.push(dErr);
+    }
+    return allErrors;
+  };
 
   const handleChange = (key: string, val: string) => {
     setValues((prev) => ({ ...prev, [key]: val }));
@@ -75,29 +103,14 @@ export default function AddCargoForm() {
 
     if (!name) return setError('Укажите название груза.');
 
-    // Mark all fields as touched to show errors
-    setTouched({
-      name: true, length: true, width: true,
-      height: true, diameter: true, weight: true,
-    });
-
-    // Validate all fields
-    const allErrors: string[] = [];
-    const lengthErr = validateField(length, FIELDS.length.min, FIELDS.length.max, 'Длина');
-    if (lengthErr) allErrors.push(lengthErr);
-    const weightErr = validateField(weight, FIELDS.weight.min, FIELDS.weight.max, 'Вес');
-    if (weightErr) allErrors.push(weightErr);
-    if (shape === 'box') {
-      const widthErr = validateField(width, FIELDS.width.min, FIELDS.width.max, 'Ширина');
-      if (widthErr) allErrors.push(widthErr);
-      const heightErr = validateField(height, FIELDS.height.min, FIELDS.height.max, 'Высота');
-      if (heightErr) allErrors.push(heightErr);
-    } else {
-      const diameterErr = validateField(diameter, FIELDS.diameter.min, FIELDS.diameter.max, 'Диаметр');
-      if (diameterErr) allErrors.push(diameterErr);
-    }
+    // Validate all fields on submit
+    const allErrors = validateOnSubmit(fd);
     if (allErrors.length > 0) {
       setError(allErrors[0]);
+      setTouched({
+        name: true, length: true, width: true,
+        height: true, diameter: true, weight: true,
+      });
       return;
     }
 

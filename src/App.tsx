@@ -104,6 +104,7 @@ const App: React.FC = () => {
                 const newSettings = { ...settings, maxStackHeight: newMaxH };
                 setSettings(newSettings);
                 console.log(`[Stacking] checkbox=${checked}, maxStackHeight=${newMaxH}`);
+                console.log('[CHK] Чекбокс изменён:', checked, 'maxStackHeight:', newMaxH);
                 // Автоматический пересчёт при включении/выключении штабелирования
                 if (cargo.length > 0) {
                   const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);

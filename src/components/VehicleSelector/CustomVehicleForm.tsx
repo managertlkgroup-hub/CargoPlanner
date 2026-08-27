@@ -19,8 +19,9 @@ function validateField(
   label: string,
 ): string | null {
   if (!value || value <= 0) return `${label} обязательно`;
-  if (value < min) return `${label} должна быть от ${min / 1000} до ${max / 1000} метров`;
-  if (value > max) return `${label} должна быть от ${min / 1000} до ${max / 1000} метров`;
+  if (value < min) { const err = `${label} должна быть от ${min / 1000} до ${max / 1000} метров`; console.log('[VAL-AUTO]', label, value, err); return err; }
+  if (value > max) { const err = `${label} должна быть от ${min / 1000} до ${max / 1000} метров`; console.log('[VAL-AUTO]', label, value, err); return err; }
+  console.log('[VAL-AUTO]', label, value, 'OK');
   return null;
 }
 
@@ -56,7 +57,7 @@ export default function CustomVehicleForm({ onDone }: Props) {
     return e;
   }, [values]);
 
-  const hasErrors = Object.keys(errors).length > 0 || !values.name?.trim();
+  const hasErrors = !values.name?.trim();
   const isInvalid = (key: string) => touched[key] && errors[key];
 
   const handleChange = (key: string, val: string) => {
