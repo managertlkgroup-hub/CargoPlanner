@@ -89,6 +89,10 @@ function drawTopView(
     ctx.lineWidth = 1;
     ctx.strokeRect(x, y, iw, ih);
 
+    // Layer index for stacking visualization
+    const layerIndex = Math.round(item.position.y / Math.max(1, item.dimensions.height));
+    const maxLayer = Math.max(...variant.items.map(it => Math.round(it.position.y / Math.max(1, it.dimensions.height))));
+
     if (iw > 14 && ih > 14) {
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 11px system-ui, sans-serif';
@@ -96,7 +100,23 @@ function drawTopView(
       ctx.textBaseline = 'middle';
       // Порядковый номер груза (1-based)
       const itemIdx = variant.items.indexOf(item) + 1;
-      ctx.fillText(String(itemIdx), x + iw / 2, y + ih / 2);
+      ctx.fillText(String(itemIdx), x + iw / 2, y + ih / 2 - (maxLayer > 0 ? 4 : 0));
+    }
+
+    // Layer badge in top-right corner
+    if (maxLayer > 0) {
+      const badgeSize = Math.min(14, Math.max(10, 11));
+      const bx = x + iw - badgeSize - 2;
+      const by = y + 2;
+      ctx.fillStyle = layerIndex === 0 ? 'rgba(0,0,0,0.6)' : 'rgba(59,130,246,0.8)';
+      ctx.beginPath();
+      ctx.roundRect(bx, by, badgeSize, badgeSize, 3);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold ' + (badgeSize - 3) + 'px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(layerIndex + 1), bx + badgeSize / 2, by + badgeSize / 2);
     }
   });
 
@@ -223,6 +243,16 @@ export function generatePdfReport(
     `Свободный объём: ${volToM3(variant.freeVolume)}`,
     `Размещено грузов: ${variant.items.length} шт.`,
   ], { fontSize: 12 });
+
+  // Layer count (if stacking)
+  if (variant.items.length > 0) {
+    const layers = new Set(variant.items.map(it => Math.round(it.position.y / Math.max(1, it.dimensions.height))));
+    if (layers.size > 1) {
+      y = drawSection(ctx, 30, y, baseW, [
+        `Количество слоёв: ${layers.size}`,
+      ], { fontSize: 12 });
+    }
+  }
   y += 8;
 
   // Cargo dimensions

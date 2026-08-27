@@ -117,8 +117,13 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
       const itemX = offsetX + item.position.x * scale;
       const itemY = offsetY + item.position.z * scale;
 
+      // Compute layer index for stacking visualization
+      const layerIndex = Math.round(item.position.y / Math.max(1, item.dimensions.height));
+      // Brighter for higher layers
+      const layerAlpha = layerIndex === 0 ? 0.75 : 0.55;
+
       ctx.fillStyle = item.color;
-      ctx.globalAlpha = 0.75;
+      ctx.globalAlpha = layerAlpha;
       ctx.fillRect(itemX, itemY, itemL, itemW);
       ctx.globalAlpha = 1.0;
       ctx.strokeStyle = '#1e293b';
@@ -130,6 +135,21 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
       ctx.textBaseline = 'middle';
       const fontSize = Math.min(11, Math.max(7, Math.min(itemL, itemW) / 5));
       ctx.font = 'bold ' + fontSize + 'px system-ui';
+
+      // Layer badge in top-right corner (if stacking is active)
+      const maxLayer = Math.max(...variant.items.map(it => Math.round(it.position.y / Math.max(1, it.dimensions.height))));
+      if (maxLayer > 0) {
+        const badgeSize = Math.min(14, Math.max(10, fontSize));
+        const bx = itemX + itemL - badgeSize - 1;
+        const by = itemY + 1;
+        ctx.fillStyle = layerIndex === 0 ? 'rgba(0,0,0,0.6)' : 'rgba(59,130,246,0.8)';
+        ctx.beginPath();
+        ctx.roundRect(bx, by, badgeSize, badgeSize, 3);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold ' + (badgeSize - 3) + 'px system-ui';
+        ctx.fillText(String(layerIndex + 1), bx + badgeSize / 2, by + badgeSize / 2);
+      }
 
       const line1 = item.name;
       const line2 =

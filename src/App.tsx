@@ -99,7 +99,7 @@ const App: React.FC = () => {
               onChange={(e) => {
                 const checked = e.target.checked;
                 setStacking(checked);
-                const newSettings = { ...settings, maxStackHeight: checked ? settings.maxStackHeight || 2000 : 0 };
+                const newSettings = { ...settings, maxStackHeight: checked ? (settings.maxStackHeight > 0 ? settings.maxStackHeight : 2000) : 0 };
                 setSettings(newSettings);
                 // Автоматический пересчёт при включении/выключении штабелирования
                 if (cargo.length > 0) {

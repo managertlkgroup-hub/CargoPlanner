@@ -248,8 +248,10 @@ function packIntoBin(
           // across: compactness first, then prefer column-filling (min X, then min Z)
           score = point.y * yMult + footprintMax * 1e6 + point.x * 100 + point.z;
         } else {
-          // mixed: compactness + balanced footprint + orientation alternation
-          score = point.y * yMult + footprintMax * 1e6 + (newMaxX + newMaxZ) * 10;
+          // mixed: floor-first + compactness + balanced footprint + alternation
+          // When stacking enabled, strongly prefer filling floor (y=0) before stacking
+          const floorBonus = (settings.maxStackHeight > 0 && point.y === 0) ? -5e6 : 0;
+          score = point.y * yMult + footprintMax * 1e6 + (newMaxX + newMaxZ) * 10 + floorBonus;
           // Бонус за чередование ориентаций (смешиваем вдоль/поперёк)
           const isAlong = orientation.rotY === 0;
           const dominated = isAlong ? alongCount : acrossCount;
