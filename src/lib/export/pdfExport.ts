@@ -249,22 +249,34 @@ function drawMetrics(p: PdfCtx, variant: LayoutVariant, vehicle: Vehicle) {
   p.gap(8);
 }
 
-// ─── Вид сверху ────────────────────────────────────────────
+// ─── Вид сверху (для одного слоя или всех) ───────────────
 
-function drawTopView(p: PdfCtx, vehicle: Vehicle, variant: LayoutVariant): number {
-  p.sectionTitle('Вид сверху');
-
-  const ox = p.LM;
-  const oy = p._y;
-  const maxW = p.contentW;
-  const maxH = 200;
-  const scale = Math.min(maxW / vehicle.length, maxH / vehicle.width, 1.5);
+/** Рисует вид сверху. Если layer задан — только грузы этого слоя. */
+function drawTopView(
+  p: PdfCtx,
+  vehicle: Vehicle,
+  variant: LayoutVariant,
+  opts?: { layer?: number; ox?: number; oy?: number; scale?: number; title?: string },
+): { bottom: number; label: string } {
+  const layer = opts?.layer;
+  const ox = opts?.ox ?? p.LM;
+  let oy = opts?.oy ?? p._y;
+  const scale = opts?.scale ?? Math.min(p.contentW / vehicle.length, 180 / vehicle.width, 1.5);
   const vw = vehicle.length * scale;
   const vh = vehicle.width * scale;
 
+  // Подпись
+  const label = opts?.title ?? (layer !== undefined ? `Слой ${layer}${layer === 0 ? ' (пол)' : ''}` : 'Вид сверху');
+  p.ctx.fillStyle = '#1e293b';
+  p.ctx.font = `bold 11px ${FONT}`;
+  p.ctx.textAlign = 'left';
+  p.ctx.textBaseline = 'top';
+  p.ctx.fillText(label, ox, oy);
+  oy += 16;
+
   // Фон кузова
   p.ctx.strokeStyle = '#475569';
-  p.ctx.lineWidth = 2;
+  p.ctx.lineWidth = 1.5;
   p.ctx.strokeRect(ox, oy, vw, vh);
   p.ctx.fillStyle = '#f8fafc';
   p.ctx.fillRect(ox, oy, vw, vh);
@@ -273,9 +285,12 @@ function drawTopView(p: PdfCtx, vehicle: Vehicle, variant: LayoutVariant): numbe
     ? Math.max(...variant.items.map(i => layerOf(i)))
     : 0;
 
-  // Рисуем грузы (слой 0 снизу, верхние слои поверх)
-  const sorted = [...variant.items].sort((a, b) => layerOf(a) - layerOf(b));
-  sorted.forEach((item) => {
+  // Фильтруем грузы: все или только указанный слой
+  const items = layer !== undefined
+    ? variant.items.filter(i => layerOf(i) === layer)
+    : [...variant.items].sort((a, b) => layerOf(a) - layerOf(b));
+
+  items.forEach((item) => {
     const { w, h } = ground(item);
     const x = ox + item.position.x * scale;
     const y = oy + item.position.z * scale;
@@ -286,51 +301,59 @@ function drawTopView(p: PdfCtx, vehicle: Vehicle, variant: LayoutVariant): numbe
 
     // Заливка
     p.ctx.fillStyle = color;
-    p.ctx.globalAlpha = li === 0 ? 0.9 : 0.75;
+    p.ctx.globalAlpha = 0.9;
     p.ctx.fillRect(x, y, iw, ih);
     p.ctx.globalAlpha = 1;
 
     // Штриховка для верхних слоёв
-    if (maxLayer > 0 && li > 0) {
-      hatch(p.ctx, x, y, iw, ih, li);
+    if (layer !== undefined && layer > 0) {
+      hatch(p.ctx, x, y, iw, ih, layer);
     }
 
     // Обводка
-    p.ctx.strokeStyle = li === 0 ? '#1e293b' : '#ffffff';
-    p.ctx.lineWidth = li === 0 ? 1 : 1.5;
+    p.ctx.strokeStyle = '#1e293b';
+    p.ctx.lineWidth = 1;
     p.ctx.strokeRect(x, y, iw, ih);
 
     // Номер
     if (iw > 12 && ih > 12) {
       p.ctx.fillStyle = '#ffffff';
-      p.ctx.font = `bold 10px ${FONT}`;
+      p.ctx.font = `bold 9px ${FONT}`;
       p.ctx.textAlign = 'center';
       p.ctx.textBaseline = 'middle';
       p.ctx.fillText(String(variant.items.indexOf(item) + 1), x + iw / 2, y + ih / 2);
     }
   });
 
+  // Если слой пуст — подпись
+  if (items.length === 0) {
+    p.ctx.fillStyle = '#94a3b8';
+    p.ctx.font = `italic 10px ${FONT}`;
+    p.ctx.textAlign = 'center';
+    p.ctx.textBaseline = 'middle';
+    p.ctx.fillText('нет грузов', ox + vw / 2, oy + vh / 2);
+  }
+
   // Линейка
   const rulerPx = 1000 * scale;
-  if (rulerPx > 25) {
-    const ry = oy + vh + 6;
+  if (rulerPx > 20) {
+    const ry = oy + vh + 4;
     p.ctx.strokeStyle = '#64748b';
     p.ctx.lineWidth = 1;
     p.ctx.beginPath();
-    p.ctx.moveTo(ox, ry);
-    p.ctx.lineTo(ox + rulerPx, ry);
-    p.ctx.moveTo(ox, ry - 3); p.ctx.lineTo(ox, ry + 3);
-    p.ctx.moveTo(ox + rulerPx, ry - 3); p.ctx.lineTo(ox + rulerPx, ry + 3);
+    p.ctx.moveTo(ox, ry); p.ctx.lineTo(ox + rulerPx, ry);
+    p.ctx.moveTo(ox, ry - 2); p.ctx.lineTo(ox, ry + 2);
+    p.ctx.moveTo(ox + rulerPx, ry - 2); p.ctx.lineTo(ox + rulerPx, ry + 2);
     p.ctx.stroke();
     p.ctx.fillStyle = '#64748b';
-    p.ctx.font = `8px ${FONT}`;
+    p.ctx.font = `7px ${FONT}`;
     p.ctx.textAlign = 'center';
     p.ctx.textBaseline = 'top';
-    p.ctx.fillText('1 м', ox + rulerPx / 2, ry + 4);
+    p.ctx.fillText('1 м', ox + rulerPx / 2, ry + 3);
   }
 
-  p._y = oy + vh + (rulerPx > 25 ? 22 : 12);
-  return maxLayer + 1;
+  const bottom = oy + vh + (rulerPx > 20 ? 18 : 8);
+  return { bottom, label };
 }
 
 // ─── Легенда слоёв ─────────────────────────────────────────
@@ -588,8 +611,57 @@ export function generatePdfReport(
   drawVehicleInfo(p, vehicle);
   drawMetrics(p, variant, vehicle);
 
-  const layers = drawTopView(p, vehicle, variant);
-  drawLayerLegend(p, layers);
+  // Определяем количество слоёв
+  const maxLayer = variant.items.length > 0
+    ? Math.max(...variant.items.map(i => layerOf(i)))
+    : 0;
+  const numLayers = maxLayer + 1;
+
+  if (numLayers <= 1) {
+    // Без штабелирования — одна общая схема
+    drawTopView(p, vehicle, variant);
+    p.gap(12);
+  } else {
+    // Со штабелированием — отдельная схема для каждого слоя
+    p.sectionTitle('Вид сверху по слоям');
+
+    // 2 в ряд если 3+ слоёв, иначе 1 в ряд
+    const perRow = numLayers >= 3 ? 2 : 1;
+    const cellW = perRow === 2
+      ? (p.contentW - 16) / 2  // 16px зазор между схемами
+      : p.contentW;
+    const cellScale = Math.min(
+      cellW / vehicle.length,
+      140 / vehicle.width,
+      1.2,
+    );
+    const cellH = vehicle.width * cellScale + 30; // высота ячейки (схема + подпись + линейка)
+
+    for (let li = 0; li < numLayers; li++) {
+      const col = li % perRow;
+      const row = Math.floor(li / perRow);
+      const ox = p.LM + col * (cellW + 16);
+      const cellY = p._y + row * (cellH + 8);
+
+      // Проверяем, поместится ли на странице
+      p.ensureSpace(cellH + 10);
+
+      drawTopView(p, vehicle, variant, {
+        layer: li,
+        ox,
+        oy: cellY,
+        scale: cellScale,
+      });
+    }
+
+    // Сдвигаем Y после всех схем
+    const totalRows = Math.ceil(numLayers / perRow);
+    p._y += totalRows * (cellH + 8) + 8;
+
+    // Легенда слоёв
+    drawLayerLegend(p, numLayers);
+  }
+
   drawItemLegend(p, variant.items);
   drawCargoTable(p, cargo, variant.items);
 
