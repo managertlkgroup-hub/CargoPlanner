@@ -1,20 +1,15 @@
 // ============================================================================
-// Экспорт отчёта в PDF — canvas-based для поддержки кириллицы
-// Рендерим отчёт на canvas, затем встраиваем в jsPDF как изображение
+// Экспорт отчёта в PDF — canvas-based, профессиональный формат
+// Рендерим на canvas (2x DPI), затем встраиваем в jsPDF как изображение
 // ============================================================================
 
 import { jsPDF } from 'jspdf';
 import type { Cargo, LayoutVariant, Vehicle } from '../../types';
 
-/** Шрифт для canvas */
 const FONT = "'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
-
-/** Цвета слоёв */
 const LAYER_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
-function vol(mm3: number): string {
-  return `${(mm3 / 1e9).toFixed(2)} м³`;
-}
+// ─── Утилиты ───────────────────────────────────────────────
 
 function ground(item: { dimensions: { length: number; width: number }; rotationY?: number }) {
   const rot = Math.round(((item.rotationY ?? 0) % 360) / 90) % 2;
@@ -27,33 +22,31 @@ function layerOf(item: { position: { y: number }; dimensions: { height: number }
   return Math.round(item.position.y / Math.max(1, item.dimensions.height));
 }
 
-/** Рисует штриховку для верхних слоёв */
-function drawHatch(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, layer: number, _color: string) {
+function vol(mm3: number): string {
+  return `${(mm3 / 1e9).toFixed(2)} м³`;
+}
+
+// ─── Штриховка для верхних слоёв ───────────────────────────
+
+function hatch(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, layer: number) {
   ctx.save();
   ctx.beginPath();
   ctx.rect(x, y, w, h);
   ctx.clip();
-
+  ctx.strokeStyle = '#ffffff';
   if (layer === 1) {
-    // Пунктирная рамка (1 штрих)
     ctx.setLineDash([4, 3]);
-    ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
     ctx.strokeRect(x + 2, y + 2, w - 4, h - 4);
     ctx.setLineDash([]);
   } else if (layer === 2) {
-    // Двойная рамка
-    ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 1.5;
     ctx.strokeRect(x + 2, y + 2, w - 4, h - 4);
     ctx.strokeRect(x + 5, y + 5, w - 10, h - 10);
-  } else if (layer >= 3) {
-    // Диагональные линии
-    ctx.strokeStyle = '#ffffff';
+  } else {
     ctx.lineWidth = 1;
-    ctx.globalAlpha = 0.5;
-    const step = 8;
-    for (let d = -h; d < w + h; d += step) {
+    ctx.globalAlpha = 0.4;
+    for (let d = -h; d < w + h; d += 7) {
       ctx.beginPath();
       ctx.moveTo(x + d, y);
       ctx.lineTo(x + d - h, y + h);
@@ -61,308 +54,513 @@ function drawHatch(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
     }
     ctx.globalAlpha = 1;
   }
-
   ctx.restore();
 }
 
-function drawHeader(ctx: CanvasRenderingContext2D, w: number): number {
-  ctx.fillStyle = '#1e293b';
-  ctx.fillRect(0, 0, w, 64);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `bold 20px ${FONT}`;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.fillText('Отчёт о загрузке', 24, 14);
-  ctx.fillStyle = '#94a3b8';
-  ctx.font = `12px ${FONT}`;
-  ctx.fillText(`CargoPlanner — ${new Date().toLocaleDateString('ru-RU')}`, 24, 42);
-  return 80;
-}
+// ─── Контекст отрисовки (с проверкой переполнения страницы) ─
 
-function drawInfo(ctx: CanvasRenderingContext2D, x: number, y: number, lines: string[], opts?: { bold?: boolean; size?: number; color?: string }): number {
-  const sz = opts?.size ?? 12;
-  ctx.font = `${opts?.bold ? 'bold ' : ''}${sz}px ${FONT}`;
-  ctx.fillStyle = opts?.color ?? '#1e293b';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  for (const line of lines) {
-    ctx.fillText(line, x, y);
-    y += sz + 5;
+class PdfCtx {
+  ctx: CanvasRenderingContext2D;
+  W: number;
+  H: number;
+  LM: number;   // левое поле
+  RM: number;   // правое поле
+  _y: number;
+  private page = 1;
+
+  constructor(ctx: CanvasRenderingContext2D, W: number, H: number) {
+    this.ctx = ctx;
+    this.W = W;
+    this.H = H;
+    this.LM = 28;
+    this.RM = 28;
+    this._y = 0;
   }
-  return y;
+
+  get y() { return this._y; }
+  set y(v: number) { this._y = v; }
+
+  get contentW() { return this.W - this.LM - this.RM; }
+
+  /** Проверяет, есть ли место на странице. Если нет — новая страница. */
+  ensureSpace(needed: number) {
+    if (this._y + needed > this.H - 30) {
+      this.newPage();
+    }
+  }
+
+  newPage() {
+    // Подвал текущей страницы
+    this.footer();
+    // Новая страница
+    this.page++;
+    this.ctx.fillStyle = '#ffffff';
+    this.ctx.fillRect(0, 0, this.W, this.H);
+    this._y = 20;
+    // Заголовок новой страницы
+    this.ctx.fillStyle = '#1e293b';
+    this.ctx.font = `bold 12px ${FONT}`;
+    this.ctx.textAlign = 'left';
+    this.ctx.textBaseline = 'top';
+    this.ctx.fillText(`Отчёт о загрузке — стр. ${this.page}`, this.LM, this._y);
+    this._y += 18;
+    this.separator();
+  }
+
+  footer() {
+    this.ctx.fillStyle = '#94a3b8';
+    this.ctx.font = `9px ${FONT}`;
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'bottom';
+    this.ctx.fillText(`CargoPlanner — стр. ${this.page}`, this.W / 2, this.H - 8);
+  }
+
+  separator() {
+    this.ctx.strokeStyle = '#e2e8f0';
+    this.ctx.lineWidth = 1;
+    this.ctx.beginPath();
+    this.ctx.moveTo(this.LM, this._y);
+    this.ctx.lineTo(this.W - this.RM, this._y);
+    this.ctx.stroke();
+    this._y += 8;
+  }
+
+  sectionTitle(text: string) {
+    this.ensureSpace(30);
+    this.ctx.fillStyle = '#1e293b';
+    this.ctx.font = `bold 13px ${FONT}`;
+    this.ctx.textAlign = 'left';
+    this.ctx.textBaseline = 'top';
+    this.ctx.fillText(text, this.LM, this._y);
+    this._y += 4;
+    // Подчёркивание
+    this.ctx.strokeStyle = '#3b82f6';
+    this.ctx.lineWidth = 2;
+    this.ctx.beginPath();
+    this.ctx.moveTo(this.LM, this._y + 12);
+    this.ctx.lineTo(this.LM + this.ctx.measureText(text).width + 4, this._y + 12);
+    this.ctx.stroke();
+    this._y += 18;
+  }
+
+  text(line: string, opts?: { bold?: boolean; size?: number; color?: string; indent?: number }) {
+    const sz = opts?.size ?? 11;
+    this.ctx.font = `${opts?.bold ? 'bold ' : ''}${sz}px ${FONT}`;
+    this.ctx.fillStyle = opts?.color ?? '#334155';
+    this.ctx.textAlign = 'left';
+    this.ctx.textBaseline = 'top';
+    this.ctx.fillText(line, this.LM + (opts?.indent ?? 0), this._y);
+    this._y += sz + 4;
+  }
+
+  gap(px: number) { this._y += px; }
 }
 
-/** Рисует вид сверху с штриховкой для верхних слоёв */
-function drawTopView(
-  ctx: CanvasRenderingContext2D,
-  vehicle: Vehicle,
-  variant: LayoutVariant,
-  ox: number,
-  oy: number,
-  scale: number,
-): { maxY: number; layers: number } {
+// ─── Заголовок (шапка) ─────────────────────────────────────
+
+function drawCover(p: PdfCtx) {
+  // Тёмный блок заголовка
+  p.ctx.fillStyle = '#1e293b';
+  p.ctx.fillRect(0, 0, p.W, 72);
+  p.ctx.fillStyle = '#ffffff';
+  p.ctx.font = `bold 22px ${FONT}`;
+  p.ctx.textAlign = 'left';
+  p.ctx.textBaseline = 'top';
+  p.ctx.fillText('ОТЧЁТ О ЗАГРУЗКЕ', p.LM, 16);
+  p.ctx.fillStyle = '#94a3b8';
+  p.ctx.font = `12px ${FONT}`;
+  p.ctx.fillText(`CargoPlanner  •  ${new Date().toLocaleDateString('ru-RU')}`, p.LM, 46);
+  p._y = 86;
+}
+
+// ─── Информация об автомобиле ──────────────────────────────
+
+function drawVehicleInfo(p: PdfCtx, vehicle: Vehicle) {
+  p.sectionTitle('Автомобиль');
+  p.text(`${vehicle.name}`, { bold: true, size: 12 });
+  p.text(`Кузов: ${vehicle.length} × ${vehicle.width} × ${vehicle.height} мм`, { indent: 8 });
+  p.text(`Грузоподъёмность: ${vehicle.maxWeight} кг`, { indent: 8 });
+  p.gap(6);
+}
+
+// ─── Сводка по загрузке ────────────────────────────────────
+
+function drawMetrics(p: PdfCtx, variant: LayoutVariant, vehicle: Vehicle) {
+  p.sectionTitle('Сводка по загрузке');
+  p.text(`Вариант раскладки: ${variant.label}`, { bold: true, size: 12 });
+  p.gap(2);
+
+  // Метрики в две колонки
+  const left = [
+    `Заполнение объёма: ${variant.volumeFill}%`,
+    `Заполнение по весу: ${variant.weightFill}%`,
+    `Размещено грузов: ${variant.items.length} шт.`,
+  ];
+  const right = [
+    `Суммарный вес: ${variant.totalWeight} кг`,
+    `Свободный объём: ${vol(variant.freeVolume)}`,
+    `Свободный вес: ${Math.max(0, vehicle.maxWeight - variant.totalWeight)} кг`,
+  ];
+
+  const sz = 11;
+  const colW = p.contentW / 2;
+  left.forEach((line, i) => {
+    p.ctx.font = `${sz}px ${FONT}`;
+    p.ctx.fillStyle = '#334155';
+    p.ctx.textAlign = 'left';
+    p.ctx.textBaseline = 'top';
+    p.ctx.fillText(line, p.LM, p._y + i * (sz + 4));
+    if (right[i]) {
+      p.ctx.fillText(right[i], p.LM + colW, p._y + i * (sz + 4));
+    }
+  });
+  p._y += left.length * (sz + 4) + 4;
+
+  // Слои
+  const maxLayer = variant.items.length > 0
+    ? Math.max(...variant.items.map(i => layerOf(i)))
+    : 0;
+  if (maxLayer > 0) {
+    p.text(`Количество слоёв: ${maxLayer + 1}`, { bold: true });
+    const counts: Record<number, number> = {};
+    variant.items.forEach(item => {
+      const li = layerOf(item);
+      counts[li] = (counts[li] || 0) + 1;
+    });
+    const dist = Object.entries(counts)
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .map(([l, c]) => `Слой ${l}: ${c} шт.`)
+      .join('  •  ');
+    p.text(dist, { indent: 8, color: '#64748b' });
+  }
+
+  // Габариты
+  if (variant.items.length > 0) {
+    let maxX = 0, maxZ = 0, maxY = 0;
+    variant.items.forEach((item) => {
+      const { w, h } = ground(item);
+      maxX = Math.max(maxX, item.position.x + w);
+      maxZ = Math.max(maxZ, item.position.z + h);
+      maxY = Math.max(maxY, item.position.y + item.dimensions.height);
+    });
+    p.gap(2);
+    p.text(`Габариты размещения: ${Math.round(maxX)} × ${Math.round(maxZ)} × ${Math.round(maxY)} мм  (${vol(maxX * maxZ * maxY)})`, { color: '#64748b' });
+  }
+  p.gap(8);
+}
+
+// ─── Вид сверху ────────────────────────────────────────────
+
+function drawTopView(p: PdfCtx, vehicle: Vehicle, variant: LayoutVariant): number {
+  p.sectionTitle('Вид сверху');
+
+  const ox = p.LM;
+  const oy = p._y;
+  const maxW = p.contentW;
+  const maxH = 200;
+  const scale = Math.min(maxW / vehicle.length, maxH / vehicle.width, 1.5);
   const vw = vehicle.length * scale;
   const vh = vehicle.width * scale;
 
-  ctx.strokeStyle = '#475569';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(ox, oy, vw, vh);
-  ctx.fillStyle = '#f8fafc';
-  ctx.fillRect(ox, oy, vw, vh);
+  // Фон кузова
+  p.ctx.strokeStyle = '#475569';
+  p.ctx.lineWidth = 2;
+  p.ctx.strokeRect(ox, oy, vw, vh);
+  p.ctx.fillStyle = '#f8fafc';
+  p.ctx.fillRect(ox, oy, vw, vh);
 
   const maxLayer = variant.items.length > 0
     ? Math.max(...variant.items.map(i => layerOf(i)))
     : 0;
 
-  // Сначала рисуем слой 0 (задний план), потом верхние слои поверх
-  const sortedItems = [...variant.items].sort((a, b) => layerOf(a) - layerOf(b));
-
-  sortedItems.forEach((item) => {
+  // Рисуем грузы (слой 0 снизу, верхние слои поверх)
+  const sorted = [...variant.items].sort((a, b) => layerOf(a) - layerOf(b));
+  sorted.forEach((item) => {
     const { w, h } = ground(item);
     const x = ox + item.position.x * scale;
     const y = oy + item.position.z * scale;
     const iw = w * scale;
     const ih = h * scale;
     const li = layerOf(item);
-
     const color = maxLayer > 0 ? LAYER_COLORS[li % LAYER_COLORS.length] : (item.color || '#3b82f6');
 
     // Заливка
-    ctx.fillStyle = color;
-    ctx.globalAlpha = li === 0 ? 0.9 : 0.75;
-    ctx.fillRect(x, y, iw, ih);
-    ctx.globalAlpha = 1;
+    p.ctx.fillStyle = color;
+    p.ctx.globalAlpha = li === 0 ? 0.9 : 0.75;
+    p.ctx.fillRect(x, y, iw, ih);
+    p.ctx.globalAlpha = 1;
 
     // Штриховка для верхних слоёв
     if (maxLayer > 0 && li > 0) {
-      drawHatch(ctx, x, y, iw, ih, li, color);
+      hatch(p.ctx, x, y, iw, ih, li);
     }
 
     // Обводка
-    ctx.strokeStyle = li === 0 ? '#1e293b' : '#ffffff';
-    ctx.lineWidth = li === 0 ? 1 : 1.5;
-    ctx.strokeRect(x, y, iw, ih);
+    p.ctx.strokeStyle = li === 0 ? '#1e293b' : '#ffffff';
+    p.ctx.lineWidth = li === 0 ? 1 : 1.5;
+    p.ctx.strokeRect(x, y, iw, ih);
 
-    // Номер груза
+    // Номер
     if (iw > 12 && ih > 12) {
-      ctx.fillStyle = '#ffffff';
-      ctx.font = `bold 10px ${FONT}`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      const idx = variant.items.indexOf(item) + 1;
-      ctx.fillText(String(idx), x + iw / 2, y + ih / 2);
+      p.ctx.fillStyle = '#ffffff';
+      p.ctx.font = `bold 10px ${FONT}`;
+      p.ctx.textAlign = 'center';
+      p.ctx.textBaseline = 'middle';
+      p.ctx.fillText(String(variant.items.indexOf(item) + 1), x + iw / 2, y + ih / 2);
     }
   });
 
   // Линейка
   const rulerPx = 1000 * scale;
   if (rulerPx > 25) {
-    const rx = ox;
     const ry = oy + vh + 6;
-    ctx.strokeStyle = '#64748b';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(rx, ry);
-    ctx.lineTo(rx + rulerPx, ry);
-    ctx.moveTo(rx, ry - 3);
-    ctx.lineTo(rx, ry + 3);
-    ctx.moveTo(rx + rulerPx, ry - 3);
-    ctx.lineTo(rx + rulerPx, ry + 3);
-    ctx.stroke();
-    ctx.fillStyle = '#64748b';
-    ctx.font = `8px ${FONT}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText('1 м', rx + rulerPx / 2, ry + 4);
+    p.ctx.strokeStyle = '#64748b';
+    p.ctx.lineWidth = 1;
+    p.ctx.beginPath();
+    p.ctx.moveTo(ox, ry);
+    p.ctx.lineTo(ox + rulerPx, ry);
+    p.ctx.moveTo(ox, ry - 3); p.ctx.lineTo(ox, ry + 3);
+    p.ctx.moveTo(ox + rulerPx, ry - 3); p.ctx.lineTo(ox + rulerPx, ry + 3);
+    p.ctx.stroke();
+    p.ctx.fillStyle = '#64748b';
+    p.ctx.font = `8px ${FONT}`;
+    p.ctx.textAlign = 'center';
+    p.ctx.textBaseline = 'top';
+    p.ctx.fillText('1 м', ox + rulerPx / 2, ry + 4);
   }
 
-  return { maxY: oy + vh + (rulerPx > 25 ? 20 : 10), layers: maxLayer + 1 };
+  p._y = oy + vh + (rulerPx > 25 ? 22 : 12);
+  return maxLayer + 1;
 }
 
-/** Легенда слоёв с примерами штриховки */
-function drawLayerLegend(ctx: CanvasRenderingContext2D, x: number, y: number, layers: number): number {
-  if (layers <= 1) return y;
-  ctx.font = `bold 10px ${FONT}`;
-  ctx.fillStyle = '#1e293b';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('Обозначение слоёв:', x, y + 7);
-  y += 16;
+// ─── Легенда слоёв ─────────────────────────────────────────
 
+function drawLayerLegend(p: PdfCtx, layers: number) {
+  if (layers <= 1) return;
+  p.ctx.font = `bold 10px ${FONT}`;
+  p.ctx.fillStyle = '#1e293b';
+  p.ctx.textAlign = 'left';
+  p.ctx.textBaseline = 'middle';
+  p.ctx.fillText('Обозначение:', p.LM, p._y + 7);
+  let lx = p.LM + 80;
   for (let i = 0; i < layers; i++) {
-    const lx = x + i * 110;
     const color = LAYER_COLORS[i % LAYER_COLORS.length];
+    p.ctx.fillStyle = color;
+    p.ctx.globalAlpha = i === 0 ? 0.9 : 0.75;
+    p.ctx.fillRect(lx, p._y, 14, 14);
+    p.ctx.globalAlpha = 1;
+    if (i > 0) hatch(p.ctx, lx, p._y, 14, 14, i);
+    p.ctx.strokeStyle = i === 0 ? '#1e293b' : '#ffffff';
+    p.ctx.lineWidth = i === 0 ? 1 : 1.5;
+    p.ctx.strokeRect(lx, p._y, 14, 14);
 
-    // Цветной квадрат 14×14 с штриховкой
-    ctx.fillStyle = color;
-    ctx.globalAlpha = i === 0 ? 0.9 : 0.75;
-    ctx.fillRect(lx, y, 14, 14);
-    ctx.globalAlpha = 1;
-    if (i > 0) drawHatch(ctx, lx, y, 14, 14, i, color);
-    ctx.strokeStyle = i === 0 ? '#1e293b' : '#ffffff';
-    ctx.lineWidth = i === 0 ? 1 : 1.5;
-    ctx.strokeRect(lx, y, 14, 14);
-
-    // Текст
-    ctx.fillStyle = '#1e293b';
-    ctx.font = `9px ${FONT}`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`Слой ${i}${i === 0 ? ' (пол)' : ''}`, lx + 18, y + 7);
+    p.ctx.fillStyle = '#334155';
+    p.ctx.font = `9px ${FONT}`;
+    p.ctx.textAlign = 'left';
+    p.ctx.textBaseline = 'middle';
+    p.ctx.fillText(`Слой ${i}${i === 0 ? ' (пол)' : ''}`, lx + 18, p._y + 7);
+    lx += 100;
   }
-  return y + 22;
+  p._y += 22;
 }
 
-/** Легенда номеров — сгруппирована по слоям */
-function drawItemLegend(ctx: CanvasRenderingContext2D, x: number, y: number, items: LayoutVariant['items']): number {
-  if (items.length === 0) return y;
+// ─── Легенда номеров (группировка по слоям) ────────────────
+
+function drawItemLegend(p: PdfCtx, items: LayoutVariant['items']) {
+  if (items.length === 0) return;
 
   const maxL = items.length > 0 ? Math.max(...items.map(i => layerOf(i))) : 0;
-  const hasLayers = maxL > 0;
+  const cols = 3;
+  const colW = p.contentW / cols;
 
-  if (!hasLayers) {
-    // Без слоёв — обычная легенда 3 колонки
-    const cols = 3;
-    const colW = (794 - 48) / cols;
-    ctx.font = `9px ${FONT}`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillStyle = '#475569';
+  if (maxL === 0) {
+    // Без слоёв — простая сетка
+    p.ctx.font = `9px ${FONT}`;
+    p.ctx.textAlign = 'left';
+    p.ctx.textBaseline = 'top';
+    p.ctx.fillStyle = '#475569';
     items.forEach((item, idx) => {
       const col = idx % cols;
       const row = Math.floor(idx / cols);
-      ctx.fillText(`${idx + 1}. ${item.name}`, x + col * colW, y + row * 14);
+      p.ctx.fillText(`${idx + 1}. ${item.name}`, p.LM + col * colW, p._y + row * 13);
     });
-    return y + Math.ceil(items.length / cols) * 14 + 12;
+    p._y += Math.ceil(items.length / cols) * 13 + 10;
+    return;
   }
 
-  // Со слоями — группировка по слоям
-  ctx.font = `bold 10px ${FONT}`;
-  ctx.fillStyle = '#1e293b';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.fillText('Грузы по слоям:', x, y);
-  y += 14;
-
-  const cols = 3;
-  const colW = (794 - 48) / cols;
+  // Со слоями — группировка
+  p.ctx.font = `bold 10px ${FONT}`;
+  p.ctx.fillStyle = '#1e293b';
+  p.ctx.textAlign = 'left';
+  p.ctx.textBaseline = 'top';
+  p.ctx.fillText('Номера грузов по слоям:', p.LM, p._y);
+  p._y += 14;
 
   for (let layer = 0; layer <= maxL; layer++) {
     const layerItems = items
       .map((item, idx) => ({ item, idx }))
       .filter(({ item }) => layerOf(item) === layer);
-
     if (layerItems.length === 0) continue;
 
-    // Заголовок слоя
     const color = LAYER_COLORS[layer % LAYER_COLORS.length];
-    ctx.fillStyle = color;
-    ctx.fillRect(x, y + 2, 10, 10);
-    ctx.fillStyle = '#1e293b';
-    ctx.font = `bold 9px ${FONT}`;
-    ctx.fillText(`Слой ${layer}:`, x + 14, y + 1);
-    y += 13;
+    p.ctx.fillStyle = color;
+    p.ctx.fillRect(p.LM, p._y + 1, 10, 10);
+    p.ctx.fillStyle = '#1e293b';
+    p.ctx.font = `bold 9px ${FONT}`;
+    p.ctx.textAlign = 'left';
+    p.ctx.fillText(`Слой ${layer}:`, p.LM + 14, p._y);
+    p._y += 12;
 
-    // Номера грузов этого слоя
-    ctx.font = `9px ${FONT}`;
-    ctx.fillStyle = '#475569';
+    p.ctx.font = `9px ${FONT}`;
+    p.ctx.fillStyle = '#475569';
     layerItems.forEach(({ item, idx }, i) => {
       const col = i % cols;
       const row = Math.floor(i / cols);
-      ctx.fillText(`${idx + 1}. ${item.name}`, x + 10 + col * colW, y + row * 13);
+      p.ctx.fillText(`${idx + 1}. ${item.name}`, p.LM + 10 + col * colW, p._y + row * 13);
     });
-    y += Math.ceil(layerItems.length / cols) * 13 + 4;
+    p._y += Math.ceil(layerItems.length / cols) * 13 + 4;
   }
-
-  return y + 8;
+  p._y += 6;
 }
 
-/** Таблица грузов — отсортирована по слоям, цветная колонка «Слой» */
-function drawCargoTable(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  pageW: number,
-  cargo: Cargo[],
-  items: LayoutVariant['items'],
-): number {
+// ─── Таблица грузов с чёткими границами ────────────────────
+
+function drawCargoTable(p: PdfCtx, cargo: Cargo[], items: LayoutVariant['items']) {
+  p.sectionTitle('Список грузов');
+
   const maxL = items.length > 0 ? Math.max(...items.map(i => layerOf(i))) : 0;
   const hasLayers = maxL > 0;
 
+  // Колонки: №, Название, Форма, Размеры, Вес, Кол-во [, Слой]
   const headers = hasLayers
-    ? ['Название', 'Форма', 'Размеры, мм', 'Вес, кг', 'Кол-во', 'Слой']
-    : ['Название', 'Форма', 'Размеры, мм', 'Вес, кг', 'Кол-во'];
-  const colX = hasLayers
-    ? [x, x + 115, x + 180, x + 290, x + 355, x + 415]
-    : [x, x + 130, x + 200, x + 320, x + 390];
+    ? ['№', 'Название', 'Форма', 'Размеры, мм', 'Вес, кг', 'Кол-во', 'Слой']
+    : ['№', 'Название', 'Форма', 'Размеры, мм', 'Вес, кг', 'Кол-во'];
+
+  // Ширины колонок (в px)
+  const colWidths = hasLayers
+    ? [24, 100, 55, 110, 52, 42, 48]
+    : [24, 110, 60, 120, 56, 46];
+
+  const totalW = colWidths.reduce((s, w) => s + w, 0);
+  const startX = p.LM + (p.contentW - totalW) / 2; // центрируем
+  const rowH = 18;
+
+  // Вычисляем X координаты колонок
+  const colX: number[] = [];
+  let cx = startX;
+  for (const w of colWidths) {
+    colX.push(cx);
+    cx += w;
+  }
+
+  // Сортируем грузы по слою
+  const sorted = cargo.map(c => {
+    const match = items.find(it => it.name === c.name);
+    return { c, layer: match ? layerOf(match) : 0 };
+  }).sort((a, b) => a.layer - b.layer);
+
+  // Проверяем помещается ли таблица
+  const headerH = 22;
+  const tableH = headerH + sorted.length * rowH + 4;
+  p.ensureSpace(tableH);
 
   // Шапка таблицы
-  ctx.fillStyle = '#e2e8f0';
-  ctx.fillRect(x, y, pageW - x * 2, 20);
-  ctx.fillStyle = '#1e293b';
-  ctx.font = `bold 10px ${FONT}`;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  headers.forEach((h, i) => ctx.fillText(h, colX[i], y + 5));
-  y += 22;
-
-  // Сортируем грузы по слою (сначала слой 0, потом 1 и т.д.)
-  const cargoWithLayer = cargo.map(c => {
-    const matchingItem = items.find(it => it.name === c.name);
-    return { cargo: c, layer: matchingItem ? layerOf(matchingItem) : 0 };
+  p.ctx.fillStyle = '#1e293b';
+  p.ctx.fillRect(startX, p._y, totalW, headerH);
+  p.ctx.font = `bold 9px ${FONT}`;
+  p.ctx.fillStyle = '#ffffff';
+  p.ctx.textAlign = 'left';
+  p.ctx.textBaseline = 'middle';
+  headers.forEach((h, i) => {
+    p.ctx.fillText(h, colX[i] + 4, p._y + headerH / 2);
   });
-  cargoWithLayer.sort((a, b) => a.layer - b.layer);
+  p._y += headerH;
 
   // Строки данных
-  ctx.font = `10px ${FONT}`;
-  for (const { cargo: c, layer: li } of cargoWithLayer) {
+  p.ctx.font = `9px ${FONT}`;
+  sorted.forEach(({ c, layer: li }, rowIdx) => {
+    // Чередование фона строк
+    if (rowIdx % 2 === 0) {
+      p.ctx.fillStyle = '#f8fafc';
+      p.ctx.fillRect(startX, p._y, totalW, rowH);
+    }
+
+    // Горизонтальная линия сверху
+    p.ctx.strokeStyle = '#e2e8f0';
+    p.ctx.lineWidth = 0.5;
+    p.ctx.beginPath();
+    p.ctx.moveTo(startX, p._y);
+    p.ctx.lineTo(startX + totalW, p._y);
+    p.ctx.stroke();
+
     const size = c.shape === 'cylinder'
       ? `Ø${c.diameter}×${c.length}`
       : `${c.length}×${c.width ?? 0}×${c.height ?? 0}`;
 
-    ctx.fillStyle = '#1e293b';
-    ctx.textAlign = 'left';
-    ctx.fillText(c.name, colX[0], y);
-    ctx.fillText(c.shape === 'box' ? 'Прямоуг.' : 'Цилиндр', colX[1], y);
-    ctx.fillText(size, colX[2], y);
-    ctx.fillText(String(c.weight), colX[3], y);
-    ctx.fillText(String(c.quantity), colX[4], y);
+    const vals = [
+      String(rowIdx + 1),
+      c.name,
+      c.shape === 'box' ? 'Прямоуг.' : 'Цилиндр',
+      size,
+      String(c.weight),
+      String(c.quantity),
+    ];
 
+    p.ctx.textAlign = 'left';
+    p.ctx.textBaseline = 'middle';
+    const cellY = p._y + rowH / 2;
+
+    vals.forEach((v, i) => {
+      p.ctx.fillStyle = '#1e293b';
+      p.ctx.fillText(v, colX[i] + 4, cellY);
+    });
+
+    // Колонка «Слой»
     if (hasLayers) {
-      // Цветной фон ячейки «Слой»
       const color = LAYER_COLORS[li % LAYER_COLORS.length];
-      const cellX = colX[5] - 2;
-      const cellY = y - 1;
-      ctx.fillStyle = color;
-      ctx.globalAlpha = 0.15;
-      ctx.fillRect(cellX, cellY, 30, 14);
-      ctx.globalAlpha = 1;
-
-      // Цветной кружок
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(colX[5] + 5, y + 5, 4, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Номер слоя
-      ctx.fillStyle = '#1e293b';
-      ctx.textAlign = 'left';
-      ctx.fillText(String(li), colX[5] + 12, y);
+      const sx = colX[6];
+      // Цветной фон
+      p.ctx.fillStyle = color;
+      p.ctx.globalAlpha = 0.12;
+      p.ctx.fillRect(sx + 2, p._y + 2, totalW - (colX[6] - startX) - 4, rowH - 4);
+      p.ctx.globalAlpha = 1;
+      // Кружок
+      p.ctx.fillStyle = color;
+      p.ctx.beginPath();
+      p.ctx.arc(sx + 12, cellY, 5, 0, Math.PI * 2);
+      p.ctx.fill();
+      // Текст
+      p.ctx.fillStyle = '#1e293b';
+      p.ctx.textAlign = 'left';
+      p.ctx.fillText(String(li), sx + 20, cellY);
     }
 
-    y += 16;
+    p._y += rowH;
+  });
 
-    ctx.strokeStyle = '#e2e8f0';
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    ctx.moveTo(x, y - 3);
-    ctx.lineTo(x + pageW - x * 2, y - 3);
-    ctx.stroke();
+  // Нижняя граница таблицы
+  p.ctx.strokeStyle = '#1e293b';
+  p.ctx.lineWidth = 1;
+  p.ctx.beginPath();
+  p.ctx.moveTo(startX, p._y);
+  p.ctx.lineTo(startX + totalW, p._y);
+  p.ctx.stroke();
+
+  // Вертикальные линии колонок
+  p.ctx.strokeStyle = '#cbd5e1';
+  p.ctx.lineWidth = 0.5;
+  for (let i = 1; i < colX.length; i++) {
+    p.ctx.beginPath();
+    p.ctx.moveTo(colX[i], p._y - sorted.length * rowH - headerH);
+    p.ctx.lineTo(colX[i], p._y);
+    p.ctx.stroke();
   }
-  return y;
+
+  p._y += 10;
 }
 
-/** Формирует и скачивает PDF-отчёт */
+// ─── Основная функция ──────────────────────────────────────
+
 export function generatePdfReport(
   vehicle: Vehicle,
   cargo: Cargo[],
@@ -379,101 +577,24 @@ export function generatePdfReport(
   if (!ctx) throw new Error('Cannot create canvas');
   ctx.scale(DPR, DPR);
 
+  // Белый фон
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, W, H);
 
-  const LM = 24;
-  let y = drawHeader(ctx, W);
-  y += 10;
+  const p = new PdfCtx(ctx, W, H);
 
-  // Автомобиль
-  y = drawInfo(ctx, LM, y, [
-    `Автомобиль: ${vehicle.name}`,
-    `Кузов: ${vehicle.length}×${vehicle.width}×${vehicle.height} мм`,
-    `Грузоподъёмность: ${vehicle.maxWeight} кг`,
-  ], { size: 11 });
-  y += 6;
+  // ─── Страница 1 ─────────────────────────────────────────
+  drawCover(p);
+  drawVehicleInfo(p, vehicle);
+  drawMetrics(p, variant, vehicle);
 
-  // Метрики
-  y = drawInfo(ctx, LM, y, [`Вариант: ${variant.label}`], { bold: true, size: 12 });
-  y = drawInfo(ctx, LM, y, [
-    `Заполнение объёма: ${variant.volumeFill}%`,
-    `Заполнение по весу: ${variant.weightFill}%`,
-    `Суммарный вес: ${variant.totalWeight} кг`,
-    `Свободный объём: ${vol(variant.freeVolume)}`,
-    `Размещено: ${variant.items.length} шт.`,
-  ], { size: 11 });
-
-  // Слои
-  const maxLayer = variant.items.length > 0
-    ? Math.max(...variant.items.map(i => layerOf(i)))
-    : 0;
-  if (maxLayer > 0) {
-    y = drawInfo(ctx, LM, y, [`Количество слоёв: ${maxLayer + 1}`], { size: 11 });
-    // Распределение по слоям
-    const layerCounts: Record<number, number> = {};
-    variant.items.forEach(item => {
-      const li = layerOf(item);
-      layerCounts[li] = (layerCounts[li] || 0) + 1;
-    });
-    const dist = Object.entries(layerCounts)
-      .sort(([a], [b]) => Number(a) - Number(b))
-      .map(([l, cnt]) => `Слой ${l}: ${cnt} шт.`)
-      .join(', ');
-    y = drawInfo(ctx, LM, y, [`Распределение: ${dist}`], { size: 11 });
-  }
-  y += 6;
-
-  // Габариты
-  if (variant.items.length > 0) {
-    let maxX = 0, maxZ = 0, maxY = 0;
-    variant.items.forEach((item) => {
-      const { w, h } = ground(item);
-      maxX = Math.max(maxX, item.position.x + w);
-      maxZ = Math.max(maxZ, item.position.z + h);
-      maxY = Math.max(maxY, item.position.y + item.dimensions.height);
-    });
-    y = drawInfo(ctx, LM, y, [
-      `Габариты: ${Math.round(maxX)}×${Math.round(maxZ)}×${Math.round(maxY)} мм`,
-      `Объём груза: ${(maxX * maxZ * maxY / 1e9).toFixed(2)} м³`,
-    ], { size: 11 });
-  }
-  y += 12;
-
-  // Вид сверху
-  ctx.fillStyle = '#1e293b';
-  ctx.font = `bold 12px ${FONT}`;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.fillText('Вид сверху:', LM, y);
-  y += 8;
-
-  const topScale = Math.min((W - LM * 2) / vehicle.length, 180 / vehicle.width, 1.5);
-  const { maxY: viewBottom, layers } = drawTopView(ctx, vehicle, variant, LM, y, topScale);
-  y = viewBottom + 20;
-
-  // Легенда слоёв
-  y = drawLayerLegend(ctx, LM, y, layers);
-
-  // Легенда номеров (группировка по слоям)
-  y = drawItemLegend(ctx, LM, y, variant.items);
-  y += 8;
-
-  // Таблица
-  ctx.fillStyle = '#1e293b';
-  ctx.font = `bold 12px ${FONT}`;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.fillText('Список грузов:', LM, y);
-  y += 8;
-  y = drawCargoTable(ctx, LM, y, W, cargo, variant.items);
+  const layers = drawTopView(p, vehicle, variant);
+  drawLayerLegend(p, layers);
+  drawItemLegend(p, variant.items);
+  drawCargoTable(p, cargo, variant.items);
 
   // Подвал
-  ctx.fillStyle = '#94a3b8';
-  ctx.font = `9px ${FONT}`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'bottom';
-  ctx.fillText('CargoPlanner — автоматический расчёт загрузки', W / 2, H - 10);
+  p.footer();
 
   // PDF
   const imgData = canvas.toDataURL('image/png');
