@@ -139,6 +139,9 @@ const App: React.FC = () => {
                 <label htmlFor="stacking-toggle" style={{ fontSize: 13, color: 'var(--text)' }}>
                   📦 Штабелирование
                 </label>
+                <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                  (для всех грузов)
+                </span>
               </div>
             </div>
           </div>

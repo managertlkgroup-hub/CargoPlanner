@@ -115,6 +115,7 @@ export default function CargoTable() {
         <div className="cargo-table-sticky-header">
           <div className="cargo-table-header-row">
             <div className="cargo-table-header-cell">✓</div>
+            <div className="cargo-table-header-cell" title="Можно ставить сверху">Штаб</div>
             <div className="cargo-table-header-cell">Название</div>
             <div className="cargo-table-header-cell">Форма</div>
             <div className="cargo-table-header-cell">Длина</div>
@@ -122,9 +123,6 @@ export default function CargoTable() {
             <div className="cargo-table-header-cell">Выс.</div>
             <div className="cargo-table-header-cell">Вес</div>
             <div className="cargo-table-header-cell">Кол-во</div>
-            <div className="cargo-table-header-cell">Штаб.</div>
-            <div className="cargo-table-header-cell">Загрузка</div>
-            <div className="cargo-table-header-cell">Выгрузка</div>
           </div>
         </div>
         {cargo.length === 0 ? (

@@ -18,8 +18,6 @@ interface Props {
 
 export default function CargoRow({ cargo, selected, onToggleSelect }: Props) {
   const updateCargo = useAppStore((s) => s.updateCargo);
-  const loadingPoints = useAppStore((s) => s.loadingPoints);
-  const unloadingPoints = useAppStore((s) => s.unloadingPoints);
   const isCylinder = cargo.shape === 'cylinder';
 
   return (
@@ -29,6 +27,14 @@ export default function CargoRow({ cargo, selected, onToggleSelect }: Props) {
           type="checkbox"
           checked={selected}
           onChange={() => onToggleSelect(cargo.id)}
+        />
+      </div>
+      <div className="cargo-row-cell">
+        <input
+          type="checkbox"
+          checked={cargo.stackable}
+          onChange={(e) => updateCargo(cargo.id, { stackable: e.target.checked })}
+          title="Можно ставить сверху"
         />
       </div>
       <div className="cargo-row-cell cargo-name-cell">
@@ -96,41 +102,6 @@ export default function CargoRow({ cargo, selected, onToggleSelect }: Props) {
           className="input-compact"
           onChange={(e) => updateCargo(cargo.id, { quantity: Math.max(1, Math.floor(Number(e.target.value) || 1)) })}
         />
-      </div>
-      <div className="cargo-row-cell">
-        <input
-          type="checkbox"
-          checked={cargo.stackable}
-          onChange={(e) => updateCargo(cargo.id, { stackable: e.target.checked })}
-        />
-      </div>
-      <div className="cargo-row-cell">
-        <select
-          value={cargo.loadingPointId ?? ''}
-          className="select-compact"
-          onChange={(e) => updateCargo(cargo.id, { loadingPointId: e.target.value || undefined })}
-        >
-          <option value="">—</option>
-          {[...loadingPoints]
-            .sort((a, b) => a.order - b.order)
-            .map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-        </select>
-      </div>
-      <div className="cargo-row-cell">
-        <select
-          value={cargo.unloadingPointId ?? ''}
-          className="select-compact"
-          onChange={(e) => updateCargo(cargo.id, { unloadingPointId: e.target.value || undefined })}
-        >
-          <option value="">—</option>
-          {[...unloadingPoints]
-            .sort((a, b) => a.order - b.order)
-            .map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-        </select>
       </div>
     </div>
   );

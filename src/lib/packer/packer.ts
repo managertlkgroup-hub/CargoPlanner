@@ -187,7 +187,10 @@ function packIntoBin(
         if (point.z + placedWidth > bin.width) continue;
 
         if (settings.maxStackHeight > 0 && point.y + placedHeight > settings.maxStackHeight) continue;
-        if (!box.stackable && point.y !== 0) continue;
+        // Если maxStackHeight === 0, штабелирование отключено для ВСЕХ грузов
+        if (settings.maxStackHeight === 0 && point.y > 0) continue;
+        // Если maxStackHeight > 0, но груз не штабелируемый — только на пол
+        if (settings.maxStackHeight > 0 && !box.stackable && point.y !== 0) continue;
 
         // Проверка опоры: груз на слое > 0 должен стоять на грузе снизу
         if (point.y > 0) {

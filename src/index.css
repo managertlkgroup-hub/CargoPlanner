@@ -351,14 +351,14 @@ html, body {
 
 .cargo-table-header-row {
   display: grid;
-  grid-template-columns: 30px 1.2fr 60px 55px 55px 75px 55px 45px 45px 1fr 1fr;
+  grid-template-columns: 30px 40px 1fr 60px 55px 55px 45px 55px 45px;
   gap: var(--spacing-xs);
   padding: var(--spacing-xs) var(--spacing-sm);
   background: var(--bg-panel);
   font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--text-muted);
-  min-width: 700px;
+  min-width: 600px;
 }
 
 .cargo-table-header-cell {
@@ -370,13 +370,13 @@ html, body {
 
 .cargo-row {
   display: grid;
-  grid-template-columns: 30px 1.2fr 60px 55px 55px 75px 55px 45px 45px 1fr 1fr;
+  grid-template-columns: 30px 40px 1fr 60px 55px 55px 45px 55px 45px;
   gap: var(--spacing-xs);
   padding: 4px var(--spacing-sm);
   align-items: center;
   border-bottom: 1px solid var(--border);
   font-size: var(--font-size-xs);
-  min-width: 700px;
+  min-width: 600px;
   min-height: 32px;
 }
 
@@ -1181,13 +1181,7 @@ html, body {
 @media (max-width: 768px) {
   .cargo-table-header-row,
   .cargo-row {
-    grid-template-columns: 30px 1fr 65px 55px 55px 75px 50px 40px 40px;
-  }
-  .cargo-table-header-cell:nth-child(10),
-  .cargo-table-header-cell:nth-child(11),
-  .cargo-row-cell:nth-child(10),
-  .cargo-row-cell:nth-child(11) {
-    display: none;
+    grid-template-columns: 30px 35px 1fr 55px 50px 50px 40px 50px 40px;
   }
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr);
