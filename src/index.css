@@ -424,6 +424,22 @@ html, body {
   padding: 4px 6px;
 }
 
+.cargo-name-display {
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-input);
+  min-height: 18px;
+  line-height: 1.2;
+}
+
+.cargo-name-display:hover {
+  background: var(--bg-input);
+  outline: 1px dashed var(--border);
+}
+
 .cargo-row-cell input,
 .cargo-row-cell select {
   width: 100%;

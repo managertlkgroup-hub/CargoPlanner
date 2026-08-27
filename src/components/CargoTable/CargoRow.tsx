@@ -6,6 +6,7 @@
 // (без ошибки "tr cannot appear as a child of div").
 // ============================================================================
 
+import { useState, useRef } from 'react';
 import type { Cargo } from '../../types';
 import { shapeLabel } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
@@ -19,6 +20,23 @@ interface Props {
 export default function CargoRow({ cargo, selected, onToggleSelect }: Props) {
   const updateCargo = useAppStore((s) => s.updateCargo);
   const isCylinder = cargo.shape === 'cylinder';
+  const [editingName, setEditingName] = useState(false);
+  const [editValue, setEditValue] = useState(cargo.name);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const startEditName = () => {
+    setEditValue(cargo.name);
+    setEditingName(true);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const commitName = () => {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== cargo.name) {
+      updateCargo(cargo.id, { name: trimmed });
+    }
+    setEditingName(false);
+  };
 
   return (
     <div className={`cargo-row ${selected ? 'cargo-row-selected' : ''}`}>
@@ -38,12 +56,29 @@ export default function CargoRow({ cargo, selected, onToggleSelect }: Props) {
         />
       </div>
       <div className="cargo-row-cell cargo-name-cell">
-        <input
-          type="text"
-          value={cargo.name}
-          className="input-block"
-          onChange={(e) => updateCargo(cargo.id, { name: e.target.value })}
-        />
+        {editingName ? (
+          <input
+            ref={inputRef}
+            type="text"
+            value={editValue}
+            className="input-block"
+            maxLength={100}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={commitName}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitName();
+              if (e.key === 'Escape') setEditingName(false);
+            }}
+          />
+        ) : (
+          <div
+            className="cargo-name-display"
+            onDoubleClick={startEditName}
+            title={cargo.name}
+          >
+            {cargo.name}
+          </div>
+        )}
       </div>
       <div className="cargo-row-cell">{shapeLabel(cargo.shape)}</div>
       <div className="cargo-row-cell">
