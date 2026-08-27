@@ -351,20 +351,20 @@ html, body {
 
 .cargo-table-header-row {
   display: grid;
-  grid-template-columns: 28px 32px 1.5fr 48px 48px 48px 40px 48px 38px;
-  gap: 0;
-  padding: 3px 0;
+  grid-template-columns: 28px 32px 1.8fr 60px 60px 60px 60px 50px 45px;
+  gap: 2px;
+  padding: 2px 4px;
   background: var(--bg-panel);
   font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--text-muted);
-  min-width: 500px;
+  min-width: 550px;
 }
 
 .cargo-table-header-cell {
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
   min-width: 0;
   padding: 3px 4px;
   border-right: 1px solid var(--border);
@@ -377,13 +377,13 @@ html, body {
 
 .cargo-row {
   display: grid;
-  grid-template-columns: 28px 32px 1.5fr 48px 48px 48px 40px 48px 38px;
-  gap: 0;
-  padding: 3px 0;
+  grid-template-columns: 28px 32px 1.8fr 60px 60px 60px 60px 50px 45px;
+  gap: 2px;
+  padding: 2px 4px;
   align-items: center;
   border-bottom: 1px solid var(--border);
   font-size: var(--font-size-xs);
-  min-width: 500px;
+  min-width: 550px;
   min-height: 28px;
 }
 
@@ -401,8 +401,8 @@ html, body {
 
 .cargo-row-cell {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
   white-space: nowrap;
   padding: 3px 4px;
   border-right: 1px solid var(--border);
@@ -411,6 +411,13 @@ html, body {
 
 .cargo-row-cell:last-child {
   border-right: none;
+}
+
+/* Колонка «Название» — обрезать длинные названия с многоточием */
+.cargo-row-cell.cargo-name-cell,
+.cargo-table-header-cell.cargo-name-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cargo-row-cell input,
@@ -1195,7 +1202,7 @@ html, body {
 @media (max-width: 768px) {
   .cargo-table-header-row,
   .cargo-row {
-    grid-template-columns: 26px 30px 1.5fr 44px 44px 44px 36px 44px 34px;
+    grid-template-columns: 26px 30px 1.8fr 50px 50px 50px 50px 44px 38px;
   }
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr);
