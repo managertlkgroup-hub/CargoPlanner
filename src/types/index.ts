@@ -9,6 +9,40 @@ export interface Dimensions {
   height: number;
 }
 
+/** Тип кузова */
+export type BodyType =
+  | 'tent' | 'curtain' | 'van' | 'isothermal'
+  | 'refrigerator' | 'refrigerator_partition' | 'refrigerator_multi'
+  | 'side' | 'platform' | 'flatbed' | 'open_container'
+  | 'low_loader' | 'trailer' | 'low_platform' | 'telescopic'
+  | 'dump' | 'tanker' | 'container'
+  | 'car_transporter' | 'concrete_mixer' | 'grain_truck'
+  | 'log_truck' | 'pipe_truck' | 'crane' | 'manipulator'
+  | 'evacuator' | 'minibus' | 'pickup' | 'combi'
+  | 'horse_carrier' | 'cattle_carrier' | 'feed_truck'
+  | 'glass_truck' | 'panel_truck' | 'garbage_truck'
+  | 'jumbo' | 'mega' | 'tank_container'
+  | 'cement_truck' | 'flour_truck' | 'tractor' | 'other';
+
+/** Человекочитаемые названия типов кузовов */
+export const BODY_TYPE_LABELS: Record<BodyType, string> = {
+  tent: 'Тентованный', curtain: 'Тент (шторка)', van: 'Фургон',
+  isothermal: 'Изотермический', refrigerator: 'Рефрижератор',
+  refrigerator_partition: 'Рефр. с перегородкой', refrigerator_multi: 'Рефр. мультизональный',
+  side: 'Бортовой', platform: 'Платформа', flatbed: 'Ровная платформа',
+  open_container: 'Открытый контейнер', low_loader: 'Низкорамный',
+  trailer: 'Прицеп', low_platform: 'Низкая платформа', telescopic: 'Телескопический',
+  dump: 'Самосвал', tanker: 'Цистерна', container: 'Контейнеровоз',
+  car_transporter: 'Автовоз', concrete_mixer: 'Бетономешалка',
+  grain_truck: 'Зерновоз', log_truck: 'Лесовоз', pipe_truck: 'Трубовоз',
+  crane: 'Кран', manipulator: 'Манипулятор', evacuator: 'Эвакуатор',
+  minibus: 'Микроавтобус', pickup: 'Пикап', combi: 'Комби',
+  horse_carrier: 'Коневоз', cattle_carrier: 'Скотовоз', feed_truck: 'Кормовоз',
+  glass_truck: 'Стекловоз', panel_truck: 'Панелевоз', garbage_truck: 'Мусоровоз',
+  jumbo: 'Джамбо', mega: 'Мега-фура', tank_container: 'Танк-контейнер',
+  cement_truck: 'Цементовоз', flour_truck: 'Муковоз', tractor: 'Тягач', other: 'Другой',
+};
+
 /** Способ загрузки/выгрузки */
 export type LoadingMethod =
   | 'rear'              // Задняя (через ворота/двери)
@@ -48,6 +82,8 @@ export interface Vehicle extends Dimensions {
   maxWeight: number;
   /** true — пользовательский пресет, false — стандартный */
   isCustom?: boolean;
+  /** Тип кузова */
+  bodyType?: BodyType;
   /** Доступные способы загрузки */
   loadingMethods?: LoadingMethod[];
   /** Доступные способы выгрузки */

@@ -4,7 +4,7 @@
 
 import { useAppStore } from '../../store/useAppStore';
 import { getCurrentVehicle, useAllVehicles } from '../../store/useAppStore';
-import { LOADING_METHOD_LABELS } from '../../types';
+import { LOADING_METHOD_LABELS, BODY_TYPE_LABELS } from '../../types';
 
 export default function VehicleSelector() {
   const selectedVehicleId = useAppStore((s) => s.selectedVehicleId);
@@ -34,6 +34,12 @@ export default function VehicleSelector() {
           ))}
         </select>
       </div>
+
+      {vehicle.bodyType && (
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>
+          Тип: <strong>{BODY_TYPE_LABELS[vehicle.bodyType] || vehicle.bodyType}</strong>
+        </div>
+      )}
 
       <div className="metrics-grid vehicle-metrics">
         <div className="metric-card">

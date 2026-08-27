@@ -2,14 +2,68 @@
 // Стандартные пресеты автомобилей и грузов
 // ============================================================================
 
-import type { Vehicle, LoadingMethod } from '../../types';
+import type { Vehicle, LoadingMethod, BodyType } from '../../types';
 
-/** Способы загрузки для тентованных кузовов (наиболее универсальные) */
-const TENT_METHODS: LoadingMethod[] = [
-  'rear', 'side', 'top', 'side_both', 'full_tent_removal',
-  'crossbar_removal', 'post_removal', 'no_gate',
-  'hydraulic_tail', 'ramps', 'lathing',
-];
+// ─── Соответствие типов кузовов и способов загрузки/выгрузки ──────
+
+const METHOD_MAP: Record<string, { loading: LoadingMethod[]; unloading: LoadingMethod[] }> = {
+  tent:                   { loading: ['rear','side','top','side_both','full_tent_removal','crossbar_removal','post_removal','no_gate','hydraulic_tail','ramps','lathing'], unloading: ['rear','side','top','side_both','full_tent_removal','crossbar_removal','post_removal','no_gate','hydraulic_tail','ramps','lathing'] },
+  curtain:                { loading: ['rear','side','top','side_both','full_tent_removal','crossbar_removal','post_removal','no_gate','hydraulic_tail','ramps','lathing'], unloading: ['rear','side','top','side_both','full_tent_removal','crossbar_removal','post_removal','no_gate','hydraulic_tail','ramps','lathing'] },
+  van:                    { loading: ['rear','hydraulic_tail'], unloading: ['rear','hydraulic_tail'] },
+  isothermal:             { loading: ['rear','hydraulic_tail'], unloading: ['rear','hydraulic_tail'] },
+  refrigerator:           { loading: ['rear','hydraulic_tail'], unloading: ['rear','hydraulic_tail'] },
+  side:                   { loading: ['rear','side','top','hydraulic_tail','ramps','with_sides'], unloading: ['rear','side','top','hydraulic_tail','ramps','with_sides'] },
+  platform:               { loading: ['top','side','rear','ramps'], unloading: ['top','side','rear','ramps'] },
+  flatbed:                { loading: ['top','side','rear','ramps'], unloading: ['top','side','rear','ramps'] },
+  low_loader:             { loading: ['rear','top','ramps'], unloading: ['rear','top','ramps'] },
+  trailer:                { loading: ['rear','top','ramps'], unloading: ['rear','top','ramps'] },
+  dump:                   { loading: ['top','side'], unloading: ['rear','side'] },
+  tanker:                 { loading: ['top','rear'], unloading: ['top','rear'] },
+  container:              { loading: ['top','rear'], unloading: ['top','rear'] },
+  car_transporter:        { loading: ['rear','ramps','top'], unloading: ['rear','ramps','top'] },
+  concrete_mixer:         { loading: ['top'], unloading: ['rear'] },
+  grain_truck:            { loading: ['top'], unloading: ['rear'] },
+  log_truck:              { loading: ['side','top'], unloading: ['side','top'] },
+  crane:                  { loading: ['top','side'], unloading: ['top','side'] },
+  manipulator:            { loading: ['top','side'], unloading: ['top','side'] },
+  evacuator:              { loading: ['rear','ramps','top'], unloading: ['rear','ramps','top'] },
+  minibus:                { loading: ['rear'], unloading: ['rear'] },
+  pickup:                 { loading: ['rear'], unloading: ['rear'] },
+  horse_carrier:          { loading: ['rear','ramps'], unloading: ['rear','ramps'] },
+  garbage_truck:          { loading: ['rear','side'], unloading: ['rear','side'] },
+  jumbo:                  { loading: ['rear','side','top','hydraulic_tail','ramps'], unloading: ['rear','side','top','hydraulic_tail','ramps'] },
+  mega:                   { loading: ['rear','side','top','hydraulic_tail','ramps'], unloading: ['rear','side','top','hydraulic_tail','ramps'] },
+  tank_container:         { loading: ['top','rear'], unloading: ['top','rear'] },
+  cement_truck:           { loading: ['top'], unloading: ['rear'] },
+  flour_truck:            { loading: ['top'], unloading: ['rear'] },
+  tractor:                { loading: [], unloading: [] },
+  other:                  { loading: ['rear'], unloading: ['rear'] },
+};
+
+function getDefaultMethod(bodyType: BodyType): { loading: LoadingMethod; unloading: LoadingMethod } {
+  const map: Record<string, { loading: LoadingMethod; unloading: LoadingMethod }> = {
+    tent: { loading: 'rear', unloading: 'rear' },
+    dump: { loading: 'top', unloading: 'rear' },
+    tanker: { loading: 'top', unloading: 'rear' },
+    concrete_mixer: { loading: 'top', unloading: 'rear' },
+    grain_truck: { loading: 'top', unloading: 'rear' },
+    cement_truck: { loading: 'top', unloading: 'rear' },
+    flour_truck: { loading: 'top', unloading: 'rear' },
+  };
+  return map[bodyType] ?? { loading: 'rear', unloading: 'rear' };
+}
+
+/** Возвращает предустановленный набор способов для типа кузова */
+export function getDefaultMethodsForBodyType(bodyType: BodyType) {
+  const entry = METHOD_MAP[bodyType] ?? METHOD_MAP.other;
+  const defaults = getDefaultMethod(bodyType);
+  return {
+    loadingMethods: entry.loading,
+    unloadingMethods: entry.unloading,
+    defaultLoadingMethod: defaults.loading,
+    defaultUnloadingMethod: defaults.unloading,
+  };
+}
 
 /** Стандартные пресеты кузовов (мм и кг) */
 export const VEHICLE_PRESETS: Vehicle[] = [
@@ -17,64 +71,55 @@ export const VEHICLE_PRESETS: Vehicle[] = [
     id: 'truck-1t',
     name: '1 тонна',
     length: 2800, width: 1800, height: 1800, maxWeight: 1000,
-    loadingMethods: TENT_METHODS, unloadingMethods: TENT_METHODS,
-    defaultLoadingMethod: 'rear', defaultUnloadingMethod: 'rear',
+    bodyType: 'tent', ...getDefaultMethodsForBodyType('tent'),
   },
   {
     id: 'truck-15t',
     name: '1.5 тонны',
     length: 3000, width: 1950, height: 1700, maxWeight: 1500,
-    loadingMethods: TENT_METHODS, unloadingMethods: TENT_METHODS,
-    defaultLoadingMethod: 'rear', defaultUnloadingMethod: 'rear',
+    bodyType: 'tent', ...getDefaultMethodsForBodyType('tent'),
   },
   {
     id: 'truck-2t',
     name: '2 тонны',
     length: 3800, width: 1900, height: 1900, maxWeight: 2000,
-    loadingMethods: TENT_METHODS, unloadingMethods: TENT_METHODS,
-    defaultLoadingMethod: 'rear', defaultUnloadingMethod: 'rear',
+    bodyType: 'tent', ...getDefaultMethodsForBodyType('tent'),
   },
   {
     id: 'truck-3t',
     name: '3 тонны',
     length: 4200, width: 2000, height: 2000, maxWeight: 3000,
-    loadingMethods: TENT_METHODS, unloadingMethods: TENT_METHODS,
-    defaultLoadingMethod: 'rear', defaultUnloadingMethod: 'rear',
+    bodyType: 'tent', ...getDefaultMethodsForBodyType('tent'),
   },
   {
     id: 'truck-5t',
     name: '5 тонн',
     length: 6200, width: 2450, height: 2400, maxWeight: 5000,
-    loadingMethods: TENT_METHODS, unloadingMethods: TENT_METHODS,
-    defaultLoadingMethod: 'rear', defaultUnloadingMethod: 'rear',
+    bodyType: 'tent', ...getDefaultMethodsForBodyType('tent'),
   },
   {
     id: 'truck-7t',
     name: '7 тонн',
     length: 7200, width: 2450, height: 2400, maxWeight: 7000,
-    loadingMethods: TENT_METHODS, unloadingMethods: TENT_METHODS,
-    defaultLoadingMethod: 'rear', defaultUnloadingMethod: 'rear',
+    bodyType: 'tent', ...getDefaultMethodsForBodyType('tent'),
   },
   {
     id: 'truck-10t',
     name: '10 тонн',
     length: 8200, width: 2450, height: 2400, maxWeight: 10000,
-    loadingMethods: TENT_METHODS, unloadingMethods: TENT_METHODS,
-    defaultLoadingMethod: 'rear', defaultUnloadingMethod: 'rear',
+    bodyType: 'tent', ...getDefaultMethodsForBodyType('tent'),
   },
   {
     id: 'truck-20t',
     name: '20 тонн (фура)',
     length: 13600, width: 2460, height: 2600, maxWeight: 20000,
-    loadingMethods: TENT_METHODS, unloadingMethods: TENT_METHODS,
-    defaultLoadingMethod: 'rear', defaultUnloadingMethod: 'rear',
+    bodyType: 'tent', ...getDefaultMethodsForBodyType('tent'),
   },
   {
     id: 'truck-20t-train',
     name: '20 тонн (автопоезд)',
     length: 15900, width: 2500, height: 2500, maxWeight: 20000,
-    loadingMethods: TENT_METHODS, unloadingMethods: TENT_METHODS,
-    defaultLoadingMethod: 'rear', defaultUnloadingMethod: 'rear',
+    bodyType: 'tent', ...getDefaultMethodsForBodyType('tent'),
   },
 ];
 

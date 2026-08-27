@@ -6,13 +6,24 @@ import { useState, useMemo } from 'react';
 import type { FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { uid } from '../../utils/helpers';
-import { LOADING_METHOD_LABELS } from '../../types';
-import type { LoadingMethod } from '../../types';
+import { LOADING_METHOD_LABELS, BODY_TYPE_LABELS } from '../../types';
+import type { LoadingMethod, BodyType } from '../../types';
+import { getDefaultMethodsForBodyType } from '../../lib/packer/presets';
 
 const ALL_METHODS: LoadingMethod[] = [
   'rear', 'side', 'top', 'side_both', 'full_tent_removal',
   'crossbar_removal', 'post_removal', 'no_gate',
   'hydraulic_tail', 'ramps', 'lathing', 'with_sides',
+];
+
+const BODY_TYPES: BodyType[] = [
+  'tent', 'curtain', 'van', 'isothermal', 'refrigerator',
+  'side', 'platform', 'flatbed', 'low_loader', 'trailer',
+  'dump', 'tanker', 'container', 'car_transporter',
+  'concrete_mixer', 'grain_truck', 'log_truck', 'crane',
+  'manipulator', 'evacuator', 'minibus', 'pickup',
+  'horse_carrier', 'garbage_truck', 'jumbo', 'mega',
+  'cement_truck', 'flour_truck', 'tractor', 'other',
 ];
 
 interface Props {
@@ -52,6 +63,20 @@ export default function CustomVehicleForm({ onDone }: Props) {
   const [error, setError] = useState('');
   const [values, setValues] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [selectedBodyType, setSelectedBodyType] = useState<BodyType>('tent');
+  const [loadingMethods, setLoadingMethods] = useState<LoadingMethod[]>(['rear']);
+  const [unloadingMethods, setUnloadingMethods] = useState<LoadingMethod[]>(['rear']);
+
+  const handleBodyTypeChange = (bt: BodyType) => {
+    setSelectedBodyType(bt);
+    const methods = getDefaultMethodsForBodyType(bt);
+    setLoadingMethods(methods.loadingMethods);
+    setUnloadingMethods(methods.unloadingMethods);
+  };
+
+  const toggleMethod = (list: LoadingMethod[], setList: (v: LoadingMethod[]) => void, m: LoadingMethod) => {
+    setList(list.includes(m) ? list.filter(x => x !== m) : [...list, m]);
+  };
 
   const errors = useMemo(() => {
     const e: Record<string, string> = {};
@@ -104,14 +129,6 @@ export default function CustomVehicleForm({ onDone }: Props) {
       return;
     }
 
-    // Собираем выбранные способы загрузки/выгрузки
-    const loadingMethods: LoadingMethod[] = ALL_METHODS.filter(m =>
-      fd.get(`load_${m}`) === 'on'
-    );
-    const unloadingMethods: LoadingMethod[] = ALL_METHODS.filter(m =>
-      fd.get(`unload_${m}`) === 'on'
-    );
-
     addCustomVehicle({
       id: `custom-${uid()}`,
       name,
@@ -120,6 +137,7 @@ export default function CustomVehicleForm({ onDone }: Props) {
       height,
       maxWeight,
       isCustom: true,
+      bodyType: selectedBodyType,
       loadingMethods: loadingMethods.length > 0 ? loadingMethods : ['rear'],
       unloadingMethods: unloadingMethods.length > 0 ? unloadingMethods : ['rear'],
       defaultLoadingMethod: loadingMethods[0] ?? 'rear',
@@ -217,13 +235,32 @@ export default function CustomVehicleForm({ onDone }: Props) {
           <div className="text-danger" style={{ fontSize: 11 }}>{errors.maxWeight}</div>
         )}
       </div>
+      {/* Тип кузова */}
+      <div className="form-group full">
+        <label>Тип кузова</label>
+        <select
+          value={selectedBodyType}
+          onChange={(e) => handleBodyTypeChange(e.target.value as BodyType)}
+        >
+          {BODY_TYPES.map(bt => (
+            <option key={bt} value={bt}>{BODY_TYPE_LABELS[bt]}</option>
+          ))}
+        </select>
+        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
+          Способы загрузки/выгрузки предустановлены для выбранного типа. Можно изменить вручную.
+        </div>
+      </div>
       {/* Способы загрузки */}
       <div className="form-group full">
         <label style={{ fontWeight: 600, marginBottom: 4, display: 'block' }}>Способы загрузки</label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {ALL_METHODS.map(m => (
             <label key={m} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer' }}>
-              <input type="checkbox" name={`load_${m}`} defaultChecked={m === 'rear'} />
+              <input
+                type="checkbox"
+                checked={loadingMethods.includes(m)}
+                onChange={() => toggleMethod(loadingMethods, setLoadingMethods, m)}
+              />
               {LOADING_METHOD_LABELS[m]}
             </label>
           ))}
@@ -235,7 +272,11 @@ export default function CustomVehicleForm({ onDone }: Props) {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {ALL_METHODS.map(m => (
             <label key={m} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer' }}>
-              <input type="checkbox" name={`unload_${m}`} defaultChecked={m === 'rear'} />
+              <input
+                type="checkbox"
+                checked={unloadingMethods.includes(m)}
+                onChange={() => toggleMethod(unloadingMethods, setUnloadingMethods, m)}
+              />
               {LOADING_METHOD_LABELS[m]}
             </label>
           ))}
