@@ -6,6 +6,14 @@ import { useState, useMemo } from 'react';
 import type { FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { uid } from '../../utils/helpers';
+import { LOADING_METHOD_LABELS } from '../../types';
+import type { LoadingMethod } from '../../types';
+
+const ALL_METHODS: LoadingMethod[] = [
+  'rear', 'side', 'top', 'side_both', 'full_tent_removal',
+  'crossbar_removal', 'post_removal', 'no_gate',
+  'hydraulic_tail', 'ramps', 'lathing', 'with_sides',
+];
 
 interface Props {
   onDone: () => void;
@@ -96,6 +104,14 @@ export default function CustomVehicleForm({ onDone }: Props) {
       return;
     }
 
+    // Собираем выбранные способы загрузки/выгрузки
+    const loadingMethods: LoadingMethod[] = ALL_METHODS.filter(m =>
+      fd.get(`load_${m}`) === 'on'
+    );
+    const unloadingMethods: LoadingMethod[] = ALL_METHODS.filter(m =>
+      fd.get(`unload_${m}`) === 'on'
+    );
+
     addCustomVehicle({
       id: `custom-${uid()}`,
       name,
@@ -104,6 +120,10 @@ export default function CustomVehicleForm({ onDone }: Props) {
       height,
       maxWeight,
       isCustom: true,
+      loadingMethods: loadingMethods.length > 0 ? loadingMethods : ['rear'],
+      unloadingMethods: unloadingMethods.length > 0 ? unloadingMethods : ['rear'],
+      defaultLoadingMethod: loadingMethods[0] ?? 'rear',
+      defaultUnloadingMethod: unloadingMethods[0] ?? 'rear',
     });
     onDone();
   };
@@ -196,6 +216,30 @@ export default function CustomVehicleForm({ onDone }: Props) {
         {isInvalid('maxWeight') && (
           <div className="text-danger" style={{ fontSize: 11 }}>{errors.maxWeight}</div>
         )}
+      </div>
+      {/* Способы загрузки */}
+      <div className="form-group full">
+        <label style={{ fontWeight: 600, marginBottom: 4, display: 'block' }}>Способы загрузки</label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {ALL_METHODS.map(m => (
+            <label key={m} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer' }}>
+              <input type="checkbox" name={`load_${m}`} defaultChecked={m === 'rear'} />
+              {LOADING_METHOD_LABELS[m]}
+            </label>
+          ))}
+        </div>
+      </div>
+      {/* Способы выгрузки */}
+      <div className="form-group full">
+        <label style={{ fontWeight: 600, marginBottom: 4, display: 'block' }}>Способы выгрузки</label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {ALL_METHODS.map(m => (
+            <label key={m} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer' }}>
+              <input type="checkbox" name={`unload_${m}`} defaultChecked={m === 'rear'} />
+              {LOADING_METHOD_LABELS[m]}
+            </label>
+          ))}
+        </div>
       </div>
       {error && <div className="form-group full text-danger">{error}</div>}
       <div className="form-group full">

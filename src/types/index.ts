@@ -9,6 +9,37 @@ export interface Dimensions {
   height: number;
 }
 
+/** Способ загрузки/выгрузки */
+export type LoadingMethod =
+  | 'rear'              // Задняя (через ворота/двери)
+  | 'side'              // Боковая (через шторку/борт)
+  | 'top'               // Верхняя (краном, через открытый верх)
+  | 'side_both'         // Боковая с 2-х сторон
+  | 'full_tent_removal' // С полной растентовкой
+  | 'crossbar_removal'  // Со снятием поперечных перекладин
+  | 'post_removal'      // Со снятием стоек
+  | 'no_gate'           // Без ворот
+  | 'hydraulic_tail'    // Гидроборт
+  | 'ramps'             // Аппарели
+  | 'lathing'           // С обрешёткой
+  | 'with_sides';       // С бортами
+
+/** Человекочитаемые названия способов загрузки */
+export const LOADING_METHOD_LABELS: Record<LoadingMethod, string> = {
+  rear: 'Задняя',
+  side: 'Боковая',
+  top: 'Верхняя',
+  side_both: 'Боковая (2 стороны)',
+  full_tent_removal: 'Полная растентовка',
+  crossbar_removal: 'Снятие перекладин',
+  post_removal: 'Снятие стоек',
+  no_gate: 'Без ворот',
+  hydraulic_tail: 'Гидроборт',
+  ramps: 'Аппарели',
+  lathing: 'С обрешёткой',
+  with_sides: 'С бортами',
+};
+
 /** Автомобиль / кузов */
 export interface Vehicle extends Dimensions {
   id: string;
@@ -17,6 +48,14 @@ export interface Vehicle extends Dimensions {
   maxWeight: number;
   /** true — пользовательский пресет, false — стандартный */
   isCustom?: boolean;
+  /** Доступные способы загрузки */
+  loadingMethods?: LoadingMethod[];
+  /** Доступные способы выгрузки */
+  unloadingMethods?: LoadingMethod[];
+  /** Способ загрузки по умолчанию */
+  defaultLoadingMethod?: LoadingMethod;
+  /** Способ выгрузки по умолчанию */
+  defaultUnloadingMethod?: LoadingMethod;
 }
 
 /** Точка загрузки груза */

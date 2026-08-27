@@ -2,81 +2,79 @@
 // Стандартные пресеты автомобилей и грузов
 // ============================================================================
 
-import type { Vehicle } from '../../types';
+import type { Vehicle, LoadingMethod } from '../../types';
+
+/** Способы загрузки для тентованных кузовов (наиболее универсальные) */
+const TENT_METHODS: LoadingMethod[] = [
+  'rear', 'side', 'top', 'side_both', 'full_tent_removal',
+  'crossbar_removal', 'post_removal', 'no_gate',
+  'hydraulic_tail', 'ramps', 'lathing',
+];
 
 /** Стандартные пресеты кузовов (мм и кг) */
 export const VEHICLE_PRESETS: Vehicle[] = [
   {
     id: 'truck-1t',
     name: '1 тонна',
-    length: 2800,
-    width: 1800,
-    height: 1800,
-    maxWeight: 1000,
+    length: 2800, width: 1800, height: 1800, maxWeight: 1000,
+    loadingMethods: TENT_METHODS, unloadingMethods: TENT_METHODS,
+    defaultLoadingMethod: 'rear', defaultUnloadingMethod: 'rear',
   },
   {
     id: 'truck-15t',
     name: '1.5 тонны',
-    length: 3000,
-    width: 1950,
-    height: 1700,
-    maxWeight: 1500,
+    length: 3000, width: 1950, height: 1700, maxWeight: 1500,
+    loadingMethods: TENT_METHODS, unloadingMethods: TENT_METHODS,
+    defaultLoadingMethod: 'rear', defaultUnloadingMethod: 'rear',
   },
   {
     id: 'truck-2t',
     name: '2 тонны',
-    length: 3800,
-    width: 1900,
-    height: 1900,
-    maxWeight: 2000,
+    length: 3800, width: 1900, height: 1900, maxWeight: 2000,
+    loadingMethods: TENT_METHODS, unloadingMethods: TENT_METHODS,
+    defaultLoadingMethod: 'rear', defaultUnloadingMethod: 'rear',
   },
   {
     id: 'truck-3t',
     name: '3 тонны',
-    length: 4200,
-    width: 2000,
-    height: 2000,
-    maxWeight: 3000,
+    length: 4200, width: 2000, height: 2000, maxWeight: 3000,
+    loadingMethods: TENT_METHODS, unloadingMethods: TENT_METHODS,
+    defaultLoadingMethod: 'rear', defaultUnloadingMethod: 'rear',
   },
   {
     id: 'truck-5t',
     name: '5 тонн',
-    length: 6200,
-    width: 2450,
-    height: 2400,
-    maxWeight: 5000,
+    length: 6200, width: 2450, height: 2400, maxWeight: 5000,
+    loadingMethods: TENT_METHODS, unloadingMethods: TENT_METHODS,
+    defaultLoadingMethod: 'rear', defaultUnloadingMethod: 'rear',
   },
   {
     id: 'truck-7t',
     name: '7 тонн',
-    length: 7200,
-    width: 2450,
-    height: 2400,
-    maxWeight: 7000,
+    length: 7200, width: 2450, height: 2400, maxWeight: 7000,
+    loadingMethods: TENT_METHODS, unloadingMethods: TENT_METHODS,
+    defaultLoadingMethod: 'rear', defaultUnloadingMethod: 'rear',
   },
   {
     id: 'truck-10t',
     name: '10 тонн',
-    length: 8200,
-    width: 2450,
-    height: 2400,
-    maxWeight: 10000,
+    length: 8200, width: 2450, height: 2400, maxWeight: 10000,
+    loadingMethods: TENT_METHODS, unloadingMethods: TENT_METHODS,
+    defaultLoadingMethod: 'rear', defaultUnloadingMethod: 'rear',
   },
   {
     id: 'truck-20t',
     name: '20 тонн (фура)',
-    length: 13600,
-    width: 2460,
-    height: 2600,
-    maxWeight: 20000,
+    length: 13600, width: 2460, height: 2600, maxWeight: 20000,
+    loadingMethods: TENT_METHODS, unloadingMethods: TENT_METHODS,
+    defaultLoadingMethod: 'rear', defaultUnloadingMethod: 'rear',
   },
   {
     id: 'truck-20t-train',
     name: '20 тонн (автопоезд)',
-    length: 15900,
-    width: 2500,
-    height: 2500,
-    maxWeight: 20000,
+    length: 15900, width: 2500, height: 2500, maxWeight: 20000,
+    loadingMethods: TENT_METHODS, unloadingMethods: TENT_METHODS,
+    defaultLoadingMethod: 'rear', defaultUnloadingMethod: 'rear',
   },
 ];
 
