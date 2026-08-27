@@ -536,17 +536,41 @@ html, body {
 .left-panel {
   flex: 0 0 320px !important;
   height: 100% !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
+  overflow: hidden !important;
   display: flex;
   flex-direction: column;
   padding: 12px !important;
   padding-right: var(--spacing-sm) !important;
   background: var(--bg-panel);
   border-right: 1px solid var(--border);
+  box-sizing: border-box;
   word-wrap: break-word;
   overflow-wrap: break-word;
   font-size: 13px;
+}
+
+/* Секция «Автомобиль» — фиксированная, не скроллится */
+.vehicle-section {
+  flex-shrink: 0;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Секция «Грузы» — скроллится, занимает оставшееся место */
+.cargo-section {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.cargo-section .btn-calculate {
+  flex-shrink: 0;
+  margin-top: auto;
 }
 
 .left-panel .panel {
@@ -1082,8 +1106,13 @@ html, body {
     flex: 1 1 auto !important;
     height: auto !important;
     max-height: none !important;
+    overflow: visible !important;
     border-right: none !important;
     border-bottom: 1px solid var(--border) !important;
+  }
+  .cargo-section {
+    min-height: 300px !important;
+    overflow-y: visible !important;
   }
   .right-panel {
     height: auto !important;
