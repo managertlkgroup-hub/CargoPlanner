@@ -201,6 +201,7 @@ export default function AddCargoForm() {
         <input
           name="name"
           placeholder="Например, Европаллета"
+          maxLength={100}
           value={values.name ?? ''}
           onChange={(e) => handleChange('name', e.target.value)}
           onBlur={() => handleBlur('name')}
