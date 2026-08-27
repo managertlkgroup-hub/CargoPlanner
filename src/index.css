@@ -534,8 +534,8 @@ html, body {
 }
 
 .left-panel {
-  width: 380px;
-  min-width: 280px;
+  width: 320px;
+  min-width: 320px;
   max-width: 380px;
   flex-shrink: 0;
   display: flex;
@@ -557,6 +557,7 @@ html, body {
 .left-panel .form-grid {
   min-width: 0;
   max-width: 100%;
+  grid-template-columns: 1fr 1fr;
 }
 
 .left-panel .section-title {
