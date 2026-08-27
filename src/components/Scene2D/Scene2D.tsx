@@ -3,7 +3,8 @@ import { useActiveVariant, useSelectedVehicle, useAppStore } from '../../store/u
 
 // Scene2D supports keyboard shortcuts:
 // R — rotate hovered/selected item by 90°
-// T — not handled here (kept in Scene3D for top-view toggle)
+// ↑/↓ — move item up/down layers
+// S — smart stack (auto-find best position on upper layer)
 
 interface Scene2DProps {
   width?: number;
@@ -16,6 +17,9 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
   const vehicle = useSelectedVehicle();
   const updateCargoPosition = useAppStore((s) => s.updateCargoPosition);
   const rotateCargo = useAppStore((s) => s.rotateCargo);
+  const moveCargoUp = useAppStore((s) => s.moveCargoUp);
+  const moveCargoDown = useAppStore((s) => s.moveCargoDown);
+  const smartStack = useAppStore((s) => s.smartStack);
 
   const [dimensions, setDimensions] = useState({ w: 600, h: 400 });
 
@@ -126,8 +130,10 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
       ctx.globalAlpha = layerAlpha;
       ctx.fillRect(itemX, itemY, itemL, itemW);
       ctx.globalAlpha = 1.0;
-      ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 1;
+      // Selection highlight for hovered item
+      const isHovered = lastHoveredIdRef.current === item.id;
+      ctx.strokeStyle = isHovered ? '#f59e0b' : '#1e293b';
+      ctx.lineWidth = isHovered ? 3 : 1;
       ctx.strokeRect(itemX, itemY, itemL, itemW);
 
       ctx.fillStyle = '#ffffff';
@@ -299,23 +305,33 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
     dragRef.current = null;
   }, []);
 
-  // R key rotation handler
+  // Keyboard shortcuts: R (rotate), ↑ (up layer), ↓ (down layer), S (smart stack)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle keys when typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.target instanceof HTMLTextAreaElement) return;
+      const targetId = lastHoveredIdRef.current;
+      if (!targetId || !variant) return;
+
       if (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К') {
-        const targetId = lastHoveredIdRef.current;
-        if (targetId && variant) {
-          const item = variant.items.find((it) => it.id === targetId);
-          if (item) {
-            const current = item.rotationY ?? item.rotation?.y ?? 0;
-            rotateCargo(item.id, current + 90);
-          }
+        const item = variant.items.find((it) => it.id === targetId);
+        if (item) {
+          const current = item.rotationY ?? item.rotation?.y ?? 0;
+          rotateCargo(item.id, current + 90);
         }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        moveCargoUp(targetId);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        moveCargoDown(targetId);
+      } else if (e.key === 's' || e.key === 'S' || e.key === 'ы' || e.key === 'Ы') {
+        smartStack(targetId);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [variant, rotateCargo]);
+  }, [variant, rotateCargo, moveCargoUp, moveCargoDown, smartStack]);
 
   // Track hovered item for R key
   const updateHoveredId = useCallback((mx: number, my: number) => {
@@ -361,7 +377,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
         onDoubleClick={handleDoubleClick}
       />
       <div style={{ fontSize: 10, color: '#9ca3af', textAlign: 'center', padding: 2 }}>
-        Перетаскивайте мышью · Двойной клик или R — поворот
+        Перетаскивайте · R — поворот · ↑↓ — слои · S — автостак
       </div>
     </div>
   );
