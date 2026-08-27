@@ -50,6 +50,7 @@ const App: React.FC = () => {
       return;
     }
     const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
+    console.log(`[Calculate] maxStackHeight=${settings.maxStackHeight}`);
     setCalculating(true);
     try {
       const result = packItems(vehicle, cargo, settings, loadingPoints);
@@ -99,14 +100,17 @@ const App: React.FC = () => {
               onChange={(e) => {
                 const checked = e.target.checked;
                 setStacking(checked);
-                const newSettings = { ...settings, maxStackHeight: checked ? (settings.maxStackHeight > 0 ? settings.maxStackHeight : 2000) : 0 };
+                const newMaxH = checked ? (settings.maxStackHeight > 0 ? settings.maxStackHeight : 2000) : 0;
+                const newSettings = { ...settings, maxStackHeight: newMaxH };
                 setSettings(newSettings);
+                console.log(`[Stacking] checkbox=${checked}, maxStackHeight=${newMaxH}`);
                 // Автоматический пересчёт при включении/выключении штабелирования
                 if (cargo.length > 0) {
                   const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
                   setCalculating(true);
                   try {
                     const result = packItems(vehicle, cargo, newSettings, loadingPoints);
+                    console.log(`[Stacking] recalculated: ${result.variants[0]?.items.length} items, first item Y=${result.variants[0]?.items[0]?.position.y}`);
                     if (!result.error) {
                       setResult(result);
                       const pristineMap: Record<string, typeof result.variants[number]['items']> = {};
@@ -114,7 +118,7 @@ const App: React.FC = () => {
                       setPristine(pristineMap);
                       setActiveVariant(result.variants[0].id);
                     }
-                  } catch (_) { /* ignore */ }
+                  } catch (err) { console.error('[Stacking] recalc error:', err); }
                   finally { setCalculating(false); }
                 }
               }}
