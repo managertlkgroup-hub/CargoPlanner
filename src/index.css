@@ -595,6 +595,20 @@ html, body {
   box-sizing: border-box !important;
 }
 
+.add-cargo-form * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Инпуты и селекты в левой панели — строгое ограничение ширины */
+.left-panel .form-group input,
+.left-panel .form-group select {
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
 /* Блок с кнопкой и чекбоксом — прижат к низу */
 .cargo-actions {
   margin-top: auto;
