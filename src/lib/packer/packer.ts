@@ -224,7 +224,7 @@ function packIntoBin(
         }
         if (usedWeight + box.weight > maxWeight) continue;
 
-        // === SCORING WITH COMPACTNESS ===
+        // === SCORING WITH COMPACTNESS & STACKING ===
         // Compute bounding box after hypothetical placement
         const newMaxX = Math.max(currentMaxX, point.x + placedLength);
         const newMaxZ = Math.max(currentMaxZ, point.z + placedWidth);
@@ -234,15 +234,22 @@ function packIntoBin(
 
         let score: number;
 
+        // Y multiplier is deliberately reduced (1e4 vs 1e9) so that when
+        // maxStackHeight > 0, the algorithm prefers stacking identical boxes
+        // vertically (footprintMax stays the same) over spreading them on the floor
+        // (footprintMax grows). Without stacking (maxStackHeight=0), only Y=0
+        // points exist, so the Y term is irrelevant.
+        const yMult = 1e4;
+
         if (sortMode === 'along') {
           // along: compactness first, then prefer row-filling (min Z, then min X)
-          score = point.y * 1e9 + footprintMax * 1e6 + point.z * 100 + point.x;
+          score = point.y * yMult + footprintMax * 1e6 + point.z * 100 + point.x;
         } else if (sortMode === 'across') {
           // across: compactness first, then prefer column-filling (min X, then min Z)
-          score = point.y * 1e9 + footprintMax * 1e6 + point.x * 100 + point.z;
+          score = point.y * yMult + footprintMax * 1e6 + point.x * 100 + point.z;
         } else {
           // mixed: compactness + balanced footprint + orientation alternation
-          score = point.y * 1e9 + footprintMax * 1e6 + (newMaxX + newMaxZ) * 10;
+          score = point.y * yMult + footprintMax * 1e6 + (newMaxX + newMaxZ) * 10;
           // Бонус за чередование ориентаций (смешиваем вдоль/поперёк)
           const isAlong = orientation.rotY === 0;
           const dominated = isAlong ? alongCount : acrossCount;

@@ -252,7 +252,7 @@ export function generatePdfReport(
   y += 8;
   const topScale = Math.min(300 / vehicle.length, 180 / vehicle.width, 1.5);
   drawTopView(ctx, vehicle, variant, 30, y, topScale);
-  y += vehicle.width * topScale + 20;
+  y += vehicle.width * topScale + 24;
 
   // Легенда номеров (номер → название груза)
   ctx.fillStyle = '#64748b';
@@ -268,14 +268,14 @@ export function generatePdfReport(
     const ly = y + row * 14;
     ctx.fillText(`${idx + 1}. ${item.name}`, lx, ly);
   });
-  y += Math.ceil(variant.items.length / legendCols) * 14 + 16;
+  y += Math.ceil(variant.items.length / legendCols) * 14 + 24;
 
   // Cargo table
   ctx.fillStyle = '#1e293b';
   ctx.font = 'bold 13px system-ui, sans-serif';
   ctx.textAlign = 'left';
   ctx.fillText('Список грузов:', 30, y);
-  y += 8;
+  y += 10;
   y = drawCargoTable(ctx, 30, y, baseW, cargo);
 
   // Footer
