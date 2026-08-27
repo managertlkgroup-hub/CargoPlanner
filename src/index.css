@@ -351,14 +351,14 @@ html, body {
 
 .cargo-table-header-row {
   display: grid;
-  grid-template-columns: 30px 40px 1fr 60px 55px 55px 45px 55px 45px;
+  grid-template-columns: 28px 32px 1.5fr 48px 48px 48px 40px 48px 38px;
   gap: 0;
-  padding: var(--spacing-xs) 0;
+  padding: 3px 0;
   background: var(--bg-panel);
   font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--text-muted);
-  min-width: 600px;
+  min-width: 500px;
 }
 
 .cargo-table-header-cell {
@@ -366,8 +366,9 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
-  padding: 4px 6px;
+  padding: 3px 4px;
   border-right: 1px solid var(--border);
+  font-size: 11px;
 }
 
 .cargo-table-header-cell:last-child {
@@ -376,14 +377,14 @@ html, body {
 
 .cargo-row {
   display: grid;
-  grid-template-columns: 30px 40px 1fr 60px 55px 55px 45px 55px 45px;
+  grid-template-columns: 28px 32px 1.5fr 48px 48px 48px 40px 48px 38px;
   gap: 0;
-  padding: 4px 0;
+  padding: 3px 0;
   align-items: center;
   border-bottom: 1px solid var(--border);
   font-size: var(--font-size-xs);
-  min-width: 600px;
-  min-height: 32px;
+  min-width: 500px;
+  min-height: 28px;
 }
 
 .cargo-row:last-child {
@@ -403,8 +404,9 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 4px 6px;
+  padding: 3px 4px;
   border-right: 1px solid var(--border);
+  font-size: 11px;
 }
 
 .cargo-row-cell:last-child {
@@ -1193,7 +1195,7 @@ html, body {
 @media (max-width: 768px) {
   .cargo-table-header-row,
   .cargo-row {
-    grid-template-columns: 30px 35px 1fr 55px 50px 50px 40px 50px 40px;
+    grid-template-columns: 26px 30px 1.5fr 44px 44px 44px 36px 44px 34px;
   }
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr);
