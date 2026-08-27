@@ -96,51 +96,51 @@ const App: React.FC = () => {
           {/* Секция «Грузы» — скроллится */}
           <div className="cargo-section">
             <CargoTable />
-            <div className="section-divider" />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', flexShrink: 0 }}>
-              <input
-                type="checkbox"
-                id="stacking-toggle"
-                checked={stacking}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  setStacking(checked);
-                  const newMaxH = checked ? (settings.maxStackHeight > 0 ? settings.maxStackHeight : 2000) : 0;
-                  const newSettings = { ...settings, maxStackHeight: newMaxH };
-                  setSettings(newSettings);
-                  console.log(`[Stacking] checkbox=${checked}, maxStackHeight=${newMaxH}`);
-                  console.log('[CHK] Чекбокс изменён:', checked, 'maxStackHeight:', newMaxH);
-                  // Автоматический пересчёт при включении/выключении штабелирования
-                  if (cargo.length > 0) {
-                    const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
-                    setCalculating(true);
-                    try {
-                      const result = packItems(vehicle, cargo, newSettings, loadingPoints);
-                      console.log(`[Stacking] recalculated: ${result.variants[0]?.items.length} items, first item Y=${result.variants[0]?.items[0]?.position.y}`);
-                      if (!result.error) {
-                        setResult(result);
-                        const pristineMap: Record<string, typeof result.variants[number]['items']> = {};
-                        result.variants.forEach((v) => { pristineMap[v.id] = v.items; });
-                        setPristine(pristineMap);
-                        setActiveVariant(result.variants[0].id);
-                      }
-                    } catch (err) { console.error('[Stacking] recalc error:', err); }
-                    finally { setCalculating(false); }
-                  }
-                }}
-              />
-              <label htmlFor="stacking-toggle" style={{ fontSize: 13, color: 'var(--text)' }}>
-                📦 Штабелирование
-              </label>
+            <div className="cargo-actions">
+              <button
+                onClick={handleCalculate}
+                disabled={isCalculating || cargo.length === 0}
+                className="btn btn-primary btn-calculate"
+              >
+                {isCalculating ? '⏳ Расчёт…' : '🧮 Рассчитать раскладку'}
+              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="checkbox"
+                  id="stacking-toggle"
+                  checked={stacking}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setStacking(checked);
+                    const newMaxH = checked ? (settings.maxStackHeight > 0 ? settings.maxStackHeight : 2000) : 0;
+                    const newSettings = { ...settings, maxStackHeight: newMaxH };
+                    setSettings(newSettings);
+                    console.log(`[Stacking] checkbox=${checked}, maxStackHeight=${newMaxH}`);
+                    console.log('[CHK] Чекбокс изменён:', checked, 'maxStackHeight:', newMaxH);
+                    // Автоматический пересчёт при включении/выключении штабелирования
+                    if (cargo.length > 0) {
+                      const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
+                      setCalculating(true);
+                      try {
+                        const result = packItems(vehicle, cargo, newSettings, loadingPoints);
+                        console.log(`[Stacking] recalculated: ${result.variants[0]?.items.length} items, first item Y=${result.variants[0]?.items[0]?.position.y}`);
+                        if (!result.error) {
+                          setResult(result);
+                          const pristineMap: Record<string, typeof result.variants[number]['items']> = {};
+                          result.variants.forEach((v) => { pristineMap[v.id] = v.items; });
+                          setPristine(pristineMap);
+                          setActiveVariant(result.variants[0].id);
+                        }
+                      } catch (err) { console.error('[Stacking] recalc error:', err); }
+                      finally { setCalculating(false); }
+                    }
+                  }}
+                />
+                <label htmlFor="stacking-toggle" style={{ fontSize: 13, color: 'var(--text)' }}>
+                  📦 Штабелирование
+                </label>
+              </div>
             </div>
-            <button
-              onClick={handleCalculate}
-              disabled={isCalculating || cargo.length === 0}
-              className="btn btn-primary btn-calculate"
-              style={{ flexShrink: 0 }}
-            >
-              {isCalculating ? '⏳ Расчёт…' : '🧮 Рассчитать раскладку'}
-            </button>
           </div>
         </div>
 

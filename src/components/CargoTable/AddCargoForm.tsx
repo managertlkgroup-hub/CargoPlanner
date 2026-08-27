@@ -173,7 +173,7 @@ export default function AddCargoForm() {
       : {};
 
   return (
-    <form className="form-grid mt-2" onSubmit={handleSubmit}>
+    <form className="form-grid mt-2 add-cargo-form" onSubmit={handleSubmit}>
       <div className="form-group full">
         <label>Быстрый выбор груза</label>
         <select onChange={handlePresetChange} defaultValue="">

@@ -573,6 +573,43 @@ html, body {
   margin-top: auto;
 }
 
+/* Форма добавления груза — не выходит за границы */
+.add-cargo-form {
+  max-width: 100% !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.add-cargo-form .form-grid {
+  grid-template-columns: 1fr 1fr !important;
+  gap: 8px !important;
+}
+
+.add-cargo-form .form-grid .full {
+  grid-column: 1 / -1;
+}
+
+.add-cargo-form select,
+.add-cargo-form input {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Блок с кнопкой и чекбоксом — прижат к низу */
+.cargo-actions {
+  margin-top: auto;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.cargo-actions .btn-calculate {
+  width: 100%;
+}
+
 .left-panel .panel {
   overflow-x: hidden !important;
   max-width: 100% !important;
