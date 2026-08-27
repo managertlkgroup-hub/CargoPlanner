@@ -6,6 +6,8 @@
 import { jsPDF } from 'jspdf';
 import type { Cargo, LayoutVariant, Vehicle } from '../../types';
 
+/** Шрифт для canvas — поддержка кириллицы */
+const FONT_FAMILY = "'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif";
 
 /** Форматирует объём мм³ в м³ */
 function volToM3(mm3: number): string {
@@ -25,12 +27,12 @@ function drawHeader(ctx: CanvasRenderingContext2D, w: number, y: number): number
   ctx.fillStyle = '#1e293b';
   ctx.fillRect(0, 0, w, 70);
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 22px system-ui, sans-serif';
+  ctx.font = `bold 22px ${FONT_FAMILY}`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillText('Отчёт о загрузке', 30, 15);
   ctx.fillStyle = '#94a3b8';
-  ctx.font = '13px system-ui, sans-serif';
+  ctx.font = `13px ${FONT_FAMILY}`;
   ctx.fillText(`CargoPlanner — ${new Date().toLocaleDateString('ru-RU')}`, 30, 45);
   return y + 20;
 }
@@ -46,7 +48,7 @@ function drawSection(
 ): number {
   const fontSize = opts?.fontSize ?? 14;
   const fontWeight = opts?.bold ? 'bold ' : '';
-  ctx.font = `${fontWeight}${fontSize}px system-ui, sans-serif`;
+  ctx.font = `${fontWeight}${fontSize}px ${FONT_FAMILY}`;
   ctx.fillStyle = opts?.color ?? '#1e293b';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
@@ -95,7 +97,7 @@ function drawTopView(
 
     if (iw > 14 && ih > 14) {
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 11px system-ui, sans-serif';
+      ctx.font = `bold 11px ${FONT_FAMILY}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       // Порядковый номер груза (1-based)
@@ -113,7 +115,7 @@ function drawTopView(
       ctx.roundRect(bx, by, badgeSize, badgeSize, 3);
       ctx.fill();
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold ' + (badgeSize - 3) + 'px system-ui, sans-serif';
+      ctx.font = `bold ${badgeSize - 3}px ${FONT_FAMILY}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(String(layerIndex + 1), bx + badgeSize / 2, by + badgeSize / 2);
@@ -140,7 +142,7 @@ function drawTopView(
     ctx.lineTo(rx + rulerPx, ry + 3);
     ctx.stroke();
     ctx.fillStyle = '#64748b';
-    ctx.font = '9px system-ui, sans-serif';
+    ctx.font = `9px ${FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillText('1 м', rx + rulerPx / 2, ry + 5);
@@ -164,14 +166,14 @@ function drawCargoTable(
   ctx.fillStyle = '#e2e8f0';
   ctx.fillRect(x, y, pageW - x * 2, 22);
   ctx.fillStyle = '#1e293b';
-  ctx.font = 'bold 11px system-ui, sans-serif';
+  ctx.font = `bold 11px ${FONT_FAMILY}`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   headers.forEach((h, i) => ctx.fillText(h, colX[i], y + 5));
   y += 24;
 
   // Data rows
-  ctx.font = '11px system-ui, sans-serif';
+  ctx.font = `11px ${FONT_FAMILY}`;
   for (const c of cargo) {
     const size = c.shape === 'cylinder'
       ? `Ø${c.diameter}×${c.length}`
@@ -276,7 +278,7 @@ export function generatePdfReport(
 
   // Top view
   ctx.fillStyle = '#1e293b';
-  ctx.font = 'bold 13px system-ui, sans-serif';
+  ctx.font = `bold 13px ${FONT_FAMILY}`;
   ctx.textAlign = 'left';
   ctx.fillText('Вид сверху:', 30, y);
   y += 8;
@@ -286,7 +288,7 @@ export function generatePdfReport(
 
   // Легенда номеров (номер → название груза)
   ctx.fillStyle = '#64748b';
-  ctx.font = '9px system-ui, sans-serif';
+  ctx.font = `9px ${FONT_FAMILY}`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   const legendCols = 3;
@@ -302,7 +304,7 @@ export function generatePdfReport(
 
   // Cargo table
   ctx.fillStyle = '#1e293b';
-  ctx.font = 'bold 13px system-ui, sans-serif';
+  ctx.font = `bold 13px ${FONT_FAMILY}`;
   ctx.textAlign = 'left';
   ctx.fillText('Список грузов:', 30, y);
   y += 10;
@@ -310,7 +312,7 @@ export function generatePdfReport(
 
   // Footer
   ctx.fillStyle = '#94a3b8';
-  ctx.font = '10px system-ui, sans-serif';
+  ctx.font = `10px ${FONT_FAMILY}`;
   ctx.textAlign = 'center';
   ctx.fillText('CargoPlanner — автоматический расчёт загрузки', baseW / 2, baseH - 20);
   ctx.fillText(new Date().toLocaleDateString('ru-RU'), baseW / 2, baseH - 8);
