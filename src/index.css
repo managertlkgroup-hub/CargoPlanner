@@ -331,10 +331,8 @@ html, body {
 .cargo-table-container {
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  overflow: hidden;
+  overflow: auto;
   max-height: 400px;
-  display: flex;
-  flex-direction: column;
 }
 
 .cargo-table-sticky-header {
@@ -342,14 +340,13 @@ html, body {
   top: 0;
   z-index: 10;
   background: var(--bg-panel);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+  border-bottom: 2px solid var(--border);
+  overflow: visible;
 }
 
 .cargo-table-scroll-area {
   overflow-x: auto;
-  overflow-y: auto;
-  flex: 1;
+  overflow-y: visible;
 }
 
 .cargo-table-header-row {

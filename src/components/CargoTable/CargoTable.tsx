@@ -127,22 +127,20 @@ export default function CargoTable() {
             <div className="cargo-table-header-cell">Выгрузка</div>
           </div>
         </div>
-        <div className="cargo-table-scroll-area">
-          {cargo.length === 0 ? (
-            <div className="empty-state text-muted">
-              Грузов пока нет. Нажмите «+ Добавить» или импортируйте CSV.
-            </div>
-          ) : (
-            cargo.map((c) => (
-              <CargoRow
-                key={c.id}
-                cargo={c}
-                selected={selectedIds.has(c.id)}
-                onToggleSelect={toggleSelect}
-              />
-            ))
-          )}
-        </div>
+        {cargo.length === 0 ? (
+          <div className="empty-state text-muted">
+            Грузов пока нет. Нажмите «+ Добавить» или импортируйте CSV.
+          </div>
+        ) : (
+          cargo.map((c) => (
+            <CargoRow
+              key={c.id}
+              cargo={c}
+              selected={selectedIds.has(c.id)}
+              onToggleSelect={toggleSelect}
+            />
+          ))
+        )}
       </div>
     </div>
   );
