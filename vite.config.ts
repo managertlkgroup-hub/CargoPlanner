@@ -11,5 +11,15 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'three': ['three'],
+          'react-three': ['@react-three/fiber', '@react-three/drei'],
+          'react-pdf': ['@react-pdf/renderer'],
+          'xlsx': ['xlsx'],
+        },
+      },
+    },
   },
 });

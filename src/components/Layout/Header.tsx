@@ -4,7 +4,6 @@
 
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import { generatePdfWithReactPdf } from '../Report/PDFReport';
 import { exportSceneToPng } from '../../lib/export/pngExport';
 import { getCurrentVehicle } from '../../store/useAppStore';
 import { useActiveVariant } from '../../store/useAppStore';
@@ -38,9 +37,9 @@ export default function Header({ onOpenSettings }: HeaderProps) {
       return;
     }
     try {
+      const { generatePdfWithReactPdf } = await import('../Report/PDFReport');
       await generatePdfWithReactPdf(vehicle, cargo, activeVariant);
     } catch (e) {
-
       setError(e instanceof Error ? e.message : 'Ошибка формирования PDF');
     }
   };
