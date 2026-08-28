@@ -214,11 +214,16 @@ function packIntoBin(
         if (a.x !== b.x) return a.x - b.x;
         return a.z - b.z;
       } else {
-        // mixed: min(X+Z) — равномерное заполнение
-        const sumA = a.x + a.z;
-        const sumB = b.x + b.z;
-        if (sumA !== sumB) return sumA - sumB;
-        return a.x - b.x;
+        // mixed: гибридный подход — сначала заполняем «вдоль» (по X, min Z), потом «поперёк»
+        if (alongCount <= acrossCount) {
+          // Приоритет «вдоль»: min Z, потом min X
+          if (a.z !== b.z) return a.z - b.z;
+          return a.x - b.x;
+        } else {
+          // Приоритет «поперёк»: min X, потом min Z
+          if (a.x !== b.x) return a.x - b.x;
+          return a.z - b.z;
+        }
       }
     });
 
@@ -236,36 +241,32 @@ function packIntoBin(
         const placedWidth = orientation.dz;
         const placedHeight = orientation.dy;
 
-        // Для негабаритных грузов разрешаем выступание до 30%, но центрируем симметрично
+        // === НЕГАБАРИТНЫЕ ГРУЗЫ ===
+        // Всегда на полу (Y=0), центрированы по ширине (Z), прижаты к передней стенке (X=0)
+        let effX = point.x, effY = point.y, effZ = point.z;
         if (box.isOversize) {
-          const oversizeOverX = Math.max(0, placedLength - bin.length) / 2;
-          const oversizeOverZ = Math.max(0, placedWidth - bin.width) / 2;
-          // Груз может выступать, но начало не может быть сильно за пределами
-          if (point.x < -oversizeOverX) continue;
-          if (point.z < -oversizeOverZ) continue;
-          if (point.x + placedLength > bin.length + oversizeOverX) continue;
-          if (point.z + placedWidth > bin.width + oversizeOverZ) continue;
+          if (point.y > 0) continue; // негабарит — только на полу
+          // Принудительно: X=0 (кабина), Z=центр по ширине, Y=0
+          effX = 0;
+          effY = 0;
+          effZ = Math.max(0, (bin.width - placedWidth) / 2);
         } else {
           if (point.x + placedLength > bin.length) continue;
           if (point.z + placedWidth > bin.width) continue;
         }
-        if (point.y + placedHeight > bin.height) continue;
+        if (effY + placedHeight > bin.height) continue;
 
-        if (settings.maxStackHeight > 0 && point.y + placedHeight > settings.maxStackHeight) continue;
-        // Если maxStackHeight === 0, штабелирование отключено для ВСЕХ грузов
-        if (settings.maxStackHeight === 0 && point.y > 0) continue;
-        // Если maxStackHeight > 0, но груз не штабелируемый — только на пол
-        if (settings.maxStackHeight > 0 && !box.stackable && point.y !== 0) continue;
+        if (settings.maxStackHeight > 0 && effY + placedHeight > settings.maxStackHeight) continue;
+        if (settings.maxStackHeight === 0 && effY > 0) continue;
+        if (settings.maxStackHeight > 0 && !box.stackable && effY !== 0) continue;
 
         // Проверка опоры: груз на слое > 0 должен стоять на грузе снизу
-        if (point.y > 0) {
+        if (effY > 0) {
           const hasSupport = placed.some((p) => {
-            // Опора — груз прямо под этим (Y заканчивается на уровне point.y)
-            const isBelow = Math.abs(p.y + p.placedHeight - point.y) < 0.01;
+            const isBelow = Math.abs(p.y + p.placedHeight - effY) < 0.01;
             if (!isBelow) return false;
-            // Пересечение по XZ (груз сверху должен хотя бы частично опираться)
-            const overlapX = point.x < p.x + p.placedLength && point.x + placedLength > p.x;
-            const overlapZ = point.z < p.z + p.placedWidth && point.z + placedWidth > p.z;
+            const overlapX = effX < p.x + p.placedLength && effX + placedLength > p.x;
+            const overlapZ = effZ < p.z + p.placedWidth && effZ + placedWidth > p.z;
             return overlapX && overlapZ;
           });
           if (!hasSupport) continue;
@@ -273,7 +274,7 @@ function packIntoBin(
 
         const candidate: PlacedBox = {
           ...box,
-          x: point.x, y: point.y, z: point.z,
+          x: effX, y: effY, z: effZ,
           placedLength, placedWidth, placedHeight,
           rotY: orientation.rotY,
         };
@@ -316,9 +317,21 @@ function packIntoBin(
           // across: compactness first, then prefer column-filling (min X, then min Z)
           score = point.y * yMult + footprintMax * 1e6 + point.x * 100 + point.z;
         } else {
-          // mixed: compactness + balanced footprint + alternation + stacking preference
-          score = point.y * yMult + footprintMax * 1e6 + (newMaxX + newMaxZ) * 10;
-          // Бонус за стекинг: если груз ставится ровно на такой же по XZ — минимизируем footprint
+          // mixed: гибридный подход (Super Flo)
+          // Приоритет: сначала заполнять «вдоль» (строки по X), потом «поперёк» (столбцы по Z)
+          score = point.y * yMult + footprintMax * 1e6;
+          // Гибридный бонус: когда alongCount <= acrossCount, сильно предпочитаем along (rotY=0)
+          const isAlong = orientation.rotY === 0;
+          if (alongCount <= acrossCount) {
+            // Заполняем «вдоль» — предпочитаем rotY=0 и min Z (заполнение строки)
+            score += isAlong ? 0 : 5e5; // сильный штраф за «поперёк» пока заполняем «вдоль»
+            score += point.z * 100 + point.x; // min Z → заполняем строки
+          } else {
+            // Ряд «вдоль» заполнен — заполняем «поперёк»
+            score += isAlong ? 5e5 : 0; // штраф за «вдоль» теперь
+            score += point.x * 100 + point.z; // min X → заполняем столбцы
+          }
+          // Бонус за стекинг: идентичный груз точно поверх
           if (point.y > 0 && settings.maxStackHeight > 0) {
             const stackBonus = placed.some(p =>
               Math.abs(p.x - point.x) < 0.01 &&
@@ -326,18 +339,8 @@ function packIntoBin(
               Math.abs(p.y + p.placedHeight - point.y) < 0.01 &&
               Math.abs(p.placedLength - placedLength) < 0.01 &&
               Math.abs(p.placedWidth - placedWidth) < 0.01
-            ) ? -1e7 : 0; // сильный бонус за стекинг идентичного груза
+            ) ? -1e7 : 0;
             score += stackBonus;
-          }
-          // Бонус за чередование ориентаций (смешиваем вдоль/поперёк)
-          const isAlong = orientation.rotY === 0;
-          const dominated = isAlong ? alongCount : acrossCount;
-          const other = isAlong ? acrossCount : alongCount;
-          const diff = dominated - other;
-          if (diff > 0) {
-            score += diff * 1e4; // штраф за «лишнюю» ориентацию
-          } else if (diff < 0) {
-            score -= Math.abs(diff) * 1e4; // бонус за «недостающую» ориентацию
           }
         }
 

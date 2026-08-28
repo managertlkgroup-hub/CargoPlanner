@@ -16,9 +16,6 @@ export default function VehicleSelector() {
 
   return (
     <div className="panel">
-      <div className="section-title">
-        <span>🚚 Автомобиль</span>
-      </div>
 
       <div className="form-group mb-1">
         <label htmlFor="vehicle-select">Модель кузова</label>

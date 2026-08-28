@@ -75,10 +75,6 @@ export default function CargoTable() {
 
   return (
     <div className="panel">
-      <div className="section-title">
-        <span>📦 Грузы ({cargo.length})</span>
-      </div>
-
       {/* Панель действий */}
       <div className="table-actions">
         <button className="btn btn-sm" onClick={() => setShowAdd((v) => !v)}>

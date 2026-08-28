@@ -186,11 +186,13 @@ const Scene3D: React.FC = () => {
             const cols = Math.ceil(Math.sqrt(packedItems.length));
             const row = Math.floor(idx / cols);
             const col = idx % cols;
-            const maxDim = vehicle.length * SCALE;
+            // Смещение 25% от габаритов кузова — достаточно для визуального разделения
+            const spacingX = vehicle.length * SCALE * 0.25;
+            const spacingZ = vehicle.width * SCALE * 0.25;
             spreadOffset = {
-              x: (col - cols / 2) * maxDim * 0.8,
+              x: (col - cols / 2) * spacingX,
               y: 0,
-              z: (row - Math.ceil(packedItems.length / cols) / 2) * maxDim * 0.8,
+              z: (row - Math.ceil(packedItems.length / cols) / 2) * spacingZ,
             };
           }
           const spreadItem = spreadMode ? {
