@@ -464,6 +464,17 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
                 Перетаскивание на слое {selectedDragLayer}
               </div>
             )}
+            {/* Текстовая легенда по слоям */}
+            <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {sortedEntries.map(([layer, items]) => (
+                <div key={layer} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+                  <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: LAYER_COLORS[layer], flexShrink: 0 }} />
+                  <span style={{ color: 'var(--text-primary)' }}>
+                    <strong>Слой {layer}:</strong> {items.map(it => `${it.name} ×${it.count}`).join(', ')}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         );
       })()}

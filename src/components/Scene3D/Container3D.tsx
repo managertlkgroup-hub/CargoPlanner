@@ -36,23 +36,26 @@ function getBodyStyle(bodyType?: string): {
   wallOpacity: number; roofOpacity: number; floorColor: string;
   wallColor: string; roofColor: string; isCylindrical: boolean;
   wallHeight: number; // 1 = full, 0.3 = low sides
+  hasFrame: boolean; // каркас (для тента)
+  lowSides: boolean; // невысокие борта (для бортового)
+  label: string; // название типа
 } {
   switch (bodyType) {
     case 'tent': case 'curtain':
-      return { wallOpacity: 0.06, roofOpacity: 0.12, floorColor: '#94a3b8', wallColor: '#3b82f6', roofColor: '#94a3b8', isCylindrical: false, wallHeight: 1 };
+      return { wallOpacity: 0.05, roofOpacity: 0.08, floorColor: '#64748b', wallColor: '#3b82f6', roofColor: '#3b82f6', isCylindrical: false, wallHeight: 1, hasFrame: true, lowSides: false, label: 'Тент' };
     case 'van': case 'isothermal': case 'refrigerator': case 'refrigerator_partition': case 'refrigerator_multi':
-      return { wallOpacity: 0.18, roofOpacity: 0.25, floorColor: '#94a3b8', wallColor: '#64748b', roofColor: '#64748b', isCylindrical: false, wallHeight: 1 };
+      return { wallOpacity: 0.22, roofOpacity: 0.3, floorColor: '#64748b', wallColor: '#475569', roofColor: '#475569', isCylindrical: false, wallHeight: 1, hasFrame: false, lowSides: false, label: 'Фургон' };
     case 'platform': case 'flatbed': case 'open_container':
     case 'low_loader': case 'trailer': case 'low_platform': case 'telescopic':
-      return { wallOpacity: 0, roofOpacity: 0, floorColor: '#94a3b8', wallColor: '#94a3b8', roofColor: '#94a3b8', isCylindrical: false, wallHeight: 1 };
+      return { wallOpacity: 0, roofOpacity: 0, floorColor: '#94a3b8', wallColor: '#94a3b8', roofColor: '#94a3b8', isCylindrical: false, wallHeight: 1, hasFrame: false, lowSides: false, label: 'Платформа' };
     case 'dump':
-      return { wallOpacity: 0.12, roofOpacity: 0, floorColor: '#94a3b8', wallColor: '#f59e0b', roofColor: '#94a3b8', isCylindrical: false, wallHeight: 1 };
+      return { wallOpacity: 0.15, roofOpacity: 0, floorColor: '#94a3b8', wallColor: '#f59e0b', roofColor: '#f59e0b', isCylindrical: false, wallHeight: 1, hasFrame: false, lowSides: false, label: 'Самосвал' };
     case 'side':
-      return { wallOpacity: 0.08, roofOpacity: 0, floorColor: '#94a3b8', wallColor: '#3b82f6', roofColor: '#94a3b8', isCylindrical: false, wallHeight: 0.3 };
+      return { wallOpacity: 0.1, roofOpacity: 0, floorColor: '#94a3b8', wallColor: '#2563eb', roofColor: '#94a3b8', isCylindrical: false, wallHeight: 0.3, hasFrame: false, lowSides: true, label: 'Бортовой' };
     case 'tanker': case 'container':
-      return { wallOpacity: 0.15, roofOpacity: 0.2, floorColor: '#94a3b8', wallColor: '#64748b', roofColor: '#64748b', isCylindrical: true, wallHeight: 1 };
+      return { wallOpacity: 0.18, roofOpacity: 0.22, floorColor: '#64748b', wallColor: '#64748b', roofColor: '#64748b', isCylindrical: true, wallHeight: 1, hasFrame: false, lowSides: false, label: 'Цистерна' };
     default:
-      return { wallOpacity: 0.08, roofOpacity: 0.15, floorColor: '#94a3b8', wallColor: '#3b82f6', roofColor: '#94a3b8', isCylindrical: false, wallHeight: 1 };
+      return { wallOpacity: 0.08, roofOpacity: 0.15, floorColor: '#94a3b8', wallColor: '#3b82f6', roofColor: '#94a3b8', isCylindrical: false, wallHeight: 1, hasFrame: false, lowSides: false, label: 'Тент' };
   }
 }
 
@@ -122,6 +125,55 @@ export default function Container3D({ vehicle }: Props) {
         <lineBasicMaterial color={bodyStyle.wallColor} />
       </lineSegments>
 
+      {/* Каркасные стойки для тента/тента (4 вертикальные опоры по углам) */}
+      {bodyStyle.hasFrame && showSides && (
+        <>\n          {[[-halfL, -halfW], [-halfL, halfW], [halfL, -halfW], [halfL, halfW]].map(([x, z], i) => (
+            <mesh key={`post-${i}`} position={[x, h / 2, z]}>
+              <cylinderGeometry args={[0.008, 0.008, h, 6]} />
+              <meshStandardMaterial color={bodyStyle.wallColor} transparent opacity={0.5} />
+            </mesh>
+          ))}
+          {/* Горизонтальные перекладины вверху (каркас крыши тента) */}
+          <mesh position={[0, h, -halfW]}>
+            <boxGeometry args={[l, 0.006, 0.006]} />
+            <meshStandardMaterial color={bodyStyle.wallColor} transparent opacity={0.4} />
+          </mesh>
+          <mesh position={[0, h, halfW]}>
+            <boxGeometry args={[l, 0.006, 0.006]} />
+            <meshStandardMaterial color={bodyStyle.wallColor} transparent opacity={0.4} />
+          </mesh>
+          <mesh position={[-halfL, h, 0]}>
+            <boxGeometry args={[0.006, 0.006, w]} />
+            <meshStandardMaterial color={bodyStyle.wallColor} transparent opacity={0.4} />
+          </mesh>
+          <mesh position={[halfL, h, 0]}>
+            <boxGeometry args={[0.006, 0.006, w]} />
+            <meshStandardMaterial color={bodyStyle.wallColor} transparent opacity={0.4} />
+          </mesh>
+        </>
+      )}
+
+      {/* Невысокие борта для бортового (20% высоты, сплошные) */}
+      {bodyStyle.lowSides && showSides && (
+        <>\n          <mesh position={[0, h * 0.1, -halfW]}>
+            <boxGeometry args={[l, h * 0.2, 0.015]} />
+            <meshStandardMaterial color={bodyStyle.wallColor} transparent opacity={0.35} />
+          </mesh>
+          <mesh position={[0, h * 0.1, halfW]}>
+            <boxGeometry args={[l, h * 0.2, 0.015]} />
+            <meshStandardMaterial color={bodyStyle.wallColor} transparent opacity={0.35} />
+          </mesh>
+          <mesh position={[-halfL, h * 0.1, 0]}>
+            <boxGeometry args={[0.015, h * 0.2, w]} />
+            <meshStandardMaterial color={bodyStyle.wallColor} transparent opacity={0.35} />
+          </mesh>
+          <mesh position={[halfL, h * 0.1, 0]}>
+            <boxGeometry args={[0.015, h * 0.2, w]} />
+            <meshStandardMaterial color={bodyStyle.wallColor} transparent opacity={0.35} />
+          </mesh>
+        </>
+      )}
+
       {/* Задняя стенка */}
       {showRear && !bodyStyle.isCylindrical && (
         <mesh position={[-halfL, sideH / 2, 0]}>
@@ -178,6 +230,17 @@ export default function Container3D({ vehicle }: Props) {
         rotation={[0, 0, 0]}
       >
         Cargo Planner
+      </Text>
+
+      {/* Тип кузова над контейнером */}
+      <Text
+        position={[0, h + 0.15, 0]}
+        fontSize={0.1}
+        color={bodyStyle.wallColor}
+        anchorX="center"
+        anchorY="middle"
+      >
+        {bodyStyle.label}
       </Text>
     </group>
   );
