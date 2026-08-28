@@ -582,7 +582,8 @@ html, body {
 .left-panel {
   flex: 0 0 320px !important;
   height: 100% !important;
-  overflow: hidden !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   display: flex;
   flex-direction: column;
   padding: 12px !important;

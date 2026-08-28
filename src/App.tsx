@@ -13,7 +13,7 @@ import SettingsModal from './components/Settings/SettingsModal';
 import ReportButton from './components/Report/ReportButton';
 import VehicleVisibilityControls from './components/VehicleSelector/VehicleVisibilityControls';
 import VehicleMatcher from './components/VehicleSelector/VehicleMatcher';
-import { VehicleDetailsPanel } from './components/PresetDetails/PresetDetailsPanel';
+import { VehicleDetailsPanel, CargoDetailsPanel } from './components/PresetDetails/PresetDetailsPanel';
 import { generateSuggestions, type PackingSuggestion } from './lib/packer/suggestions';
 
 const App: React.FC = () => {
@@ -38,6 +38,8 @@ const App: React.FC = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [vehicleSectionOpen, setVehicleSectionOpen] = useState(true);
   const [cargoSectionOpen, setCargoSectionOpen] = useState(true);
+  const [controlSectionOpen, setControlSectionOpen] = useState(true);
+  const [detailsCargoId, setDetailsCargoId] = useState<string | null>(null);
 
   const [activeView, setActiveView] = useState<'3d' | '2d'>('3d');
   const [stacking, setStacking] = useState(settings.maxStackHeight > 0);
@@ -106,7 +108,6 @@ const App: React.FC = () => {
             {vehicleSectionOpen && (
               <div className="accordion-content">
                 <VehicleSelector />
-                <VehicleVisibilityControls vehicleId={selectedVehicleId} />
                 <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
                   <button className="btn btn-sm" onClick={() => setMatcherOpen(true)}>🔍 Подобрать авто</button>
                   <button className="btn btn-sm" onClick={() => setDetailsVehicleId(selectedVehicleId)}>📋 Детали</button>
@@ -123,55 +124,61 @@ const App: React.FC = () => {
             </button>
             {cargoSectionOpen && (
               <div className="cargo-section">
-                <CargoTable />
-                <div className="cargo-actions">
-              <button
-                onClick={handleCalculate}
-                disabled={isCalculating || cargo.length === 0}
-                className="btn btn-primary btn-calculate"
-              >
-                {isCalculating ? '⏳ Расчёт…' : '🧮 Рассчитать раскладку'}
-              </button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input
-                  type="checkbox"
-                  id="stacking-toggle"
-                  checked={stacking}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setStacking(checked);
-                    const newMaxH = checked ? (settings.maxStackHeight > 0 ? settings.maxStackHeight : 2000) : 0;
-                    const newSettings = { ...settings, maxStackHeight: newMaxH };
-                    setSettings(newSettings);
-                    console.log(`[Stacking] checkbox=${checked}, maxStackHeight=${newMaxH}`);
-                    console.log('[CHK] Чекбокс изменён:', checked, 'maxStackHeight:', newMaxH);
-                    // Автоматический пересчёт при включении/выключении штабелирования
-                    if (cargo.length > 0) {
-                      const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
-                      setCalculating(true);
-                      try {
-                        const result = packItems(vehicle, cargo, newSettings, loadingPoints);
-                        console.log(`[Stacking] recalculated: ${result.variants[0]?.items.length} items, first item Y=${result.variants[0]?.items[0]?.position.y}`);
-                        if (!result.error) {
-                          setResult(result);
-                          const pristineMap: Record<string, typeof result.variants[number]['items']> = {};
-                          result.variants.forEach((v) => { pristineMap[v.id] = v.items; });
-                          setPristine(pristineMap);
-                          setActiveVariant(result.variants[0].id);
-                        }
-                      } catch (err) { console.error('[Stacking] recalc error:', err); }
-                      finally { setCalculating(false); }
-                    }
-                  }}
-                />
-                <label htmlFor="stacking-toggle" style={{ fontSize: 13, color: 'var(--text)' }}>
-                  📦 Штабелирование
-                </label>
-                <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                  (для всех грузов)
-                </span>
-                </div>
+                <CargoTable onCargoDetails={setDetailsCargoId} />
               </div>
+            )}
+          </div>
+          {/* Секция «Управление» — сворачиваемый аккордеон */}
+          <div className="accordion-section">
+            <button className="accordion-toggle" onClick={() => setControlSectionOpen(!controlSectionOpen)}>
+              <span>⚙️ Управление</span>
+              <span>{controlSectionOpen ? '▼' : '▶'}</span>
+            </button>
+            {controlSectionOpen && (
+              <div className="accordion-content">
+                <button
+                  onClick={handleCalculate}
+                  disabled={isCalculating || cargo.length === 0}
+                  className="btn btn-primary btn-calculate"
+                >
+                  {isCalculating ? '⏳ Расчёт…' : '🧮 Рассчитать раскладку'}
+                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+                  <input
+                    type="checkbox"
+                    id="stacking-toggle"
+                    checked={stacking}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setStacking(checked);
+                      const newMaxH = checked ? (settings.maxStackHeight > 0 ? settings.maxStackHeight : 2000) : 0;
+                      const newSettings = { ...settings, maxStackHeight: newMaxH };
+                      setSettings(newSettings);
+                      if (cargo.length > 0) {
+                        const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
+                        setCalculating(true);
+                        try {
+                          const result = packItems(vehicle, cargo, newSettings, loadingPoints);
+                          if (!result.error) {
+                            setResult(result);
+                            const pristineMap: Record<string, typeof result.variants[number]['items']> = {};
+                            result.variants.forEach((v) => { pristineMap[v.id] = v.items; });
+                            setPristine(pristineMap);
+                            setActiveVariant(result.variants[0].id);
+                          }
+                        } catch (err) { console.error('[Stacking] recalc error:', err); }
+                        finally { setCalculating(false); }
+                      }
+                    }}
+                  />
+                  <label htmlFor="stacking-toggle" style={{ fontSize: 13, color: 'var(--text)' }}>
+                    📦 Штабелирование
+                  </label>
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                    (для всех грузов)
+                  </span>
+                </div>
+                <VehicleVisibilityControls vehicleId={selectedVehicleId} />
               </div>
             )}
           </div>
@@ -233,6 +240,7 @@ const App: React.FC = () => {
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       {matcherOpen && <VehicleMatcher onClose={() => setMatcherOpen(false)} />}
       {detailsVehicleId && <VehicleDetailsPanel vehicleId={detailsVehicleId} onClose={() => setDetailsVehicleId(null)} />}
+      {detailsCargoId && <CargoDetailsPanel cargoId={detailsCargoId} onClose={() => setDetailsCargoId(null)} />}
     </div>
   );
 };

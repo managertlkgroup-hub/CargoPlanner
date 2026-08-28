@@ -7,6 +7,7 @@ import type { Vehicle } from '../../types';
 import { BODY_TYPE_LABELS, LOADING_METHOD_LABELS } from '../../types';
 import { getDefaultMethodsForBodyType } from '../../lib/packer/presets';
 import { useAppStore, getCurrentVehicle } from '../../store/useAppStore';
+import { uid } from '../../utils/helpers';
 
 interface VehiclePanelProps {
   vehicleId: string;
@@ -127,7 +128,50 @@ interface CargoPanelProps {
 export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
   const cargo = useAppStore((s) => s.cargo);
   const item = cargo.find(c => c.id === cargoId);
+  const updateCargo = useAppStore((s) => s.updateCargo);
+  const addCargo = useAppStore((s) => s.addCargo);
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(item?.name ?? '');
+  const [editLength, setEditLength] = useState(String(item?.length ?? 0));
+  const [editWidth, setEditWidth] = useState(String(item?.width ?? 0));
+  const [editHeight, setEditHeight] = useState(String(item?.height ?? 0));
+  const [editWeight, setEditWeight] = useState(String(item?.weight ?? 0));
+  const [editQuantity, setEditQuantity] = useState(String(item?.quantity ?? 1));
+  const [editShape, setEditShape] = useState(item?.shape ?? 'box');
+  const [editStackable, setEditStackable] = useState(item?.stackable ?? true);
+  const [editOversize, setEditOversize] = useState(item?.isOversize ?? false);
+  const [editDiameter, setEditDiameter] = useState(String(item?.diameter ?? 0));
+
   if (!item) return null;
+
+  const isCustom = item.isCustom ?? false;
+
+  const handleSave = () => {
+    updateCargo(item.id, {
+      name: editName,
+      length: Number(editLength) || 0,
+      width: Number(editWidth) || 0,
+      height: Number(editHeight) || 0,
+      weight: Number(editWeight) || 0,
+      quantity: Number(editQuantity) || 1,
+      shape: editShape as 'box' | 'cylinder',
+      stackable: editStackable,
+      isOversize: editOversize,
+      diameter: editShape === 'cylinder' ? Number(editDiameter) : undefined,
+    });
+    setEditing(false);
+    onClose();
+  };
+
+  const handleCreateCopy = () => {
+    addCargo({
+      ...item,
+      id: uid(),
+      name: item.name + ' (копия)',
+      isCustom: true,
+    });
+    onClose();
+  };
 
   return (
     <div className="slide-panel">
@@ -136,32 +180,105 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
         <button onClick={onClose} className="btn btn-sm">✕</button>
       </div>
       <div className="slide-panel-body">
-        <div style={{ fontSize: 12, marginBottom: 4 }}>
-          Форма: <strong>{item.shape === 'cylinder' ? 'Цилиндр' : 'Прямоугольный'}</strong>
-        </div>
-        {item.shape === 'cylinder' ? (
-          <div style={{ fontSize: 12, marginBottom: 4 }}>
-            Диаметр: <strong>{item.diameter} мм</strong>, Длина: <strong>{item.length} мм</strong>
+        {editing ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="form-group">
+              <label>Название</label>
+              <input className="input-compact" value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Форма</label>
+              <select className="select-compact" value={editShape} onChange={(e) => setEditShape(e.target.value as 'box' | 'cylinder')}>
+                <option value="box">Прямоугольный</option>
+                <option value="cylinder">Цилиндр</option>
+              </select>
+            </div>
+            {editShape === 'cylinder' ? (
+              <>
+                <div className="form-group">
+                  <label>Диаметр, мм</label>
+                  <input className="input-compact" type="number" value={editDiameter} onChange={(e) => setEditDiameter(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Длина, мм</label>
+                  <input className="input-compact" type="number" value={editLength} onChange={(e) => setEditLength(e.target.value)} />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="form-group">
+                  <label>Длина, мм</label>
+                  <input className="input-compact" type="number" value={editLength} onChange={(e) => setEditLength(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Ширина, мм</label>
+                  <input className="input-compact" type="number" value={editWidth} onChange={(e) => setEditWidth(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Высота, мм</label>
+                  <input className="input-compact" type="number" value={editHeight} onChange={(e) => setEditHeight(e.target.value)} />
+                </div>
+              </>
+            )}
+            <div className="form-group">
+              <label>Вес, кг</label>
+              <input className="input-compact" type="number" step="any" value={editWeight} onChange={(e) => setEditWeight(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Количество</label>
+              <input className="input-compact" type="number" value={editQuantity} onChange={(e) => setEditQuantity(e.target.value)} />
+            </div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <input type="checkbox" checked={editStackable} onChange={(e) => setEditStackable(e.target.checked)} style={{ width: 14, height: 14 }} />
+                Штабелируемый
+              </label>
+              <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <input type="checkbox" checked={editOversize} onChange={(e) => setEditOversize(e.target.checked)} style={{ width: 14, height: 14 }} />
+                Негабаритный
+              </label>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <button className="btn btn-primary btn-sm" onClick={handleSave}>💾 Сохранить</button>
+              <button className="btn btn-sm" onClick={() => setEditing(false)}>Отмена</button>
+            </div>
           </div>
         ) : (
-          <div style={{ fontSize: 12, marginBottom: 4 }}>
-            Размеры: <strong>{item.length}×{item.width}×{item.height} мм</strong>
-          </div>
+          <>
+            <div style={{ fontSize: 12, marginBottom: 4 }}>
+              Форма: <strong>{item.shape === 'cylinder' ? 'Цилиндр' : 'Прямоугольный'}</strong>
+            </div>
+            {item.shape === 'cylinder' ? (
+              <div style={{ fontSize: 12, marginBottom: 4 }}>
+                Диаметр: <strong>{item.diameter} мм</strong>, Длина: <strong>{item.length} мм</strong>
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, marginBottom: 4 }}>
+                Размеры: <strong>{item.length}×{item.width}×{item.height} мм</strong>
+              </div>
+            )}
+            <div style={{ fontSize: 12, marginBottom: 4 }}>
+              Вес: <strong>{item.weight} кг</strong>, Кол-во: <strong>{item.quantity} шт</strong>
+            </div>
+            <div style={{ fontSize: 12, marginBottom: 4 }}>
+              Штабелируемый: <strong>{item.stackable ? 'Да' : 'Нет'}</strong>
+            </div>
+            {item.isOversize && (
+              <div style={{ fontSize: 12, color: 'var(--color-danger)', marginBottom: 4 }}>
+                ⚠️ Негабаритный груз
+              </div>
+            )}
+            <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+              <button className="btn btn-sm" onClick={() => setEditing(true)}>✏️ Редактировать</button>
+              {!isCustom && (
+                <button className="btn btn-sm btn-primary" onClick={handleCreateCopy}>
+                  📋 Создать копию
+                </button>
+              )}
+              <button className="btn btn-sm" onClick={onClose}>Закрыть</button>
+            </div>
+          </>
         )}
-        <div style={{ fontSize: 12, marginBottom: 4 }}>
-          Вес: <strong>{item.weight} кг</strong>, Кол-во: <strong>{item.quantity} шт</strong>
-        </div>
-        <div style={{ fontSize: 12, marginBottom: 4 }}>
-          Штабелируемый: <strong>{item.stackable ? 'Да' : 'Нет'}</strong>
-        </div>
-        {item.isOversize && (
-          <div style={{ fontSize: 12, color: 'var(--color-danger)', marginBottom: 4 }}>
-            ⚠️ Негабаритный груз
-          </div>
-        )}
-        <div style={{ marginTop: 12 }}>
-          <button className="btn btn-sm" onClick={onClose}>Закрыть</button>
-        </div>
       </div>
     </div>
   );

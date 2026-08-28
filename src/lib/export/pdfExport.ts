@@ -190,16 +190,18 @@ function drawMetrics(p: PdfCtx, variant: LayoutVariant, vehicle: Vehicle) {
   p.text(`Вариант раскладки: ${variant.label}`, { bold: true, size: 12 });
   p.gap(2);
 
-  // Метрики в две колонки
+  // Метрики в две колонки (более компактно)
   const left = [
     `Заполнение объёма: ${variant.volumeFill}%`,
     `Заполнение по весу: ${variant.weightFill}%`,
     `Размещено грузов: ${variant.items.length} шт.`,
+    `Суммарный вес: ${variant.totalWeight} кг`,
   ];
   const right = [
-    `Суммарный вес: ${variant.totalWeight} кг`,
     `Свободный объём: ${vol(variant.freeVolume)}`,
     `Свободный вес: ${Math.max(0, vehicle.maxWeight - variant.totalWeight)} кг`,
+    `Грузоподъёмность: ${vehicle.maxWeight} кг`,
+    ``,
   ];
 
   const sz = 11;

@@ -9,7 +9,11 @@ import AddCargoForm from './AddCargoForm';
 import { exportCsv } from '../../lib/csv/exportCsv';
 import { importCsv } from '../../lib/csv/importCsv';
 
-export default function CargoTable() {
+interface CargoTableProps {
+  onCargoDetails?: (id: string) => void;
+}
+
+export default function CargoTable({ onCargoDetails }: CargoTableProps) {
   const cargo = useAppStore((s) => s.cargo);
   const setCargo = useAppStore((s) => s.setCargo);
   const removeCargo = useAppStore((s) => s.removeCargo);
@@ -137,6 +141,7 @@ export default function CargoTable() {
                   cargo={c}
                   selected={selectedIds.has(c.id)}
                   onToggleSelect={toggleSelect}
+                  onDetailsClick={onCargoDetails}
                 />
               ))
             )}

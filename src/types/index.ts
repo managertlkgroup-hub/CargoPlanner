@@ -154,6 +154,8 @@ export interface Cargo {
   loadingPointId?: string;
   /** Точка выгрузки (опционально) */
   unloadingPointId?: string;
+  /** Пользовательский груз (создан копированием) */
+  isCustom?: boolean;
 }
 
 /** Точка/координаты в пространстве кузова */

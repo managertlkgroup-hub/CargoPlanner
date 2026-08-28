@@ -17,9 +17,10 @@ interface Props {
   cargo: Cargo;
   selected: boolean;
   onToggleSelect: (id: string) => void;
+  onDetailsClick?: (id: string) => void;
 }
 
-export default function CargoRow({ cargo, selected, onToggleSelect }: Props) {
+export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsClick }: Props) {
   const updateCargo = useAppStore((s) => s.updateCargo);
   const setFocusItemId = useAppStore((s) => s.setFocusItemId);
   const setHighlightItemId = useAppStore((s) => s.setHighlightItemId);
@@ -189,6 +190,17 @@ export default function CargoRow({ cargo, selected, onToggleSelect }: Props) {
         >
           ↻
         </button>
+        {/* Кнопка «Детали» */}
+        {onDetailsClick && (
+          <button
+            className="btn btn-sm"
+            style={{ padding: '1px 4px', fontSize: 10 }}
+            title="Детали груза"
+            onClick={() => onDetailsClick(cargo.id)}
+          >
+            📋
+          </button>
+        )}
       </td>
     </tr>
   );
