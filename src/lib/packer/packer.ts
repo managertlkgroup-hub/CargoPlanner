@@ -38,6 +38,7 @@ function toBox(cargo: Cargo, index: number): Box {
     name: cargo.name,
     shape: cargo.shape,
     diameter: cargo.diameter,
+    cylinderOrientation: cargo.cylinderOrientation,
     length: size.length,
     width: size.width,
     height: size.height,
@@ -48,13 +49,59 @@ function toBox(cargo: Cargo, index: number): Box {
   };
 }
 
-/** Проверка пересечения двух размещённых боксов (по осям X, Y, Z) */
+/** Проверка, является ли размещённый бокс вертикальным цилиндром */
+function isVerticalCylinder(p: PlacedBox): boolean {
+  return p.shape === 'cylinder' && p.cylinderOrientation === 'vertical';
+}
+
+/** Проверка пересечения двух размещённых боксов (с учётом круглых цилиндров) */
 function intersects(a: PlacedBox, b: PlacedBox): boolean {
+  // По высоте — всегда AABB
+  if (a.y >= b.y + b.placedHeight || a.y + a.placedHeight <= b.y) return false;
+
+  // Если оба — вертикальные цилиндры, проверяем пересечение кругов на XZ
+  if (isVerticalCylinder(a) && isVerticalCylinder(b)) {
+    const aDiam = a.placedLength; // для верт. цилиндра placedLength = placedWidth = diameter
+    const bDiam = b.placedLength;
+    const aCx = a.x + aDiam / 2;
+    const aCz = a.z + aDiam / 2;
+    const bCx = b.x + bDiam / 2;
+    const bCz = b.z + bDiam / 2;
+    const dx = aCx - bCx;
+    const dz = aCz - bCz;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+    return dist < (aDiam + bDiam) / 2;
+  }
+
+  // Если один — вертикальный цилиндр, другой — AABB: проверяем центр окружности vs прямоугольник
+  if (isVerticalCylinder(a)) {
+    const aDiam = a.placedLength;
+    const aCx = a.x + aDiam / 2;
+    const aCz = a.z + aDiam / 2;
+    const aR = aDiam / 2;
+    // Ближайшая точка на прямоугольнике b к центру окружности a
+    const closestX = Math.max(b.x, Math.min(aCx, b.x + b.placedLength));
+    const closestZ = Math.max(b.z, Math.min(aCz, b.z + b.placedWidth));
+    const dx = aCx - closestX;
+    const dz = aCz - closestZ;
+    return (dx * dx + dz * dz) < (aR * aR);
+  }
+  if (isVerticalCylinder(b)) {
+    const bDiam = b.placedLength;
+    const bCx = b.x + bDiam / 2;
+    const bCz = b.z + bDiam / 2;
+    const bR = bDiam / 2;
+    const closestX = Math.max(a.x, Math.min(bCx, a.x + a.placedLength));
+    const closestZ = Math.max(a.z, Math.min(bCz, a.z + a.placedWidth));
+    const dx = bCx - closestX;
+    const dz = bCz - closestZ;
+    return (dx * dx + dz * dz) < (bR * bR);
+  }
+
+  // Стандартная AABB проверка
   return (
     a.x < b.x + b.placedLength &&
     a.x + a.placedLength > b.x &&
-    a.y < b.y + b.placedHeight &&
-    a.y + a.placedHeight > b.y &&
     a.z < b.z + b.placedWidth &&
     a.z + a.placedWidth > b.z
   );
@@ -65,12 +112,18 @@ function getOrientations(box: Box, mode: 'along' | 'across' | 'mixed'): Orientat
   // Цилиндр: горизонтальная ось (длина), ширина = высота = диаметр.
   // Вертикальный поворот запрещён, горизонтальный — разрешён.
   if (box.shape === 'cylinder') {
+    // Вертикальный цилиндр: проекция на пол — круг диаметром diameter
+    // placedLength = placedWidth = diameter, placedHeight = длина цилиндра
+    if (box.cylinderOrientation === 'vertical') {
+      const d = box.diameter ?? box.width;
+      return [{ dx: d, dy: box.length, dz: d, rotY: 0 }];
+    }
+    // Горизонтальный цилиндр (по умолчанию)
     if (mode === 'along') {
       return [{ dx: box.length, dy: box.height, dz: box.width, rotY: 0 }];
     } else if (mode === 'across') {
       return [{ dx: box.width, dy: box.height, dz: box.length, rotY: 90 }];
     } else {
-      // mixed: обе горизонтальные ориентации
       return [
         { dx: box.length, dy: box.height, dz: box.width, rotY: 0 },
         { dx: box.width, dy: box.height, dz: box.length, rotY: 90 },

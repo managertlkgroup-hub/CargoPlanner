@@ -124,12 +124,13 @@ export default function CargoTable() {
               <th className="cargo-th-num">Выс.</th>
               <th className="cargo-th-num">Вес</th>
               <th className="cargo-th-num">Кол-во</th>
+              <th style={{ width: 52, textAlign: 'center' }}>Действия</th>
             </tr>
           </thead>
           <tbody>
             {cargo.length === 0 ? (
               <tr>
-                <td colSpan={9} className="empty-state text-muted">
+                <td colSpan={10} className="empty-state text-muted">
                   Грузов пока нет. Нажмите «+ Добавить» или импортируйте CSV.
                 </td>
               </tr>

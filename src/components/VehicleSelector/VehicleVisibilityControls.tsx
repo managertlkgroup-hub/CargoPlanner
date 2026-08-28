@@ -3,7 +3,20 @@
 // ============================================================================
 
 
+import { useEffect } from 'react';
 import { useAppStore, getCurrentVehicle } from '../../store/useAppStore';
+
+const VIS_KEY = 'cargoPlanner_visibility';
+
+function loadVisibility(): Record<string, Partial<Record<string, boolean>>> {
+  try {
+    return JSON.parse(localStorage.getItem(VIS_KEY) || '{}');
+  } catch { return {}; }
+}
+
+function saveVisibility(data: Record<string, Partial<Record<string, boolean>>>) {
+  localStorage.setItem(VIS_KEY, JSON.stringify(data));
+}
 
 interface Props {
   vehicleId: string;
@@ -56,8 +69,21 @@ export default function VehicleVisibilityControls({ vehicleId }: Props) {
   // We store visibility in a global state through store
   const updateVisibility = useAppStore((s) => s.setVehicleVisibility);
 
+  // Load from localStorage on mount
+  useEffect(() => {
+    const saved = loadVisibility();
+    if (saved[vehicleId]) {
+      const patch = saved[vehicleId];
+      updateVisibility(vehicleId, patch as any);
+    }
+  }, [vehicleId]);
+
   const handleChange = (key: 'showRoof' | 'showSides' | 'showFront' | 'showRear' | 'showFloor', val: boolean) => {
     updateVisibility(vehicleId, { [key]: val });
+    // Save to localStorage
+    const saved = loadVisibility();
+    saved[vehicleId] = { ...(saved[vehicleId] || {}), [key]: val };
+    saveVisibility(saved);
   };
 
   return (

@@ -3,6 +3,7 @@
 // ============================================================================
 
 import { useState } from 'react';
+import type { Vehicle } from '../../types';
 import { BODY_TYPE_LABELS, LOADING_METHOD_LABELS } from '../../types';
 import { useAppStore, getCurrentVehicle } from '../../store/useAppStore';
 
@@ -30,6 +31,19 @@ export function VehicleDetailsPanel({ vehicleId, onClose }: VehiclePanelProps) {
     setEditing(false);
     onClose();
   };
+
+  const handleCreateCopy = () => {
+    const copy: Vehicle = {
+      ...vehicle,
+      id: `copy-${Date.now()}`,
+      name: vehicle.name + ' (копия)',
+      isCustom: true,
+    };
+    addCustomVehicle(copy);
+    onClose();
+  };
+
+  const isStandard = !vehicle.isCustom;
 
   return (
     <div className="slide-panel">
@@ -82,8 +96,13 @@ export function VehicleDetailsPanel({ vehicleId, onClose }: VehiclePanelProps) {
             </div>
           </div>
         )}
-        <div style={{ marginTop: 12 }}>
+        <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
           <button className="btn btn-sm" onClick={() => setEditing(true)}>✏️ Редактировать</button>
+          {isStandard && (
+            <button className="btn btn-sm btn-primary" onClick={handleCreateCopy}>
+              📋 Создать копию
+            </button>
+          )}
         </div>
       </div>
     </div>

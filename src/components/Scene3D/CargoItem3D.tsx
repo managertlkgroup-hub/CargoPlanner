@@ -7,7 +7,7 @@
 
 import { useMemo, useState } from 'react';
 import * as THREE from 'three';
-import { Html, Text } from '@react-three/drei';
+import { Html, Text, Outlines } from '@react-three/drei';
 import type { PackedItem, Vehicle } from '../../types';
 import { SCALE } from './Container3D';
 
@@ -69,6 +69,8 @@ export default function CargoItem3D({
 
   // Позиция подписи
   const labelY = isCylinder ? h / 2 + 0.06 : h / 2 + 0.05;
+
+  const outlineColor = isOversize ? '#ef4444' : isSelected ? '#ffffff' : hovered ? '#f59e0b' : undefined;
 
   return (
     <group
@@ -136,6 +138,14 @@ export default function CargoItem3D({
         {item.name}
       </Text>
 
+      {/* Outline подсветка при наведении/выделении */}
+      {(hovered || isSelected) && !isCylinder && (
+        <Outlines
+          thickness={3}
+          color={outlineColor ?? '#f59e0b'}
+        />
+      )}
+
       {/* Тултип при наведении */}
       {hovered && (
         <Html position={[0, labelY + 0.3, 0]} center style={{ pointerEvents: 'none' }}>
@@ -145,6 +155,7 @@ export default function CargoItem3D({
               ? `Цилиндр Ø${Math.round(diameter)}×${Math.round(item.dimensions.length)} мм`
               : `${Math.round(item.dimensions.length)}×${Math.round(item.dimensions.width)}×${Math.round(item.dimensions.height)} мм`}`}
             {`\nВес: ${item.weight} кг`}
+            {isOversize ? `\n⚠️ Негабаритный` : ''}
             {`\nПозиция: x=${Math.round(item.position.x)} y=${Math.round(item.position.y)} z=${Math.round(item.position.z)}`}
             {`\nПоворот Y: ${Math.round(item.rotationY ?? 0)}°`}
           </div>

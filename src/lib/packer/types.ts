@@ -1,6 +1,6 @@
 /** Единичная коробка после "размножения" груза на quantity штук */
 
-import type { CargoShape } from '../../types';
+import type { CargoShape, CylinderOrientation } from '../../types';
 
 export interface Box {
   id: string;
@@ -8,6 +8,8 @@ export interface Box {
   shape: CargoShape;
   /** Диаметр для цилиндров (мм), undefined для прямоугольников */
   diameter?: number;
+  /** Ориентация цилиндра */
+  cylinderOrientation?: CylinderOrientation;
   /** Габаритный объём для упаковки (для цилиндра width=height=diameter) */
   length: number;
   width: number;

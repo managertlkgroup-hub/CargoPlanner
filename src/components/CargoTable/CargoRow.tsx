@@ -10,6 +10,8 @@ import { useState, useRef } from 'react';
 import type { Cargo } from '../../types';
 import { shapeLabel } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
+import { getCurrentVehicle } from '../../store/useAppStore';
+import { packItems } from '../../lib/packer/packer';
 
 interface Props {
   cargo: Cargo;
@@ -19,6 +21,15 @@ interface Props {
 
 export default function CargoRow({ cargo, selected, onToggleSelect }: Props) {
   const updateCargo = useAppStore((s) => s.updateCargo);
+  const setFocusItemId = useAppStore((s) => s.setFocusItemId);
+  const setHighlightItemId = useAppStore((s) => s.setHighlightItemId);
+  const selectedVehicleId = useAppStore((s) => s.selectedVehicleId);
+  const customVehicles = useAppStore((s) => s.customVehicles);
+  const settings = useAppStore((s) => s.settings);
+  const loadingPoints = useAppStore((s) => s.loadingPoints);
+  const allCargo = useAppStore((s) => s.cargo);
+  const setResult = useAppStore((s) => s.setResult);
+  const setActiveVariant = useAppStore((s) => s.setActiveVariant);
   const isCylinder = cargo.shape === 'cylinder';
   const [editingName, setEditingName] = useState(false);
   const [editValue, setEditValue] = useState(cargo.name);
@@ -137,6 +148,47 @@ export default function CargoRow({ cargo, selected, onToggleSelect }: Props) {
           className="cargo-num-input"
           onChange={(e) => updateCargo(cargo.id, { quantity: Math.max(1, Math.floor(Number(e.target.value) || 1)) })}
         />
+      </td>
+      <td style={{ padding: '2px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+        {/* Кнопка «Показать в 3D» */}
+        <button
+          className="btn btn-sm"
+          style={{ padding: '1px 4px', fontSize: 10 }}
+          title="Показать в 3D"
+          onClick={() => {
+            setFocusItemId(cargo.id);
+            setHighlightItemId(cargo.id);
+            setTimeout(() => setHighlightItemId(null), 2000);
+          }}
+        >
+          🔍
+        </button>
+        {/* Кнопка «Повернуть на 90°» */}
+        <button
+          className="btn btn-sm"
+          style={{ padding: '1px 4px', fontSize: 10 }}
+          title="Повернуть на 90° (поменять длину и ширину)"
+          onClick={() => {
+            if (isCylinder) return; // Цилиндры не вращаем так
+            const newLength = cargo.width ?? cargo.length;
+            const newWidth = cargo.length;
+            updateCargo(cargo.id, { length: newLength, width: newWidth });
+            // Автопересчёт
+            const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
+            try {
+              const result = packItems(vehicle, allCargo, settings, loadingPoints);
+              if (!result.error) {
+                setResult(result);
+                const pristineMap: Record<string, typeof result.variants[number]['items']> = {};
+                result.variants.forEach((v) => { pristineMap[v.id] = v.items; });
+                useAppStore.getState().setPristine(pristineMap);
+                setActiveVariant(result.variants[0].id);
+              }
+            } catch (e) { console.error('[CargoRow] recalc error:', e); }
+          }}
+        >
+          ↻
+        </button>
       </td>
     </tr>
   );

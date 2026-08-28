@@ -105,6 +105,17 @@ interface AppState {
   /** Автоматически найти место на верхнем слое (S) */
   smartStack: (cargoId: string) => boolean;
 
+  // --- Подсветка и фокус в 3D ---
+  /** ID груза, на который нужно навести камеру в 3D */
+  focusItemId: string | null;
+  setFocusItemId: (id: string | null) => void;
+  /** ID груза для временной подсветки (2 сек) */
+  highlightItemId: string | null;
+  setHighlightItemId: (id: string | null) => void;
+  /** Режим "разнесённый вид" — грузы разъезжаются для наглядности */
+  spreadMode: boolean;
+  toggleSpreadMode: () => void;
+
   // Сессии
   sessions: SavedSession[];
   saveSession: (name: string) => void;
@@ -567,6 +578,14 @@ export const useAppStore = create<AppState>()(
           set({ customVehicles: list, selectedVehicleId: customCopy.id });
         }
       },
+
+      // --- Подсветка и фокус ---
+      focusItemId: null,
+      setFocusItemId: (id) => set({ focusItemId: id }),
+      highlightItemId: null,
+      setHighlightItemId: (id) => set({ highlightItemId: id }),
+      spreadMode: false,
+      toggleSpreadMode: () => set((s) => ({ spreadMode: !s.spreadMode })),
 
       // --- Ошибки ---
       error: null,

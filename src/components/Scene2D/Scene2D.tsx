@@ -347,10 +347,17 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [variant, rotateCargo, moveCargoUp, moveCargoDown, smartStack]);
 
-  // Track hovered item for R key
+  // Track hovered item for R key and tooltip
+  const [tooltipData, setTooltipData] = useState<{ x: number; y: number; item: typeof variant extends null ? null : NonNullable<typeof variant>['items'][number] } | null>(null);
+
   const updateHoveredId = useCallback((mx: number, my: number) => {
     const item = hitTest(mx, my);
     lastHoveredIdRef.current = item?.id ?? null;
+    if (item) {
+      setTooltipData({ x: mx, y: my, item });
+    } else {
+      setTooltipData(null);
+    }
   }, [hitTest]);
 
   const handleDoubleClick = useCallback(
@@ -390,6 +397,31 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
         onMouseLeave={handleMouseUp}
         onDoubleClick={handleDoubleClick}
       />
+      {/* Тултип при наведении в 2D */}
+      {tooltipData && tooltipData.item && (
+        <div
+          style={{
+            position: 'absolute',
+            left: tooltipData.x + 12,
+            top: tooltipData.y - 40,
+            background: 'rgba(30,41,59,0.95)',
+            color: '#fff',
+            padding: '4px 8px',
+            borderRadius: 6,
+            fontSize: 11,
+            whiteSpace: 'pre-line',
+            pointerEvents: 'none',
+            zIndex: 20,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          }}
+        >
+          <strong>{tooltipData.item.name}</strong>
+          {`\n${Math.round(tooltipData.item.dimensions.length)}×${Math.round(tooltipData.item.dimensions.width)}×${Math.round(tooltipData.item.dimensions.height)} мм`}
+          {`\nВес: ${tooltipData.item.weight} кг`}
+          {tooltipData.item.isOversize ? `\n⚠️ Негабаритный` : ''}
+        </div>
+      )}
+
       <div style={{ fontSize: 10, color: '#9ca3af', textAlign: 'center', padding: 2 }}>
         Перетаскивайте · R — поворот · ↑↓ — слои · S — автостак
       </div>

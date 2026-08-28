@@ -1,20 +1,62 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useAppStore, useActiveVariant, useSelectedVehicle } from '../../store/useAppStore';
 import CargoItem3D from './CargoItem3D';
 import Container3D from './Container3D';
 import { SCALE } from './Container3D';
+import type { PackedItem } from '../../types';
+
+/** Компонент-обёртка для плавного перемещения камеры к грузу */
+function CameraFocuser({ items, focusItemId }: { items: PackedItem[]; focusItemId: string | null }) {
+  const { camera } = useThree();
+  const targetPos = useMemo(() => {
+    if (!focusItemId) return null;
+    const item = items.find(it => it.id === focusItemId || it.id.startsWith(focusItemId));
+    if (!item) return null;
+    const rotY = item.rotationY ?? 0;
+    const isOdd90 = Math.round(((rotY % 360) + 360) % 360 / 90) % 2 === 1;
+    const effL = isOdd90 ? item.dimensions.width : item.dimensions.length;
+    const effW = isOdd90 ? item.dimensions.length : item.dimensions.width;
+    const cx = (item.position.x + effL / 2) * SCALE;
+    const cy = (item.position.y + item.dimensions.height / 2) * SCALE;
+    const cz = (item.position.z + effW / 2) * SCALE;
+    return { x: cx, y: cy, z: cz };
+  }, [items, focusItemId]);
+
+  useFrame(() => {
+    if (!targetPos) return;
+    const speed = 0.08;
+    camera.position.x += (targetPos.x + 3 - camera.position.x) * speed;
+    camera.position.y += (targetPos.y + 2 - camera.position.y) * speed;
+    camera.position.z += (targetPos.z + 3 - camera.position.z) * speed;
+  });
+
+  return null;
+}
 
 const Scene3D: React.FC = () => {
   const result = useAppStore((s) => s.result);
   const activeVariant = useAppStore((s) => s.activeVariant);
   const variant = useActiveVariant();
   const vehicle = useSelectedVehicle();
+  const focusItemId = useAppStore((s) => s.focusItemId);
+  const highlightItemId = useAppStore((s) => s.highlightItemId);
+  const spreadMode = useAppStore((s) => s.spreadMode);
+  const toggleSpreadMode = useAppStore((s) => s.toggleSpreadMode);
+  const setFocusItemId = useAppStore((s) => s.setFocusItemId);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [topView] = useState(false);
   const controlsRef = useRef<any>(null);
+
+  // Clear focus after 2 seconds
+  useEffect(() => {
+    if (focusItemId) {
+      const timer = setTimeout(() => setFocusItemId(null), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [focusItemId, setFocusItemId]);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -133,18 +175,44 @@ const Scene3D: React.FC = () => {
         {/* Кузов (центрирован, центр в начале координат) */}
         <Container3D vehicle={vehicle} />
 
+        {/* Камера фокусируется на грузе */}
+        <CameraFocuser items={packedItems} focusItemId={focusItemId} />
+
         {/* Грузы */}
-        {packedItems.map((item) => (
-          <CargoItem3D
-            key={item.id}
-            item={item}
-            vehicle={vehicle}
-            isSelected={selectedId === item.id}
-            onSelect={(id) => setSelectedId(id)}
-            onHover={() => {}}
-            allItems={packedItems}
-          />
-        ))}
+        {packedItems.map((item, idx) => {
+          // Spread mode: offset items for visual separation
+          let spreadOffset = { x: 0, y: 0, z: 0 };
+          if (spreadMode) {
+            const cols = Math.ceil(Math.sqrt(packedItems.length));
+            const row = Math.floor(idx / cols);
+            const col = idx % cols;
+            spreadOffset = {
+              x: col * 0.5,
+              y: 0,
+              z: row * 0.5,
+            };
+          }
+          const spreadItem = spreadMode ? {
+            ...item,
+            position: {
+              x: item.position.x + spreadOffset.x,
+              y: item.position.y + spreadOffset.y,
+              z: item.position.z + spreadOffset.z,
+            },
+          } : item;
+          const isHighlighted = highlightItemId === item.id || highlightItemId === item.id.split('-')[0];
+          return (
+            <CargoItem3D
+              key={item.id}
+              item={spreadItem}
+              vehicle={vehicle}
+              isSelected={selectedId === item.id || isHighlighted}
+              onSelect={(id) => setSelectedId(id)}
+              onHover={() => {}}
+              allItems={packedItems}
+            />
+          );
+        })}
 
         {/* Камера заблокирована во время перетаскивания груза */}
         <OrbitControls
@@ -167,6 +235,26 @@ const Scene3D: React.FC = () => {
       <div className="scene-overlay scene-hint">
         ЛКМ вращение · колесо — зум
       </div>
+
+      {/* Кнопка «Разнести грузы» */}
+      <button
+        onClick={toggleSpreadMode}
+        style={{
+          position: 'absolute',
+          bottom: 40,
+          right: 10,
+          padding: '4px 8px',
+          fontSize: 10,
+          borderRadius: 4,
+          border: '1px solid var(--border)',
+          background: spreadMode ? 'var(--color-accent)' : 'var(--bg-panel)',
+          color: spreadMode ? '#fff' : 'var(--text)',
+          cursor: 'pointer',
+          zIndex: 10,
+        }}
+      >
+        {spreadMode ? '🧲 Склеить' : '📦 Разнести'}
+      </button>
     </div>
   );
 };
