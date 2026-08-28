@@ -143,13 +143,29 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
       }
       ctx.fillStyle = isOversize ? '#ef4444' : item.color;
       ctx.globalAlpha = layerAlpha;
-      ctx.fillRect(itemX, itemY, itemL, itemW);
+      // Для вертикальных цилиндров рисуем круг
+      const isVertCyl = (item as any).shape === 'cylinder' && (item as any).cylinderOrientation === 'vertical';
+      if (isVertCyl) {
+        const radius = Math.min(itemL, itemW) / 2;
+        ctx.beginPath();
+        ctx.arc(itemX + itemL / 2, itemY + itemW / 2, radius, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillRect(itemX, itemY, itemL, itemW);
+      }
       ctx.globalAlpha = 1.0;
       // Selection highlight for hovered item
       const isHovered = lastHoveredIdRef.current === item.id;
       ctx.strokeStyle = isHovered ? '#f59e0b' : isOversize ? '#ef4444' : '#1e293b';
       ctx.lineWidth = isHovered ? 3 : isOversize ? 2 : 1;
-      ctx.strokeRect(itemX, itemY, itemL, itemW);
+      if (isVertCyl) {
+        const rad2 = Math.min(itemL, itemW) / 2;
+        ctx.beginPath();
+        ctx.arc(itemX + itemL / 2, itemY + itemW / 2, rad2, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        ctx.strokeRect(itemX, itemY, itemL, itemW);
+      }
 
       ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'center';

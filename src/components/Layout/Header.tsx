@@ -8,6 +8,7 @@ import { generatePdfWithReactPdf } from '../Report/PDFReport';
 import { exportSceneToPng } from '../../lib/export/pngExport';
 import { getCurrentVehicle } from '../../store/useAppStore';
 import { useActiveVariant } from '../../store/useAppStore';
+import { Package, Save, Image, FileText, Settings } from 'lucide-react';
 import ThemeToggle from '../Settings/ThemeToggle';
 import SessionModal from '../Settings/SessionModal';
 import PresetsModal from '../Settings/PresetsModal';
@@ -67,19 +68,19 @@ export default function Header({ onOpenSettings }: HeaderProps) {
 
       <div className="header-actions">
         <button className="btn btn-sm" onClick={() => setPresetsOpen(true)}>
-          📦 Пресеты
+          <Package size={14} /> Пресеты
         </button>
         <button className="btn btn-sm" onClick={() => setSessionOpen(true)}>
-          💾 Сессии
+          <Save size={14} /> Сессии
         </button>
         <button className="btn btn-sm" onClick={handlePng}>
-          🖼 Экспорт PNG
+          <Image size={14} /> Экспорт PNG
         </button>
         <button className="btn btn-sm btn-primary" onClick={handlePdf}>
-          📄 Отчёт PDF
+          <FileText size={14} /> Отчёт PDF
         </button>
         <button className="btn btn-sm" onClick={onOpenSettings}>
-          ⚙️ Настройки
+          <Settings size={14} /> Настройки
         </button>
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </div>

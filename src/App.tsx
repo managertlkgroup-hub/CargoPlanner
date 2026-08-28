@@ -6,6 +6,7 @@ import Footer from './components/Layout/Footer';
 import VehicleSelector from './components/VehicleSelector/VehicleSelector';
 import CargoTable from './components/CargoTable/CargoTable';
 import Scene3D from './components/Scene3D/Scene3D';
+import { Search, ClipboardList, Package, Box, Grid3x3, Lightbulb } from 'lucide-react';
 import Scene2D from './components/Scene2D/Scene2D';
 import VariantTabs from './components/VariantTabs/VariantTabs';
 import MetricsPanel from './components/MetricsPanel/MetricsPanel';
@@ -104,8 +105,8 @@ const App: React.FC = () => {
               <div className="accordion-content">
                 <VehicleSelector />
                 <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                  <button className="btn btn-sm" onClick={() => setMatcherOpen(true)}>🔍 Подобрать авто</button>
-                  <button className="btn btn-sm" onClick={() => setDetailsVehicleId(selectedVehicleId)}>📋 Детали</button>
+                  <button className="btn btn-sm" onClick={() => setMatcherOpen(true)}><Search size={14} /> Подобрать авто</button>
+                  <button className="btn btn-sm" onClick={() => setDetailsVehicleId(selectedVehicleId)}><ClipboardList size={14} /> Детали</button>
                 </div>
               </div>
             )}
@@ -114,7 +115,7 @@ const App: React.FC = () => {
           {/* Секция «Грузы» — сворачиваемый аккордеон */}
           <div className="accordion-section" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <button className="accordion-toggle" onClick={() => setCargoSectionOpen(!cargoSectionOpen)}>
-              <span>📦 Грузы ({cargo.length})</span>
+              <span><Package size={14} /> Грузы ({cargo.length})</span>
               <span>{cargoSectionOpen ? '▼' : '▶'}</span>
             </button>
             {cargoSectionOpen && (
@@ -136,7 +137,7 @@ const App: React.FC = () => {
                   disabled={isCalculating || cargo.length === 0}
                   className="btn btn-primary btn-calculate"
                 >
-                  {isCalculating ? '⏳ Расчёт…' : '🧮 Рассчитать раскладку'}
+                  {isCalculating ? 'Расчёт…' : 'Расчёт'}
                 </button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
                   <input
@@ -167,7 +168,7 @@ const App: React.FC = () => {
                     }}
                   />
                   <label htmlFor="stacking-toggle" style={{ fontSize: 13, color: 'var(--text)' }}>
-                    📦 Штабелирование
+                    <Box size={14} /> Штабелирование
                   </label>
                   <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
                     (для всех грузов)
@@ -191,14 +192,14 @@ const App: React.FC = () => {
               className={`view-tab ${activeView === '2d' ? 'active' : ''}`}
               onClick={() => setActiveView('2d')}
             >
-              📐 2D Вид (сверху)
+              <Grid3x3 size={14} /> 2D Вид
             </button>
             <button
               type="button"
               className={`view-tab ${activeView === '3d' ? 'active' : ''}`}
               onClick={() => setActiveView('3d')}
             >
-              🧊 3D Вид
+              <Box size={14} /> 3D Вид
             </button>
           </div>
           
@@ -255,7 +256,7 @@ function SuggestionsPanel({ show, onToggle }: { show: boolean; onToggle: () => v
   return (
     <div style={{ flexShrink: 0 }}>
       <button className="btn btn-sm w-full" onClick={onToggle} style={{ marginBottom: 4 }}>
-        💡 Подсказки ({suggestions.length}) {show ? '▲' : '▼'}
+        <Lightbulb size={14} /> Подсказки ({suggestions.length}) {show ? '▲' : '▼'}
       </button>
       {show && (
         <div className="suggestions-list">
