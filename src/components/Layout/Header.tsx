@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import { generatePdfReport } from '../../lib/export/pdfExport';
+import { generatePdfWithReactPdf } from '../Report/PDFReport';
 import { exportSceneToPng } from '../../lib/export/pngExport';
 import { getCurrentVehicle } from '../../store/useAppStore';
 import { useActiveVariant } from '../../store/useAppStore';
@@ -31,14 +31,15 @@ export default function Header({ onOpenSettings }: HeaderProps) {
   const [sessionOpen, setSessionOpen] = useState(false);
   const [presetsOpen, setPresetsOpen] = useState(false);
 
-  const handlePdf = () => {
+  const handlePdf = async () => {
     if (!result || !activeVariant) {
-      setError('Сначала выполните расчёт и выберите вариант раскладки.');
+      setError('Раскладка не рассчитана, рассчитайте сначала.');
       return;
     }
     try {
-      generatePdfReport(vehicle, cargo, activeVariant);
+      await generatePdfWithReactPdf(vehicle, cargo, activeVariant);
     } catch (e) {
+      console.error('[PDF] Error:', e);
       setError(e instanceof Error ? e.message : 'Ошибка формирования PDF');
     }
   };
