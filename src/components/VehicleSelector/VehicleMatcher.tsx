@@ -1,3 +1,4 @@
+import { Search, Package } from 'lucide-react';
 // ============================================================================
 // Модальное окно автоподбора автомобиля под грузы
 // ============================================================================
@@ -28,7 +29,7 @@ export default function VehicleMatcher({ onClose }: Props) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 560 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h3 style={{ margin: 0 }}>🔍 Подбор автомобиля</h3>
+          <h3 style={{ margin: 0 }}><Search size={18} /> Подбор автомобиля</h3>
           <button onClick={onClose} className="btn btn-sm">✕</button>
         </div>
 
@@ -74,7 +75,7 @@ export default function VehicleMatcher({ onClose }: Props) {
                   {m.vehicle.length}×{m.vehicle.width}×{m.vehicle.height} мм • {m.vehicle.maxWeight} кг
                 </div>
                 <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 11 }}>
-                  <span>📦 {m.volumeFill}% объёма</span>
+                  <span><Package size={12} /> {m.volumeFill}% объёма</span>
                   <span>⚖️ {m.weightFill}% веса</span>
                 </div>
               </div>

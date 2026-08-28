@@ -277,7 +277,7 @@ const Scene3D: React.FC = () => {
           zIndex: 10,
         }}
       >
-        {spreadMode ? '🧲 Склеить' : '📦 Разнести'}
+        {spreadMode ? 'Склеить' : 'Разнести'}
       </button>
     </div>
   );

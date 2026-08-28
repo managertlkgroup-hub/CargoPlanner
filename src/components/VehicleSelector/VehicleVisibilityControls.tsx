@@ -1,3 +1,5 @@
+import React from 'react';
+import { Home, Package, ArrowRight, ArrowLeft, Square } from 'lucide-react';
 // ============================================================================
 // Управление видимостью частей кузова (чекбоксы)
 // ============================================================================
@@ -9,12 +11,12 @@ interface Props {
   vehicleId: string;
 }
 
-const PARTS: { key: 'showRoof' | 'showSides' | 'showFront' | 'showRear' | 'showFloor'; label: string; icon: string }[] = [
-  { key: 'showRoof', label: 'Крыша', icon: '🏠' },
-  { key: 'showSides', label: 'Борта', icon: '📦' },
-  { key: 'showFront', label: 'Перед', icon: '➡️' },
-  { key: 'showRear', label: 'Зад', icon: '⬅️' },
-  { key: 'showFloor', label: 'Пол', icon: '⬜' },
+const PARTS: { key: 'showRoof' | 'showSides' | 'showFront' | 'showRear' | 'showFloor'; label: string; icon: React.ReactNode }[] = [
+  { key: 'showRoof', label: 'Крыша', icon: <Home size={12} /> },
+  { key: 'showSides', label: 'Борта', icon: <Package size={12} /> },
+  { key: 'showFront', label: 'Перед', icon: <ArrowRight size={12} /> },
+  { key: 'showRear', label: 'Зад', icon: <ArrowLeft size={12} /> },
+  { key: 'showFloor', label: 'Пол', icon: <Square size={12} /> },
 ];
 
 export default function VehicleVisibilityControls({ vehicleId }: Props) {

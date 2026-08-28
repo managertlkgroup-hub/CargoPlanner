@@ -1,3 +1,4 @@
+import { Truck, Package, Pencil, ClipboardList } from 'lucide-react';
 // ============================================================================
 // Выдвижная панель с деталями пресета (автомобиль или груз)
 // ============================================================================
@@ -59,7 +60,7 @@ export function VehicleDetailsPanel({ vehicleId, onClose }: VehiclePanelProps) {
   return (
     <div className="slide-panel">
       <div className="slide-panel-header">
-        <strong>🚚 {vehicle.name}</strong>
+        <strong><Truck size={14} /> {vehicle.name}</strong>
         <button onClick={onClose} className="btn btn-sm">✕</button>
       </div>
       <div className="slide-panel-body">
@@ -108,10 +109,10 @@ export function VehicleDetailsPanel({ vehicleId, onClose }: VehiclePanelProps) {
           </div>
         )}
         <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-          <button className="btn btn-sm" onClick={() => setEditing(true)}>✏️ Редактировать</button>
+          <button className="btn btn-sm" onClick={() => setEditing(true)}><Pencil size={12} /> Редактировать</button>
           {isStandard && (
             <button className="btn btn-sm btn-primary" onClick={handleCreateCopy}>
-              📋 Создать копию
+              <ClipboardList size={12} /> Создать копию
             </button>
           )}
         </div>
@@ -176,7 +177,7 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
   return (
     <div className="slide-panel">
       <div className="slide-panel-header">
-        <strong>📦 {item.name}</strong>
+        <strong><Package size={14} /> {item.name}</strong>
         <button onClick={onClose} className="btn btn-sm">✕</button>
       </div>
       <div className="slide-panel-body">
@@ -269,10 +270,10 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
               </div>
             )}
             <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-              <button className="btn btn-sm" onClick={() => setEditing(true)}>✏️ Редактировать</button>
+              <button className="btn btn-sm" onClick={() => setEditing(true)}><Pencil size={12} /> Редактировать</button>
               {!isCustom && (
                 <button className="btn btn-sm btn-primary" onClick={handleCreateCopy}>
-                  📋 Создать копию
+                  <ClipboardList size={12} /> Создать копию
                 </button>
               )}
               <button className="btn btn-sm" onClick={onClose}>Закрыть</button>

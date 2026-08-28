@@ -1,3 +1,4 @@
+import { Package, Truck } from 'lucide-react';
 // ============================================================================
 // Модальное окно управления пресетами (автомобили + грузы)
 // ============================================================================
@@ -20,7 +21,7 @@ export default function PresetsModal({ onClose }: Props) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 560 }}>
-        <h3>📦 Управление пресетами</h3>
+        <h3><Package size={18} /> Управление пресетами</h3>
 
         {/* Tabs */}
         <div className="variant-tabs mb-2">
@@ -29,14 +30,14 @@ export default function PresetsModal({ onClose }: Props) {
             className={`variant-tab ${tab === 'vehicles' ? 'active' : ''}`}
             onClick={() => setTab('vehicles')}
           >
-            🚚 Автомобили
+            <Truck size={14} /> Автомобили
           </button>
           <button
             type="button"
             className={`variant-tab ${tab === 'cargo' ? 'active' : ''}`}
             onClick={() => setTab('cargo')}
           >
-            📦 Грузы
+            <Package size={14} /> Грузы
           </button>
         </div>
 

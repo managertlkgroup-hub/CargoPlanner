@@ -1,3 +1,4 @@
+import { Search, RefreshCw, ClipboardList } from 'lucide-react';
 // ============================================================================
 // Строка таблицы грузов
 // ============================================================================
@@ -157,7 +158,7 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
             setTimeout(() => setHighlightItemId(null), 2000);
           }}
         >
-          🔍
+          <Search size={12} />
         </button>
         {/* Кнопка «Повернуть на 90°» */}
         <button
@@ -184,7 +185,7 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
             } catch (e) { /* recalc error */ }
           }}
         >
-          ↻
+          <RefreshCw size={12} />
         </button>
         {/* Кнопка «Детали» */}
         {onDetailsClick && (
@@ -194,7 +195,7 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
             title="Детали груза"
             onClick={() => onDetailsClick(cargo.id)}
           >
-            📋
+            <ClipboardList size={12} />
           </button>
         )}
       </td>

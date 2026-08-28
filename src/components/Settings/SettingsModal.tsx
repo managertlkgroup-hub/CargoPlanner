@@ -1,3 +1,4 @@
+import { Settings } from 'lucide-react';
 // ============================================================================
 // Модальное окно настроек расчёта
 // ============================================================================
@@ -23,7 +24,7 @@ export default function SettingsModal({ onClose }: Props) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>⚙️ Настройки расчёта</h3>
+        <h3><Settings size={18} /> Настройки расчёта</h3>
         <div className="form-row mb-2">
           <input
             type="checkbox"

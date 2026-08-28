@@ -13,14 +13,18 @@ export interface PackingSuggestion {
 }
 
 /**
- * Анализирует результат упаковки и генерирует подсказки.
+ * Анализирует результат упаковки и генерирует подсказки для ТЕКУЩЕГО варианта.
  */
 export function generateSuggestions(
   result: PackResult,
   vehicle: Vehicle,
+  activeVariantId?: string | null,
 ): PackingSuggestion[] {
   const suggestions: PackingSuggestion[] = [];
-  const variant = result.variants[0];
+  // Используем активный вариант, а не всегда variants[0]
+  const variant = activeVariantId
+    ? result.variants.find(v => v.id === activeVariantId) ?? result.variants[0]
+    : result.variants[0];
   if (!variant || variant.items.length === 0) return suggestions;
 
   // 1. Низкое заполнение объёма
@@ -39,7 +43,7 @@ export function generateSuggestions(
     suggestions.push({
       id: 'unplaced',
       icon: '⚠️',
-      message: 'Некоторые грузы не поместились. Попробуйте режим «Смешанный» или включите штабелирование.',
+      message: 'Некоторые грузы не поместились. Попробуйте другой режим или включите штабелирование.',
       cargoIds: [],
     });
   }
@@ -80,14 +84,18 @@ export function generateSuggestions(
     });
   }
 
-  // 6. Баланс: центр тяжести сильно смещён
+  // 6. Баланс: центр тяжести сильно смещён по оси X (вдоль кузова)
   let totalW = 0, cogX = 0;
+  let totalWz = 0, cogZ = 0;
   variant.items.forEach(it => {
     const rotY = it.rotationY ?? 0;
     const isOdd90 = Math.round(((rotY % 360) + 360) % 360 / 90) % 2 === 1;
     const effL = isOdd90 ? it.dimensions.width : it.dimensions.length;
+    const effW = isOdd90 ? it.dimensions.length : it.dimensions.width;
     totalW += it.weight;
     cogX += it.weight * (it.position.x + effL / 2);
+    totalWz += it.weight;
+    cogZ += it.weight * (it.position.z + effW / 2);
   });
   if (totalW > 0) {
     const avgX = cogX / totalW;
@@ -95,9 +103,23 @@ export function generateSuggestions(
     if (Math.abs(avgX - centerX) > vehicle.length * 0.2) {
       const side = avgX < centerX ? 'задней' : 'передней';
       suggestions.push({
-        id: 'balance',
+        id: 'balance-long',
         icon: '⚖️',
         message: `Грузы смещены к ${side} части кузова (${Math.abs(Math.round(avgX - centerX))} мм). Распределите тяжёлые грузы равномернее.`,
+        cargoIds: [],
+      });
+    }
+  }
+  // 7. Баланс по ширине (Z)
+  if (totalWz > 0) {
+    const avgZ = cogZ / totalWz;
+    const centerZ = vehicle.width / 2;
+    if (Math.abs(avgZ - centerZ) > vehicle.width * 0.2) {
+      const sideZ = avgZ < centerZ ? 'левую' : 'правую';
+      suggestions.push({
+        id: 'balance-width',
+        icon: '⚖️',
+        message: `Грузы смещены к ${sideZ} стороне кузова (${Math.abs(Math.round(avgZ - centerZ))} мм). Распределите грузы равномернее по ширине.`,
         cargoIds: [],
       });
     }

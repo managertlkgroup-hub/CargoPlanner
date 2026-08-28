@@ -6,7 +6,7 @@ import Footer from './components/Layout/Footer';
 import VehicleSelector from './components/VehicleSelector/VehicleSelector';
 import CargoTable from './components/CargoTable/CargoTable';
 import Scene3D from './components/Scene3D/Scene3D';
-import { Search, ClipboardList, Package, Box, Grid3x3, Lightbulb } from 'lucide-react';
+import { Search, ClipboardList, Package, Box, Grid3x3, Lightbulb, Truck, Settings } from 'lucide-react';
 import Scene2D from './components/Scene2D/Scene2D';
 import VariantTabs from './components/VariantTabs/VariantTabs';
 import MetricsPanel from './components/MetricsPanel/MetricsPanel';
@@ -98,7 +98,7 @@ const App: React.FC = () => {
           {/* Секция «Автомобиль» — сворачиваемый аккордеон */}
           <div className="accordion-section">
             <button className="accordion-toggle" onClick={() => setVehicleSectionOpen(!vehicleSectionOpen)}>
-              <span>🚚 Автомобиль</span>
+              <span><Truck size={14} /> Автомобиль</span>
               <span>{vehicleSectionOpen ? '▼' : '▶'}</span>
             </button>
             {vehicleSectionOpen && (
@@ -127,7 +127,7 @@ const App: React.FC = () => {
           {/* Секция «Управление» — сворачиваемый аккордеон */}
           <div className="accordion-section">
             <button className="accordion-toggle" onClick={() => setControlSectionOpen(!controlSectionOpen)}>
-              <span>⚙️ Управление</span>
+              <span><Settings size={14} /> Управление</span>
               <span>{controlSectionOpen ? '▼' : '▶'}</span>
             </button>
             {controlSectionOpen && (
@@ -245,11 +245,12 @@ const App: React.FC = () => {
 function SuggestionsPanel({ show, onToggle }: { show: boolean; onToggle: () => void }) {
   const vehicle = getCurrentVehicle(useAppStore.getState().selectedVehicleId, useAppStore.getState().customVehicles);
   const result = useAppStore.getState().result;
+  const activeVariant = useAppStore((s) => s.activeVariant);
 
   const suggestions: PackingSuggestion[] = useMemo(() => {
     if (!result) return [];
-    return generateSuggestions(result, vehicle);
-  }, [result, vehicle]); // eslint-disable-line
+    return generateSuggestions(result, vehicle, activeVariant);
+  }, [result, vehicle, activeVariant]);
 
   if (suggestions.length === 0) return null;
 
