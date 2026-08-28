@@ -17,9 +17,8 @@ function validateField(
   label: string,
 ): string | null {
   if (!value || value <= 0) return `${label} обязательно`;
-  if (value < min) { const err = `${label} должна быть от ${min} до ${max}`; console.log('[VAL-CARGO]', label, value, err); return err; }
-  if (value > max) { const err = `${label} должна быть от ${min} до ${max}`; console.log('[VAL-CARGO]', label, value, err); return err; }
-  console.log('[VAL-CARGO]', label, value, 'OK');
+  if (value < min) return `${label} должна быть от ${min} до ${max}`;
+  if (value > max) return `${label} должна быть от ${min} до ${max}`;
   return null;
 }
 

@@ -185,7 +185,7 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
                 useAppStore.getState().setPristine(pristineMap);
                 setActiveVariant(result.variants[0].id);
               }
-            } catch (e) { console.error('[CargoRow] recalc error:', e); }
+            } catch (e) { /* recalc error */ }
           }}
         >
           ↻

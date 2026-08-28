@@ -190,8 +190,6 @@ function packIntoBin(
     sorted = [...boxes].sort((a, b) => (b.length * b.width) - (a.length * a.width));
   }
 
-  console.log(`[packIntoBin] Режим: ${sortMode}, грузов: ${sorted.length}, кузов: ${bin.length}x${bin.width}x${bin.height}`);
-
   // Счётчик уже размещённых ориентаций (только для mixed)
   let alongCount = 0;
   let acrossCount = 0;
@@ -280,15 +278,6 @@ function packIntoBin(
         };
 
         if (placed.some((p) => intersects(candidate, p))) {
-          const collider = placed.find((p) => intersects(candidate, p));
-          if (collider) {
-            console.warn(
-              `[packIntoBin] Коллизия: ${box.name} (point=(${point.x},${point.y},${point.z}), ` +
-              `size=${placedLength}x${placedWidth}) с ` +
-              `${collider.name} (x=${collider.x}, z=${collider.z}, ` +
-              `size=${collider.placedLength}x${collider.placedWidth}) — пропуск`
-            );
-          }
           continue;
         }
         if (usedWeight + box.weight > maxWeight) continue;
@@ -404,33 +393,9 @@ function packIntoBin(
       }
       points.length = 0;
       points.push(...uniquePoints);
-    } else {
-      console.log(`[packIntoBin] Не удалось разместить груз: ${box.name} (${box.length}x${box.width}x${box.height})`);
     }
   }
   
-  console.log(`[packIntoBin] Размещено грузов: ${placed.length} из ${sorted.length}`);
-  if (placed.length > 0) {
-    console.log('[packIntoBin] Координаты размещённых грузов:');
-    placed.forEach((p, i) => {
-      console.log(`  ${i + 1}. ${p.name}: x=${p.x}, y=${p.y}, z=${p.z}, size=${p.placedLength}x${p.placedWidth}x${p.placedHeight}`);
-    });
-
-    // Пост-проверка: убеждаемся что нет пересечений между размещёнными грузами
-    for (let i = 0; i < placed.length; i++) {
-      for (let j = i + 1; j < placed.length; j++) {
-        if (intersects(placed[i], placed[j])) {
-          console.warn(
-            `[packIntoBin] ⚠️ КОЛЛИЗИЯ: ${placed[i].name} (x=${placed[i].x}, z=${placed[i].z}, ` +
-            `size=${placed[i].placedLength}x${placed[i].placedWidth}) и ` +
-            `${placed[j].name} (x=${placed[j].x}, z=${placed[j].z}, ` +
-            `size=${placed[j].placedLength}x${placed[j].placedWidth})`
-          );
-        }
-      }
-    }
-  }
-
   return placed;
 }
 
@@ -524,14 +489,6 @@ export function packItems(
 
     const variants: LayoutVariant[] = modes.map(({ mode, label }) => {
       const placed = packIntoBin(bin, vehicle.maxWeight, boxes, resolvedSettings, mode);
-
-      // Debug: layer counts for stacking verification
-      if (resolvedSettings.maxStackHeight > 0) {
-        const layer0 = placed.filter(p => p.y < 0.01).length;
-        const layer1 = placed.filter(p => p.y >= 0.01 && p.y < 2000).length;
-        const layer2 = placed.filter(p => p.y >= 2000).length;
-        console.log(`[packer] ${label}: размещено ${placed.length} из ${boxes.length}, слои: 0=${layer0}, 1=${layer1}, 2=${layer2}`);
-      }
 
       let totalWeight = 0;
       let totalVolume = 0;

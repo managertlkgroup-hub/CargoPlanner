@@ -38,9 +38,8 @@ function validateField(
   label: string,
 ): string | null {
   if (!value || value <= 0) return `${label} обязательно`;
-  if (value < min) { const err = `${label} должна быть от ${min / 1000} до ${max / 1000} метров`; console.log('[VAL-AUTO]', label, value, err); return err; }
-  if (value > max) { const err = `${label} должна быть от ${min / 1000} до ${max / 1000} метров`; console.log('[VAL-AUTO]', label, value, err); return err; }
-  console.log('[VAL-AUTO]', label, value, 'OK');
+  if (value < min) return `${label} должна быть от ${min / 1000} до ${max / 1000} метров`;
+  if (value > max) return `${label} должна быть от ${min / 1000} до ${max / 1000} метров`;
   return null;
 }
 

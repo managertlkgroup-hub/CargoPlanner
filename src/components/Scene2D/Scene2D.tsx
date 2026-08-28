@@ -321,11 +321,9 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
         }
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        console.log('[2D] ↑ moveCargoUp вызван для', targetId);
         moveCargoUp(targetId);
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
-        console.log('[2D] ↓ moveCargoDown вызван для', targetId);
         moveCargoDown(targetId);
       } else if (e.key === 's' || e.key === 'S' || e.key === 'ы' || e.key === 'Ы') {
         smartStack(targetId);

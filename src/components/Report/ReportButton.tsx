@@ -25,7 +25,7 @@ export default function ReportButton() {
     try {
       await generatePdfWithReactPdf(vehicle, cargo, variant);
     } catch (e) {
-      console.error('[PDF] Error:', e);
+
       setError(e instanceof Error ? e.message : 'Ошибка формирования PDF');
     }
   };

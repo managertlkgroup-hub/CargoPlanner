@@ -39,7 +39,7 @@ export default function Header({ onOpenSettings }: HeaderProps) {
     try {
       await generatePdfWithReactPdf(vehicle, cargo, activeVariant);
     } catch (e) {
-      console.error('[PDF] Error:', e);
+
       setError(e instanceof Error ? e.message : 'Ошибка формирования PDF');
     }
   };

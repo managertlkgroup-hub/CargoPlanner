@@ -7,6 +7,7 @@
 // используется центрирование (см. helpers).
 // ============================================================================
 
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { Vehicle } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
@@ -64,15 +65,17 @@ export default function Container3D({ vehicle }: Props) {
     corners[2], corners[6], corners[3], corners[7],
   ];
 
-  const positions = new Float32Array(edges.length * 3);
-  edges.forEach((v, i) => {
-    positions[i * 3] = v[0];
-    positions[i * 3 + 1] = v[1];
-    positions[i * 3 + 2] = v[2];
-  });
-
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const geometry = useMemo(() => {
+    const positions = new Float32Array(edges.length * 3);
+    edges.forEach((v, i) => {
+      positions[i * 3] = v[0];
+      positions[i * 3 + 1] = v[1];
+      positions[i * 3 + 2] = v[2];
+    });
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    return geo;
+  }, [halfL, halfW, h]);
 
   return (
     <group>

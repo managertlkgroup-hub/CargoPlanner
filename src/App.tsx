@@ -61,14 +61,9 @@ const App: React.FC = () => {
       return;
     }
     const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
-    console.log(`[Calculate] maxStackHeight=${settings.maxStackHeight}`);
     setCalculating(true);
     try {
       const result = packItems(vehicle, cargo, settings, loadingPoints);
-      console.log('[App] Результат расчёта:', {
-        variants: result.variants.length,
-        error: result.error,
-      });
       if (result.error) {
         setError(result.error);
         setResult(null);
@@ -166,7 +161,7 @@ const App: React.FC = () => {
                             setPristine(pristineMap);
                             setActiveVariant(result.variants[0].id);
                           }
-                        } catch (err) { console.error('[Stacking] recalc error:', err); }
+                        } catch (err) { /* stacking recalc error */ }
                         finally { setCalculating(false); }
                       }
                     }}

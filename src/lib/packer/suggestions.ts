@@ -25,15 +25,6 @@ export function generateSuggestions(
 
   // 1. Низкое заполнение объёма
   if (variant.volumeFill < 50) {
-    const emptyItems: string[] = [];
-    variant.items.forEach(it => {
-      if (it.position.y === 0 && variant.items.some(other =>
-        other.id !== it.id && other.position.y > 0 &&
-        other.position.x === it.position.x && other.position.z === it.position.z
-      )) {
-        emptyItems.push(it.id);
-      }
-    });
     suggestions.push({
       id: 'low-fill',
       icon: '📦',

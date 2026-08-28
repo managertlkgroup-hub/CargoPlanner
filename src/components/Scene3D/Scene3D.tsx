@@ -36,8 +36,6 @@ function CameraFocuser({ items, focusItemId }: { items: PackedItem[]; focusItemI
 }
 
 const Scene3D: React.FC = () => {
-  const result = useAppStore((s) => s.result);
-  const activeVariant = useAppStore((s) => s.activeVariant);
   const variant = useActiveVariant();
   const vehicle = useSelectedVehicle();
   const focusItemId = useAppStore((s) => s.focusItemId);
@@ -61,36 +59,12 @@ const Scene3D: React.FC = () => {
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Обработка изменения размера окна для корректного рендеринга
-  useEffect(() => {
-    const handleResize = () => {
-      // Three.js через @react-three/fiber автоматически обрабатывает resize
-      // но можно принудительно вызвать обновление если нужно
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
-  // Диагностика: при изменении данных выводим каждый груз с его параметрами
+
+  // Сброс выделения при смене данных
   useEffect(() => {
     setSelectedId(null);
-    const items = variant?.items ?? [];
-    console.log('[Scene3D] Данные обновлены:', {
-      variants: result?.variants?.length ?? 0,
-      activeVariant,
-      items: items.length,
-    });
-    items.forEach((item, idx) => {
-      console.log(`[Scene3D] Груз ${idx}:`, {
-        name: item.name,
-        shape: item.shape,
-        position: item.position,
-        dimensions: item.dimensions,
-        rotationY: item.rotationY,
-        color: item.color,
-      });
-    });
-  }, [result, activeVariant, variant]);
+  }, [variant]);
 
 
 
