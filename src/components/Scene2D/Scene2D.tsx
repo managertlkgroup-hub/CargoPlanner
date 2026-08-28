@@ -379,12 +379,12 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
   }
 
   return (
-    <div style={{ width: '100%', height: '100%', minHeight: 0, position: 'relative' }}>
+    <div style={{ width: '100%', height: '100%', minHeight: 0, position: 'relative', display: 'flex', flexDirection: 'column' }}>
       <canvas
         ref={canvasRef}
         width={dimensions.w}
         height={dimensions.h}
-        style={{ width: '100%', height: '100%', display: 'block', cursor: 'default' }}
+        style={{ width: '100%', flex: 1, minHeight: 0, display: 'block', cursor: 'default' }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
