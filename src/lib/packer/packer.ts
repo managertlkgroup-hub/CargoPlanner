@@ -300,15 +300,14 @@ function packIntoBin(
         const yMult = 1e4;
 
         if (sortMode === 'along') {
-          // along: compactness first, then prefer row-filling (min Z, then min X)
-          score = point.y * yMult + footprintMax * 1e6 + point.z * 100 + point.x;
+          // along: Bottom-Left-Fill — Y first, then min Z (front), then min X (left), then compactness
+          score = point.y * yMult + point.z * 1e5 + point.x * 1e3 + footprintMax * 100;
         } else if (sortMode === 'across') {
-          // across: compactness first, then prefer column-filling (min X, then min Z)
-          score = point.y * yMult + footprintMax * 1e6 + point.x * 100 + point.z;
+          // across: Bottom-Left-Fill — Y first, then min X (left), then min Z (front), then compactness
+          score = point.y * yMult + point.x * 1e5 + point.z * 1e3 + footprintMax * 100;
         } else {
-          // mixed: гибридный подход (Super Flo)
-          // Приоритет: сначала заполнять «вдоль» (строки по X), потом «поперёк» (столбцы по Z)
-          score = point.y * yMult + footprintMax * 1e6;
+          // mixed: Bottom-Left-Fill — Y first, then min Z, then min X, then compactness
+          score = point.y * yMult + point.z * 1e5 + point.x * 1e3 + footprintMax * 100;
           // Гибридный бонус: когда alongCount <= acrossCount, сильно предпочитаем along (rotY=0)
           const isAlong = orientation.rotY === 0;
           if (alongCount <= acrossCount) {
