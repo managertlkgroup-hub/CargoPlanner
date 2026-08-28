@@ -101,12 +101,16 @@ export default function MetricsPanel() {
         </>
       )}
       {cog && (
-        <div className="metric-card">
+        <div className="metric-card" style={{ gridColumn: 'span 3' }}>
           <div className={`metric-value ${cog.status === 'ok' ? 'cog-status-ok' : cog.status === 'warning' ? 'cog-status-warning' : 'cog-status-danger'}`} style={{ fontSize: 14 }}>
-            {cog.status === 'ok' ? '✅' : cog.status === 'warning' ? '⚠️' : '❌'} COG
+            {cog.status === 'ok' ? '✅' : cog.status === 'warning' ? '⚠️' : '❌'} Центр тяжести (COG)
           </div>
           <div className="metric-label">
-            X:{Math.round(cog.x)} Y:{Math.round(cog.y)} Z:{Math.round(cog.z)}
+            Смещение по ширине: {Math.abs(Math.round(cog.z - vehicle.width / 2))} мм
+            {cog.status === 'danger' ? ' — критическое!' : cog.status === 'warning' ? ' — близко к границе' : ' — в пределах нормы'}
+          </div>
+          <div className="metric-label" style={{ fontSize: 10, marginTop: 2 }}>
+            Смещение вперёд/назад/влево/вправо влияет на устойчивость автомобиля при движении.
           </div>
         </div>
       )}

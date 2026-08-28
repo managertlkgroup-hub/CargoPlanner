@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import type { Vehicle } from '../../types';
 import { BODY_TYPE_LABELS, LOADING_METHOD_LABELS } from '../../types';
+import { getDefaultMethodsForBodyType } from '../../lib/packer/presets';
 import { useAppStore, getCurrentVehicle } from '../../store/useAppStore';
 
 interface VehiclePanelProps {
@@ -45,6 +46,15 @@ export function VehicleDetailsPanel({ vehicleId, onClose }: VehiclePanelProps) {
 
   const isStandard = !vehicle.isCustom;
 
+  // Фильтруем способы загрузки/выгрузки по типу кузова
+  const bodyTypeMethods = vehicle.bodyType ? getDefaultMethodsForBodyType(vehicle.bodyType) : null;
+  const filteredLoadingMethods = vehicle.loadingMethods?.filter(m => 
+    bodyTypeMethods ? bodyTypeMethods.loadingMethods.includes(m) : true
+  ) || [];
+  const filteredUnloadingMethods = vehicle.unloadingMethods?.filter(m => 
+    bodyTypeMethods ? bodyTypeMethods.unloadingMethods.includes(m) : true
+  ) || [];
+
   return (
     <div className="slide-panel">
       <div className="slide-panel-header">
@@ -76,21 +86,21 @@ export function VehicleDetailsPanel({ vehicleId, onClose }: VehiclePanelProps) {
             Грузоподъёмность: <strong>{vehicle.maxWeight} кг</strong>
           </div>
         )}
-        {vehicle.loadingMethods && vehicle.loadingMethods.length > 0 && (
+        {filteredLoadingMethods.length > 0 && (
           <div style={{ marginBottom: 8 }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Загрузка:</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-              {vehicle.loadingMethods.map((m) => (
+              {filteredLoadingMethods.map((m) => (
                 <span key={m} className="method-tag loading-tag">{LOADING_METHOD_LABELS[m]}</span>
               ))}
             </div>
           </div>
         )}
-        {vehicle.unloadingMethods && vehicle.unloadingMethods.length > 0 && (
+        {filteredUnloadingMethods.length > 0 && (
           <div>
             <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Выгрузка:</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-              {vehicle.unloadingMethods.map((m) => (
+              {filteredUnloadingMethods.map((m) => (
                 <span key={m} className="method-tag unloading-tag">{LOADING_METHOD_LABELS[m]}</span>
               ))}
             </div>

@@ -36,6 +36,8 @@ const App: React.FC = () => {
   const [matcherOpen, setMatcherOpen] = useState(false);
   const [detailsVehicleId, setDetailsVehicleId] = useState<string | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [vehicleSectionOpen, setVehicleSectionOpen] = useState(true);
+  const [cargoSectionOpen, setCargoSectionOpen] = useState(true);
 
   const [activeView, setActiveView] = useState<'3d' | '2d'>('3d');
   const [stacking, setStacking] = useState(settings.maxStackHeight > 0);
@@ -95,20 +97,34 @@ const App: React.FC = () => {
 
       <main className="app-layout flex-1">
         <div className="left-panel">
-          {/* Секция «Автомобиль» — фиксированная, не скроллится */}
-          <div className="vehicle-section">
-            <VehicleSelector />
-            <VehicleVisibilityControls vehicleId={selectedVehicleId} />
-            <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-              <button className="btn btn-sm" onClick={() => setMatcherOpen(true)}>🔍 Подобрать авто</button>
-              <button className="btn btn-sm" onClick={() => setDetailsVehicleId(selectedVehicleId)}>📋 Детали</button>
-            </div>
+          {/* Секция «Автомобиль» — сворачиваемый аккордеон */}
+          <div className="accordion-section">
+            <button className="accordion-toggle" onClick={() => setVehicleSectionOpen(!vehicleSectionOpen)}>
+              <span>🚚 Автомобиль</span>
+              <span>{vehicleSectionOpen ? '▼' : '▶'}</span>
+            </button>
+            {vehicleSectionOpen && (
+              <div className="accordion-content">
+                <VehicleSelector />
+                <VehicleVisibilityControls vehicleId={selectedVehicleId} />
+                <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                  <button className="btn btn-sm" onClick={() => setMatcherOpen(true)}>🔍 Подобрать авто</button>
+                  <button className="btn btn-sm" onClick={() => setDetailsVehicleId(selectedVehicleId)}>📋 Детали</button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Секция «Грузы» — скроллится */}
-          <div className="cargo-section">
-            <CargoTable />
-            <div className="cargo-actions">
+          {/* Секция «Грузы» — сворачиваемый аккордеон */}
+          <div className="accordion-section" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <button className="accordion-toggle" onClick={() => setCargoSectionOpen(!cargoSectionOpen)}>
+              <span>📦 Грузы ({cargo.length})</span>
+              <span>{cargoSectionOpen ? '▼' : '▶'}</span>
+            </button>
+            {cargoSectionOpen && (
+              <div className="cargo-section">
+                <CargoTable />
+                <div className="cargo-actions">
               <button
                 onClick={handleCalculate}
                 disabled={isCalculating || cargo.length === 0}
@@ -154,8 +170,10 @@ const App: React.FC = () => {
                 <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
                   (для всех грузов)
                 </span>
+                </div>
               </div>
-            </div>
+              </div>
+            )}
           </div>
         </div>
 

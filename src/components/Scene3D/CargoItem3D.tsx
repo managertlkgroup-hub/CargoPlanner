@@ -7,7 +7,7 @@
 
 import { useMemo, useState } from 'react';
 import * as THREE from 'three';
-import { Html, Text, Outlines } from '@react-three/drei';
+import { Html, Outlines } from '@react-three/drei';
 import type { PackedItem, Vehicle } from '../../types';
 import { SCALE } from './Container3D';
 
@@ -67,10 +67,8 @@ export default function CargoItem3D({
   const highlightIntensity = hovered || isSelected ? 0.25 : 0;
   const isOversize = item.isOversize;
 
-  // Позиция подписи
-  const labelY = isCylinder ? h / 2 + 0.06 : h / 2 + 0.05;
-
   const outlineColor = isOversize ? '#ef4444' : isSelected ? '#ffffff' : hovered ? '#f59e0b' : undefined;
+  const labelY = isCylinder ? h / 2 + 0.06 : h / 2 + 0.05;
 
   return (
     <group
@@ -125,18 +123,6 @@ export default function CargoItem3D({
           )}
         </mesh>
       )}
-
-      {/* Подпись с названием */}
-      <Text
-        position={[0, labelY, 0]}
-        fontSize={Math.min(Math.max(l, w), 0.6)}
-        color="#ffffff"
-        anchorX="center"
-        anchorY="middle"
-        maxWidth={Math.max(l, w) + 0.2}
-      >
-        {item.name}
-      </Text>
 
       {/* Outline подсветка при наведении/выделении */}
       {(hovered || isSelected) && !isCylinder && (

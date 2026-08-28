@@ -186,10 +186,11 @@ const Scene3D: React.FC = () => {
             const cols = Math.ceil(Math.sqrt(packedItems.length));
             const row = Math.floor(idx / cols);
             const col = idx % cols;
+            const maxDim = vehicle.length * SCALE;
             spreadOffset = {
-              x: col * 0.5,
+              x: (col - cols / 2) * maxDim * 0.8,
               y: 0,
-              z: row * 0.5,
+              z: (row - Math.ceil(packedItems.length / cols) / 2) * maxDim * 0.8,
             };
           }
           const spreadItem = spreadMode ? {

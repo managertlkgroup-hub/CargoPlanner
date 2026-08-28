@@ -57,7 +57,6 @@ interface AppState {
   addCustomVehicle: (v: Vehicle) => void;
   removeCustomVehicle: (id: string) => void;
   selectVehicle: (id: string) => void;
-  setVehicleVisibility: (id: string, patch: Partial<Pick<Vehicle, 'showRoof' | 'showSides' | 'showFront' | 'showRear' | 'showFloor'>>) => void;
 
   // Грузы
   cargo: Cargo[];
@@ -115,6 +114,9 @@ interface AppState {
   /** Режим "разнесённый вид" — грузы разъезжаются для наглядности */
   spreadMode: boolean;
   toggleSpreadMode: () => void;
+  /** Карта видимости частей кузова по ID автомобиля */
+  vehicleVisibilityMap: Record<string, Partial<Pick<Vehicle, 'showRoof' | 'showSides' | 'showFront' | 'showRear' | 'showFloor'>>>;
+  setVehicleVisibility: (id: string, patch: Partial<Pick<Vehicle, 'showRoof' | 'showSides' | 'showFront' | 'showRear' | 'showFloor'>>) => void;
 
   // Сессии
   sessions: SavedSession[];
@@ -363,6 +365,7 @@ export const useAppStore = create<AppState>()(
         const variant = result.variants.find((v) => v.id === activeVariant);
         if (!variant) return false;
         const item = variant.items.find((it) => it.id === cargoId);
+        const vehicle = getCurrentVehicle(get().selectedVehicleId, get().customVehicles);
         if (!item || item.position.y > 0) return false; // Already stacked or not found
         
         // Find support: another item at y=0 that overlaps in XZ
@@ -385,6 +388,8 @@ export const useAppStore = create<AppState>()(
         if (!support) return false; // No support below
         
         const newY = support.position.y + support.dimensions.height;
+        // Enforce height limit
+        if (newY + item.dimensions.height > vehicle.height) return false;
         
         // Center on support's XZ
         const supportL = support.rotationY === 90 || support.rotationY === 270 ? support.dimensions.width : support.dimensions.length;
@@ -557,26 +562,12 @@ export const useAppStore = create<AppState>()(
         set({ sessions });
       },
 
-      // --- Видимость кузова ---
+      // --- Видимость кузова (отдельно от vehicle, чтобы не создавать копии) ---
+      vehicleVisibilityMap: loadFromStorage<Record<string, Partial<Pick<Vehicle, 'showRoof' | 'showSides' | 'showFront' | 'showRear' | 'showFloor'>>>>('mlp:visibility-map', {}),
       setVehicleVisibility: (id, patch) => {
-        // Обновляем в standard vehicles (создаём кастомную копию если нужно)
-        const defaultVehicles = getDefaultVehicles();
-        const stdVehicle = defaultVehicles.find(v => v.id === id);
-        const customVehicle = get().customVehicles.find(v => v.id === id);
-        
-        if (customVehicle) {
-          const updated = { ...customVehicle, ...patch };
-          const list = get().customVehicles.map(v => v.id === id ? updated : v);
-          saveToStorage(KEYS.vehicles, list);
-          set({ customVehicles: list });
-        } else if (stdVehicle) {
-          // For standard vehicles, create a custom copy with visibility
-          const customCopy: Vehicle = { ...stdVehicle, isCustom: true, id: `vis-${id}`, ...patch, name: stdVehicle.name + ' (настройка)' };
-          const list = [...get().customVehicles, customCopy];
-          saveToStorage(KEYS.vehicles, list);
-          saveToStorage(KEYS.vehicleId, customCopy.id);
-          set({ customVehicles: list, selectedVehicleId: customCopy.id });
-        }
+        const map = { ...get().vehicleVisibilityMap, [id]: { ...(get().vehicleVisibilityMap[id] || {}), ...patch } };
+        saveToStorage('mlp:visibility-map', map);
+        set({ vehicleVisibilityMap: map });
       },
 
       // --- Подсветка и фокус ---
@@ -606,6 +597,7 @@ export const useAppStore = create<AppState>()(
         sessions: s.sessions,
         loadingPoints: s.loadingPoints,
         unloadingPoints: s.unloadingPoints,
+        vehicleVisibilityMap: s.vehicleVisibilityMap,
       }),
     },
   ),

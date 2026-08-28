@@ -89,7 +89,7 @@ export function generateSuggestions(
     });
   }
 
-  // 6. Баланс:重心 сильно смещён
+  // 6. Баланс: центр тяжести сильно смещён
   let totalW = 0, cogX = 0;
   variant.items.forEach(it => {
     const rotY = it.rotationY ?? 0;

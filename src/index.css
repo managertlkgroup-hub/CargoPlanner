@@ -595,6 +595,36 @@ html, body {
   font-size: 13px;
 }
 
+/* Аккордеон */
+.accordion-section {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.accordion-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 4px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.accordion-toggle:hover {
+  background: var(--bg-body);
+}
+
+.accordion-content {
+  padding: 0 0 8px;
+}
+
 /* Секция «Автомобиль» — фиксированная, не скроллится */
 .vehicle-section {
   flex-shrink: 0;

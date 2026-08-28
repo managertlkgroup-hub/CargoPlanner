@@ -236,11 +236,20 @@ function packIntoBin(
         const placedWidth = orientation.dz;
         const placedHeight = orientation.dy;
 
-        // Для негабаритных грузов разрешаем выступание до 30%
-        const oversizeLimit = box.isOversize ? 1.3 : 1.0;
-        if (point.x + placedLength > bin.length * oversizeLimit) continue;
+        // Для негабаритных грузов разрешаем выступание до 30%, но центрируем симметрично
+        if (box.isOversize) {
+          const oversizeOverX = Math.max(0, placedLength - bin.length) / 2;
+          const oversizeOverZ = Math.max(0, placedWidth - bin.width) / 2;
+          // Груз может выступать, но начало не может быть сильно за пределами
+          if (point.x < -oversizeOverX) continue;
+          if (point.z < -oversizeOverZ) continue;
+          if (point.x + placedLength > bin.length + oversizeOverX) continue;
+          if (point.z + placedWidth > bin.width + oversizeOverZ) continue;
+        } else {
+          if (point.x + placedLength > bin.length) continue;
+          if (point.z + placedWidth > bin.width) continue;
+        }
         if (point.y + placedHeight > bin.height) continue;
-        if (point.z + placedWidth > bin.width * oversizeLimit) continue;
 
         if (settings.maxStackHeight > 0 && point.y + placedHeight > settings.maxStackHeight) continue;
         // Если maxStackHeight === 0, штабелирование отключено для ВСЕХ грузов

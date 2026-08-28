@@ -110,7 +110,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
     ctx.font = '10px system-ui';
     ctx.fillText('X (length)', offsetX + containerPxL / 2 - 25, offsetY + containerPxW + 28);
 
-    variant.items.forEach((item) => {
+    variant.items.forEach((item, idx) => {
       let itemL = item.dimensions.length * scale;
       let itemW = item.dimensions.width * scale;
       const rotY = item.rotationY ?? item.rotation?.y ?? 0;
@@ -169,22 +169,10 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
         ctx.fillText(String(layerIndex + 1), bx + badgeSize / 2, by + badgeSize / 2);
       }
 
-      const line1 = item.name;
-      const line2 =
-        Math.round(item.dimensions.length) + 'x' + Math.round(item.dimensions.width) + ' mm';
+      // Draw index number only (not full text — tooltip handles that)
       const textY = itemY + itemW / 2;
-
-      let t1 = line1;
-      while (t1.length > 0 && ctx.measureText(t1).width > itemL - 6) t1 = t1.slice(0, -1);
-      let t2 = line2;
-      while (t2.length > 0 && ctx.measureText(t2).width > itemL - 6) t2 = t2.slice(0, -1);
-
-      if (itemW > 30) {
-        ctx.fillText(t1, itemX + itemL / 2, textY - fontSize / 2 - 1);
-        ctx.font = fontSize - 1 + 'px system-ui';
-        ctx.fillText(t2, itemX + itemL / 2, textY + fontSize / 2 + 1);
-      } else {
-        ctx.fillText(t1, itemX + itemL / 2, textY);
+      if (itemW > 14 && itemL > 14) {
+        ctx.fillText(String(idx + 1), itemX + itemL / 2, textY);
       }
     });
   }, [variant, vehicle, dimensions]);
@@ -421,6 +409,34 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
           {tooltipData.item.isOversize ? `\n⚠️ Негабаритный` : ''}
         </div>
       )}
+
+      {/* Легенда по слоям */}
+      {variant && variant.items.length > 0 && (() => {
+        const layers = new Map<number, { name: string; count: number }[]>();
+        variant.items.forEach((item) => {
+          const layer = Math.round(item.position.y / Math.max(1, item.dimensions.height));
+          if (!layers.has(layer)) layers.set(layer, []);
+          const existing = layers.get(layer)!.find(l => l.name === item.name);
+          if (existing) existing.count++;
+          else layers.get(layer)!.push({ name: item.name, count: 1 });
+        });
+        const maxLayer = Math.max(...layers.keys());
+        if (maxLayer === 0) return null;
+        return (
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', padding: '4px 8px', borderTop: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
+            <strong>Слои:</strong> {[...layers.entries()].sort((a, b) => a[0] - b[0]).map(([layer, items]) => (
+              <span key={layer} style={{ marginLeft: 8 }}>
+                <span style={{
+                  display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
+                  background: layer === 0 ? '#3b82f6' : layer === 1 ? '#22c55e' : layer === 2 ? '#f59e0b' : '#ef4444',
+                  marginRight: 3, verticalAlign: 'middle',
+                }} />
+                Слой {layer}: {items.map(it => `${it.name} ×${it.count}`).join(', ')}
+              </span>
+            ))}
+          </div>
+        );
+      })()}
 
       <div style={{ fontSize: 10, color: '#9ca3af', textAlign: 'center', padding: 2 }}>
         Перетаскивайте · R — поворот · ↑↓ — слои · S — автостак

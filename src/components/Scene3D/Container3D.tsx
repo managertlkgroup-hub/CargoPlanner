@@ -9,6 +9,7 @@
 
 import * as THREE from 'three';
 import type { Vehicle } from '../../types';
+import { useAppStore } from '../../store/useAppStore';
 
 /** Масштабный коэффициент: переводим мм в "сценные" единицы */
 export const SCALE = 0.001;
@@ -35,11 +36,13 @@ export default function Container3D({ vehicle }: Props) {
   const h = vehicle.height * SCALE;
   const l = vehicle.length * SCALE;
   const defaults = getDefaultVisibility(vehicle.bodyType);
-  const showRoof = vehicle.showRoof ?? defaults.showRoof;
-  const showSides = vehicle.showSides ?? defaults.showSides;
-  const showFront = vehicle.showFront ?? defaults.showFront;
-  const showRear = vehicle.showRear ?? defaults.showRear;
-  const showFloor = vehicle.showFloor ?? defaults.showFloor;
+  const visMap = useAppStore((s) => s.vehicleVisibilityMap);
+  const vis = visMap[vehicle.id] || {};
+  const showRoof = vis.showRoof ?? defaults.showRoof;
+  const showSides = vis.showSides ?? defaults.showSides;
+  const showFront = vis.showFront ?? defaults.showFront;
+  const showRear = vis.showRear ?? defaults.showRear;
+  const showFloor = vis.showFloor ?? defaults.showFloor;
 
   // Каркас кузова через LineSegments (центрирован в начале координат)
   const halfL = l / 2;
