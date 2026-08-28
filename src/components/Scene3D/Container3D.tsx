@@ -9,6 +9,7 @@
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
+import { Text } from '@react-three/drei';
 import type { Vehicle } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 
@@ -166,6 +167,18 @@ export default function Container3D({ vehicle }: Props) {
           <meshStandardMaterial color={bodyStyle.roofColor} transparent opacity={bodyStyle.roofOpacity} side={THREE.DoubleSide} />
         </mesh>
       )}
+
+      {/* Надпись "Cargo Planner" на задней стенке */}
+      <Text
+        position={[0, h * 0.5, -halfW - 0.01]}
+        fontSize={0.12}
+        color={bodyStyle.wallColor}
+        anchorX="center"
+        anchorY="middle"
+        rotation={[0, 0, 0]}
+      >
+        Cargo Planner
+      </Text>
     </group>
   );
 }

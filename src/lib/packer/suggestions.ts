@@ -97,11 +97,17 @@ export function generateSuggestions(
       suggestions.push({
         id: 'balance',
         icon: '⚖️',
-        message: `Центр тяжести смещён к ${side} части кузова. Распределите грузы более равномерно.`,
+        message: `Грузы смещены к ${side} части кузова (${Math.abs(Math.round(avgX - centerX))} мм). Распределите тяжёлые грузы равномернее.`,
         cargoIds: [],
       });
     }
   }
 
-  return suggestions;
+  // Дедупликация по id (защита от дублей)
+  const seen = new Set<string>();
+  return suggestions.filter(s => {
+    if (seen.has(s.id)) return false;
+    seen.add(s.id);
+    return true;
+  });
 }

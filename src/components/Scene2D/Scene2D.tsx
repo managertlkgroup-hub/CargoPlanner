@@ -125,8 +125,9 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
 
       // Compute layer index for stacking visualization
       const layerIndex = Math.round(item.position.y / Math.max(1, item.dimensions.height));
-      // Brighter for higher layers
-      const layerAlpha = layerIndex === 0 ? 0.75 : 0.55;
+      // Dim items on non-selected layers
+      const isSelectedLayer = selectedDragLayer === null || selectedDragLayer === layerIndex;
+      const layerAlpha = isSelectedLayer ? (layerIndex === 0 ? 0.75 : 0.55) : 0.2;
 
       // Определяем негабаритность
       const isOversize = (item as any).isOversize;
@@ -177,7 +178,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
         ctx.fillText(String(idx + 1), itemX + itemL / 2, textY);
       }
     });
-  }, [variant, vehicle, dimensions]);
+  }, [variant, vehicle, dimensions, selectedDragLayer]);
 
   const hitTest = useCallback(
     (mx: number, my: number) => {

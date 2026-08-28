@@ -107,9 +107,9 @@ export default function MetricsPanel() {
           </div>
           <div className="metric-label">
             {cog.status === 'danger'
-              ? `Грузы сильно смещены в сторону — перевес ${Math.abs(Math.round(cog.z - vehicle.width / 2))} мм. Перераспределите грузы!`
+              ? `Сильный перевес влево/вправо (${Math.abs(Math.round(cog.z - vehicle.width / 2))} мм). Распределите грузы равномернее!`
               : cog.status === 'warning'
-                ? `Грузы смещены от центра на ${Math.abs(Math.round(cog.z - vehicle.width / 2))} мм — рекомендуется выровнять`
+                ? `Грузы смещены от центра по ширине на ${Math.abs(Math.round(cog.z - vehicle.width / 2))} мм — рекомендуется выровнять`
                 : `Грузы распределены равномерно (смещение ${Math.abs(Math.round(cog.z - vehicle.width / 2))} мм)`
             }
           </div>

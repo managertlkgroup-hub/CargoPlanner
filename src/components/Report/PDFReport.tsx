@@ -11,8 +11,21 @@ import {
   View,
   StyleSheet,
   pdf,
+  Font,
 } from '@react-pdf/renderer';
 import type { Cargo, LayoutVariant, PackedItem, Vehicle } from '../../types';
+
+// Регистрация шрифтов с поддержкой кириллицы
+import robotoRegular from '../../assets/Roboto-Regular.ttf';
+import robotoBold from '../../assets/Roboto-Bold.ttf';
+
+Font.register({
+  family: 'Roboto',
+  fonts: [
+    { src: robotoRegular, fontWeight: 400 },
+    { src: robotoBold, fontWeight: 700 },
+  ],
+});
 
 // ─── Цвета слоёв ───────────────────────────────────────────
 const LAYER_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -46,7 +59,7 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
 const styles = StyleSheet.create({
   page: {
     padding: 28,
-    fontFamily: 'Helvetica',
+    fontFamily: 'Roboto',
     fontSize: 10,
     color: '#1e293b',
   },
@@ -59,7 +72,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto',
+    fontWeight: 700,
     color: '#ffffff',
     marginBottom: 4,
   },
@@ -70,7 +84,8 @@ const styles = StyleSheet.create({
   // Заголовки секций
   sectionTitle: {
     fontSize: 13,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto',
+    fontWeight: 700,
     color: '#1e293b',
     marginBottom: 6,
     borderBottomWidth: 2,
@@ -85,7 +100,8 @@ const styles = StyleSheet.create({
   },
   textBold: {
     fontSize: 11,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto',
+    fontWeight: 700,
     color: '#1e293b',
     marginBottom: 2,
   },
@@ -109,7 +125,7 @@ const styles = StyleSheet.create({
   },
   schemeTitle: {
     fontSize: 10,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto',
     color: '#1e293b',
     marginBottom: 4,
   },
@@ -126,7 +142,7 @@ const styles = StyleSheet.create({
   },
   schemeItemText: {
     fontSize: 7,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto',
     color: '#ffffff',
     textAlign: 'center',
     position: 'absolute',
@@ -167,7 +183,7 @@ const styles = StyleSheet.create({
   },
   tableHeaderText: {
     fontSize: 8,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto',
     color: '#ffffff',
   },
   tableRow: {

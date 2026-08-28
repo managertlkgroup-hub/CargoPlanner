@@ -4,8 +4,6 @@
 
 import { getCurrentVehicle, useActiveVariant } from '../../store/useAppStore';
 import { useAppStore } from '../../store/useAppStore';
-import { generatePdfWithReactPdf } from './PDFReport';
-import { exportToXLSX } from '../../lib/export/xlsxExport';
 
 export default function ReportButton() {
   const cargo = useAppStore((s) => s.cargo);
@@ -23,19 +21,20 @@ export default function ReportButton() {
       return;
     }
     try {
+      const { generatePdfWithReactPdf } = await import('./PDFReport');
       await generatePdfWithReactPdf(vehicle, cargo, variant);
     } catch (e) {
-
       setError(e instanceof Error ? e.message : 'Ошибка формирования PDF');
     }
   };
 
-  const handleXlsx = () => {
+  const handleXlsx = async () => {
     if (!result || result.variants.length === 0) {
       setError('Сначала выполните расчёт.');
       return;
     }
     try {
+      const { exportToXLSX } = await import('../../lib/export/xlsxExport');
       exportToXLSX(vehicle, cargo, result.variants);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка экспорта в Excel');
