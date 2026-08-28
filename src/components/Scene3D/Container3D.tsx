@@ -114,10 +114,23 @@ export default function Container3D({ vehicle }: Props) {
     <group>
       {/* Пол */}
       {showFloor && (
-        <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[l, w]} />
-          <meshStandardMaterial color={bodyStyle.floorColor} transparent opacity={0.35} />
-        </mesh>
+        <>
+          <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[l, w]} />
+            <meshStandardMaterial color={bodyStyle.floorColor} transparent opacity={0.35} />
+          </mesh>
+          {/* Балки пола для платформы (3 продольные линии) */}
+          {bodyStyle.label === 'Платформа' && (
+            <>
+              {[-halfW * 0.5, 0, halfW * 0.5].map((z, i) => (
+                <mesh key={`beam-${i}`} position={[0, -0.005, z]}>
+                  <boxGeometry args={[l, 0.008, 0.008]} />
+                  <meshStandardMaterial color="#64748b" transparent opacity={0.5} />
+                </mesh>
+              ))}
+            </>
+          )}
+        </>
       )}
 
       {/* Каркас (ребра кузова) */}
@@ -176,10 +189,19 @@ export default function Container3D({ vehicle }: Props) {
 
       {/* Задняя стенка */}
       {showRear && !bodyStyle.isCylindrical && (
-        <mesh position={[-halfL, sideH / 2, 0]}>
-          <boxGeometry args={[0.02, sideH, w]} />
-          <meshStandardMaterial color={bodyStyle.wallColor} transparent opacity={bodyStyle.wallOpacity} />
-        </mesh>
+        <>
+          <mesh position={[-halfL, sideH / 2, 0]}>
+            <boxGeometry args={[0.02, sideH, w]} />
+            <meshStandardMaterial color={bodyStyle.wallColor} transparent opacity={bodyStyle.wallOpacity} />
+          </mesh>
+          {/* Линии дверей фургона (вертикальная линия по центру) */}
+          {bodyStyle.wallOpacity > 0.15 && (
+            <mesh position={[-halfL - 0.005, sideH / 2, 0]}>
+              <boxGeometry args={[0.003, sideH * 0.9, 0.003]} />
+              <meshStandardMaterial color="#1e293b" transparent opacity={0.3} />
+            </mesh>
+          )}
+        </>
       )}
 
       {/* Передняя стенка */}
@@ -206,10 +228,19 @@ export default function Container3D({ vehicle }: Props) {
 
       {/* Цилиндрический кузов (цистерна) */}
       {bodyStyle.isCylindrical && showSides && (
-        <mesh position={[0, w / 2, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[w / 2, w / 2, l, 24, 1, true]} />
-          <meshStandardMaterial color={bodyStyle.wallColor} transparent opacity={bodyStyle.wallOpacity} side={THREE.DoubleSide} />
-        </mesh>
+        <>
+          <mesh position={[0, w / 2, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[w / 2, w / 2, l, 24, 1, true]} />
+            <meshStandardMaterial color={bodyStyle.wallColor} transparent opacity={bodyStyle.wallOpacity} side={THREE.DoubleSide} />
+          </mesh>
+          {/* Пояса цистерны (3 кольца) */}
+          {[-halfL * 0.5, 0, halfL * 0.5].map((x, i) => (
+            <mesh key={`band-${i}`} position={[x, w / 2, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <torusGeometry args={[w / 2 + 0.005, 0.004, 8, 24]} />
+              <meshStandardMaterial color="#475569" transparent opacity={0.4} />
+            </mesh>
+          ))}
+        </>
       )}
 
       {/* Крыша */}
