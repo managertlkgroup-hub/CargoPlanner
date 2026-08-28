@@ -91,9 +91,7 @@ html, body {
 
 .flex { display: flex; }
 .flex-1 { flex: 1; }
-.flex-col { flex-direction: column; }
 .items-center { align-items: center; }
-.justify-between { justify-content: space-between; }
 .gap-1 { gap: var(--spacing-sm); }
 .gap-2 { gap: var(--spacing-md); }
 
@@ -121,11 +119,7 @@ html, body {
   margin-bottom: var(--spacing-md);
 }
 
-.section-divider {
-  height: 1px;
-  background: var(--border);
-  margin: var(--spacing-md) 0;
-}
+
 
 .section-title {
   display: flex;
@@ -268,16 +262,7 @@ html, body {
   grid-column: 1 / -1;
 }
 
-.input-block {
-  width: 100%;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  font-size: var(--font-size-sm);
-  font-family: inherit;
-  color: var(--text);
-  background: transparent;
-  border: none;
-  outline: none;
-}
+
 
 .input-compact {
   width: 100%;
@@ -326,13 +311,6 @@ html, body {
   flex-wrap: wrap;
   gap: var(--spacing-sm);
   margin-bottom: var(--spacing-md);
-}
-
-.cargo-table-container {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  overflow: auto;
-  max-height: 400px;
 }
 
 /* ==========================================================================
@@ -626,14 +604,6 @@ html, body {
   padding: 0 0 8px;
 }
 
-/* Секция «Автомобиль» — фиксированная, не скроллится */
-.vehicle-section {
-  flex-shrink: 0;
-  padding-bottom: 12px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-}
-
 /* Секция «Грузы» — скроллится, занимает оставшееся место */
 .cargo-section {
   flex: 1;
@@ -684,21 +654,6 @@ html, body {
   min-width: 0 !important;
   box-sizing: border-box !important;
   width: 100% !important;
-}
-
-/* Блок с кнопкой и чекбоксом — прижат к низу */
-.cargo-actions {
-  margin-top: auto;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-}
-
-.cargo-actions .btn-calculate {
-  width: 100%;
 }
 
 .left-panel .panel {
@@ -888,31 +843,9 @@ html, body {
   gap: var(--spacing-xs);
 }
 
-.row-sm {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-}
-
-.input-rotation {
-  width: 70px;
-  padding: var(--spacing-xs);
-  font-size: var(--font-size-sm);
-  font-family: inherit;
-  color: var(--text);
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-input);
-  text-align: center;
-}
-
 /* ==========================================================================
    Coordinates Editor
    ========================================================================== */
-
-.coords-scroll {
-  overflow-y: auto;
-}
 
 .cargo-table {
   width: 100%;
@@ -946,11 +879,6 @@ html, body {
 
 [data-theme="dark"] .cargo-table tbody tr:hover {
   background: rgba(59, 130, 246, 0.15);
-}
-
-.coords-name {
-  font-weight: 500;
-  white-space: nowrap;
 }
 
 /* ==========================================================================
@@ -1085,24 +1013,6 @@ html, body {
   color: var(--text-muted);
   background: var(--bg-panel);
   box-shadow: var(--shadow-sm);
-}
-
-.rotate-hint {
-  position: absolute;
-  bottom: var(--spacing-md);
-  right: var(--spacing-md);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-btn);
-  pointer-events: none;
-  z-index: 10;
-}
-
-[data-theme="dark"] .rotate-hint {
-  background: rgba(31, 41, 55, 0.9);
 }
 
 /* ==========================================================================
@@ -1264,8 +1174,7 @@ html, body {
   .metrics-grid {
     grid-template-columns: 1fr;
   }
-  .scene-hint,
-  .rotate-hint {
+  .scene-hint {
     font-size: 10px;
     padding: 2px 6px;
   }

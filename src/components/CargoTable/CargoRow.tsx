@@ -1,9 +1,5 @@
 // ============================================================================
-// Строка таблицы грузов (react-window)
-//
-// Используются <div> с display: table-row / table-cell вместо <tr>/<td>,
-// чтобы react-window корректно рендерил строки внутри виртуального списка
-// (без ошибки "tr cannot appear as a child of div").
+// Строка таблицы грузов
 // ============================================================================
 
 import { useState, useRef } from 'react';
@@ -28,7 +24,6 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
   const customVehicles = useAppStore((s) => s.customVehicles);
   const settings = useAppStore((s) => s.settings);
   const loadingPoints = useAppStore((s) => s.loadingPoints);
-  const allCargo = useAppStore((s) => s.cargo);
   const setResult = useAppStore((s) => s.setResult);
   const setActiveVariant = useAppStore((s) => s.setActiveVariant);
   const isCylinder = cargo.shape === 'cylinder';
@@ -174,10 +169,11 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
             const newLength = cargo.width ?? cargo.length;
             const newWidth = cargo.length;
             updateCargo(cargo.id, { length: newLength, width: newWidth });
-            // Автопересчёт
+            // Автопересчёт (читаем обновлённый список из store)
             const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
+            const updatedCargo = useAppStore.getState().cargo;
             try {
-              const result = packItems(vehicle, allCargo, settings, loadingPoints);
+              const result = packItems(vehicle, updatedCargo, settings, loadingPoints);
               if (!result.error) {
                 setResult(result);
                 const pristineMap: Record<string, typeof result.variants[number]['items']> = {};
