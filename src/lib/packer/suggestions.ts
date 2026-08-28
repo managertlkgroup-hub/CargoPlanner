@@ -93,7 +93,7 @@ export function generateSuggestions(
     const avgX = cogX / totalW;
     const centerX = vehicle.length / 2;
     if (Math.abs(avgX - centerX) > vehicle.length * 0.2) {
-      const side = avgX < centerX ? 'заднюю' : 'переднюю';
+      const side = avgX < centerX ? 'задней' : 'передней';
       suggestions.push({
         id: 'balance',
         icon: '⚖️',

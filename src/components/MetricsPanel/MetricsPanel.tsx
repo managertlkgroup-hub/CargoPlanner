@@ -103,14 +103,18 @@ export default function MetricsPanel() {
       {cog && (
         <div className="metric-card" style={{ gridColumn: 'span 3' }}>
           <div className={`metric-value ${cog.status === 'ok' ? 'cog-status-ok' : cog.status === 'warning' ? 'cog-status-warning' : 'cog-status-danger'}`} style={{ fontSize: 14 }}>
-            {cog.status === 'ok' ? '✅' : cog.status === 'warning' ? '⚠️' : '❌'} Центр тяжести (COG)
+            {cog.status === 'ok' ? '✅' : cog.status === 'warning' ? '⚠️' : '❌'} Баланс загрузки
           </div>
           <div className="metric-label">
-            Смещение по ширине: {Math.abs(Math.round(cog.z - vehicle.width / 2))} мм
-            {cog.status === 'danger' ? ' — критическое!' : cog.status === 'warning' ? ' — близко к границе' : ' — в пределах нормы'}
+            {cog.status === 'danger'
+              ? `Грузы сильно смещены в сторону — перевес ${Math.abs(Math.round(cog.z - vehicle.width / 2))} мм. Перераспределите грузы!`
+              : cog.status === 'warning'
+                ? `Грузы смещены от центра на ${Math.abs(Math.round(cog.z - vehicle.width / 2))} мм — рекомендуется выровнять`
+                : `Грузы распределены равномерно (смещение ${Math.abs(Math.round(cog.z - vehicle.width / 2))} мм)`
+            }
           </div>
           <div className="metric-label" style={{ fontSize: 10, marginTop: 2 }}>
-            Смещение вперёд/назад/влево/вправо влияет на устойчивость автомобиля при движении.
+            Неравномерная загрузка влияет на устойчивость автомобиля при движении и торможении.
           </div>
         </div>
       )}
