@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
-import { useActiveVariant } from '../../store/useAppStore';
+import { useActiveVariant, useSelectedVehicle } from '../../store/useAppStore';
 import { formatNumber, volumeToM3 } from '../../utils/helpers';
+import { calculateCOG } from '../../lib/physics/cog';
 
 export default function MetricsPanel() {
   // Все хуки ДО любого раннего возврата
@@ -35,6 +36,19 @@ export default function MetricsPanel() {
       height: Math.round(maxY),
       volume: (maxX * maxZ * maxY / 1e9).toFixed(2),
     };
+  }, [variant]);
+
+  // COG
+  const vehicle = useSelectedVehicle();
+  const cog = useMemo(() => {
+    if (!variant || variant.items.length === 0) return null;
+    return calculateCOG(variant.items, vehicle);
+  }, [variant, vehicle]);
+
+  // Количество негабаритных
+  const oversizeCount = useMemo(() => {
+    if (!variant) return 0;
+    return variant.items.filter(it => it.isOversize).length;
   }, [variant]);
 
   // Ранний возврат — после всех хуков
@@ -85,6 +99,22 @@ export default function MetricsPanel() {
             <div className="metric-label">Объём груза</div>
           </div>
         </>
+      )}
+      {cog && (
+        <div className="metric-card">
+          <div className={`metric-value ${cog.status === 'ok' ? 'cog-status-ok' : cog.status === 'warning' ? 'cog-status-warning' : 'cog-status-danger'}`} style={{ fontSize: 14 }}>
+            {cog.status === 'ok' ? '✅' : cog.status === 'warning' ? '⚠️' : '❌'} COG
+          </div>
+          <div className="metric-label">
+            X:{Math.round(cog.x)} Y:{Math.round(cog.y)} Z:{Math.round(cog.z)}
+          </div>
+        </div>
+      )}
+      {oversizeCount > 0 && (
+        <div className="metric-card">
+          <div className="metric-value" style={{ color: 'var(--color-danger)', fontSize: 14 }}>⚠️ Негабарит</div>
+          <div className="metric-label">Грузов: {oversizeCount}</div>
+        </div>
       )}
     </div>
   );

@@ -125,6 +125,8 @@ export default function AddCargoForm() {
       weight,
       quantity,
       stackable: true,
+      isOversize: (fd.get('isOversize') === 'on'),
+      cylinderOrientation: shape === 'cylinder' ? ((fd.get('cylinderOrientation') as any) || 'horizontal') : undefined,
     };
     addCargo(cargo);
     // Сбрасываем форму
@@ -222,6 +224,15 @@ export default function AddCargoForm() {
           <option value="cylinder">Цилиндр</option>
         </select>
       </div>
+      {shape === 'cylinder' && (
+        <div className="form-group">
+          <label>Ориентация</label>
+          <select name="cylinderOrientation" defaultValue="horizontal">
+            <option value="horizontal">Горизонтально</option>
+            <option value="vertical">Вертикально</option>
+          </select>
+        </div>
+      )}
       <div className="form-group">
         <label>Длина, мм</label>
         <input
@@ -320,6 +331,12 @@ export default function AddCargoForm() {
       <div className="form-group">
         <label>Кол-во, шт</label>
         <input name="quantity" type="number" min={1} defaultValue={1} />
+      </div>
+      <div className="form-group">
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <input type="checkbox" name="isOversize" style={{ width: 14, height: 14 }} />
+          Негабаритный
+        </label>
       </div>
       {error && <div className="form-group full text-muted text-danger">{error}</div>}
       <div className="form-group full">

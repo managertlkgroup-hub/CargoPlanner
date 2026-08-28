@@ -92,6 +92,12 @@ export interface Vehicle extends Dimensions {
   defaultLoadingMethod?: LoadingMethod;
   /** Способ выгрузки по умолчанию */
   defaultUnloadingMethod?: LoadingMethod;
+  /** Видимость элементов кузова */
+  showRoof?: boolean;
+  showSides?: boolean;
+  showFront?: boolean;
+  showRear?: boolean;
+  showFloor?: boolean;
 }
 
 /** Точка загрузки груза */
@@ -117,6 +123,9 @@ export interface UnloadingPoint {
 /** Форма груза */
 export type CargoShape = 'box' | 'cylinder';
 
+/** Ориентация цилиндра */
+export type CylinderOrientation = 'horizontal' | 'vertical';
+
 /**
  * Отдельная позиция груза в списке грузов (до расчёта).
  * Для прямоугольного груза (shape='box') используются width и height,
@@ -137,6 +146,10 @@ export interface Cargo {
   weight: number;
   quantity: number;
   stackable: boolean;
+  /** Негабаритный груз (может выступать за пределы кузова) */
+  isOversize?: boolean;
+  /** Ориентация цилиндра (по умолчанию 'horizontal') */
+  cylinderOrientation?: CylinderOrientation;
   /** Точка загрузки (опционально) */
   loadingPointId?: string;
   /** Точка выгрузки (опционально) */
@@ -177,6 +190,10 @@ export interface PackedItem {
   rotation?: Rotation;
   color: string;
   stackable: boolean;
+  /** Негабаритный груз */
+  isOversize?: boolean;
+  /** Индекс слоя (0-based) */
+  layer?: number;
 }
 
 /** Вариант раскладки */

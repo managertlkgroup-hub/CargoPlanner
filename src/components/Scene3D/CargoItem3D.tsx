@@ -65,6 +65,7 @@ export default function CargoItem3D({
   // Подсветка для выбранного или наведённого груза
   const highlight = hovered || isSelected;
   const highlightIntensity = hovered || isSelected ? 0.25 : 0;
+  const isOversize = item.isOversize;
 
   // Позиция подписи
   const labelY = isCylinder ? h / 2 + 0.06 : h / 2 + 0.05;
@@ -107,17 +108,17 @@ export default function CargoItem3D({
         <mesh>
           <boxGeometry args={[l, h, w]} />
           <meshStandardMaterial
-            color={item.color}
+            color={isOversize ? '#ef4444' : item.color}
             transparent
             opacity={0.9}
-            emissive={highlight ? new THREE.Color('#ffffff') : new THREE.Color('#000000')}
-            emissiveIntensity={highlightIntensity}
+            emissive={highlight ? new THREE.Color('#ffffff') : isOversize ? new THREE.Color('#ff0000') : new THREE.Color('#000000')}
+            emissiveIntensity={isOversize ? 0.15 : highlightIntensity}
           />
-          {/* Обводка для выбранного груза */}
-          {isSelected && (
+          {/* Обводка для выбранного или негабаритного груза */}
+          {(isSelected || isOversize) && (
             <lineSegments>
               <edgesGeometry args={[new THREE.BoxGeometry(l, h, w)]} />
-              <lineBasicMaterial color="#ffffff" linewidth={2} />
+              <lineBasicMaterial color={isOversize ? '#ef4444' : '#ffffff'} linewidth={2} />
             </lineSegments>
           )}
         </mesh>

@@ -126,14 +126,26 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
       // Brighter for higher layers
       const layerAlpha = layerIndex === 0 ? 0.75 : 0.55;
 
-      ctx.fillStyle = item.color;
+      // Определяем негабаритность
+      const isOversize = (item as any).isOversize;
+      if (isOversize) {
+        // Рисуем штриховку за пределами кузова
+        ctx.save();
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(itemX, itemY, itemL, itemW);
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+      ctx.fillStyle = isOversize ? '#ef4444' : item.color;
       ctx.globalAlpha = layerAlpha;
       ctx.fillRect(itemX, itemY, itemL, itemW);
       ctx.globalAlpha = 1.0;
       // Selection highlight for hovered item
       const isHovered = lastHoveredIdRef.current === item.id;
-      ctx.strokeStyle = isHovered ? '#f59e0b' : '#1e293b';
-      ctx.lineWidth = isHovered ? 3 : 1;
+      ctx.strokeStyle = isHovered ? '#f59e0b' : isOversize ? '#ef4444' : '#1e293b';
+      ctx.lineWidth = isHovered ? 3 : isOversize ? 2 : 1;
       ctx.strokeRect(itemX, itemY, itemL, itemW);
 
       ctx.fillStyle = '#ffffff';

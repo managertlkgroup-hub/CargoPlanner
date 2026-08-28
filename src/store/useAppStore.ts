@@ -57,6 +57,7 @@ interface AppState {
   addCustomVehicle: (v: Vehicle) => void;
   removeCustomVehicle: (id: string) => void;
   selectVehicle: (id: string) => void;
+  setVehicleVisibility: (id: string, patch: Partial<Pick<Vehicle, 'showRoof' | 'showSides' | 'showFront' | 'showRear' | 'showFloor'>>) => void;
 
   // Грузы
   cargo: Cargo[];
@@ -543,6 +544,28 @@ export const useAppStore = create<AppState>()(
         const sessions = get().sessions.filter((x) => x.id !== id);
         saveToStorage(KEYS.sessions, sessions);
         set({ sessions });
+      },
+
+      // --- Видимость кузова ---
+      setVehicleVisibility: (id, patch) => {
+        // Обновляем в standard vehicles (создаём кастомную копию если нужно)
+        const defaultVehicles = getDefaultVehicles();
+        const stdVehicle = defaultVehicles.find(v => v.id === id);
+        const customVehicle = get().customVehicles.find(v => v.id === id);
+        
+        if (customVehicle) {
+          const updated = { ...customVehicle, ...patch };
+          const list = get().customVehicles.map(v => v.id === id ? updated : v);
+          saveToStorage(KEYS.vehicles, list);
+          set({ customVehicles: list });
+        } else if (stdVehicle) {
+          // For standard vehicles, create a custom copy with visibility
+          const customCopy: Vehicle = { ...stdVehicle, isCustom: true, id: `vis-${id}`, ...patch, name: stdVehicle.name + ' (настройка)' };
+          const list = [...get().customVehicles, customCopy];
+          saveToStorage(KEYS.vehicles, list);
+          saveToStorage(KEYS.vehicleId, customCopy.id);
+          set({ customVehicles: list, selectedVehicleId: customCopy.id });
+        }
       },
 
       // --- Ошибки ---

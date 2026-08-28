@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAppStore, getCurrentVehicle } from './store/useAppStore';
 import { packItems } from './lib/packer/packer';
 import Header from './components/Layout/Header';
@@ -11,6 +11,10 @@ import VariantTabs from './components/VariantTabs/VariantTabs';
 import MetricsPanel from './components/MetricsPanel/MetricsPanel';
 import SettingsModal from './components/Settings/SettingsModal';
 import ReportButton from './components/Report/ReportButton';
+import VehicleVisibilityControls from './components/VehicleSelector/VehicleVisibilityControls';
+import VehicleMatcher from './components/VehicleSelector/VehicleMatcher';
+import { VehicleDetailsPanel } from './components/PresetDetails/PresetDetailsPanel';
+import { generateSuggestions, type PackingSuggestion } from './lib/packer/suggestions';
 
 const App: React.FC = () => {
   const cargo = useAppStore((s) => s.cargo);
@@ -29,6 +33,9 @@ const App: React.FC = () => {
   const setError = useAppStore((s) => s.setError);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [matcherOpen, setMatcherOpen] = useState(false);
+  const [detailsVehicleId, setDetailsVehicleId] = useState<string | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const [activeView, setActiveView] = useState<'3d' | '2d'>('3d');
   const [stacking, setStacking] = useState(settings.maxStackHeight > 0);
@@ -91,6 +98,11 @@ const App: React.FC = () => {
           {/* Секция «Автомобиль» — фиксированная, не скроллится */}
           <div className="vehicle-section">
             <VehicleSelector />
+            <VehicleVisibilityControls vehicleId={selectedVehicleId} />
+            <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+              <button className="btn btn-sm" onClick={() => setMatcherOpen(true)}>🔍 Подобрать авто</button>
+              <button className="btn btn-sm" onClick={() => setDetailsVehicleId(selectedVehicleId)}>📋 Детали</button>
+            </div>
           </div>
 
           {/* Секция «Грузы» — скроллится */}
@@ -150,6 +162,7 @@ const App: React.FC = () => {
         <div className="right-panel">
           <VariantTabs />
           <MetricsPanel />
+          <SuggestionsPanel show={showSuggestions} onToggle={() => setShowSuggestions(!showSuggestions)} />
           
           {/* Переключение между 3D и 2D видом */}
           <div className="view-tabs mb-2">
@@ -200,8 +213,41 @@ const App: React.FC = () => {
       <Footer />
 
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+      {matcherOpen && <VehicleMatcher onClose={() => setMatcherOpen(false)} />}
+      {detailsVehicleId && <VehicleDetailsPanel vehicleId={detailsVehicleId} onClose={() => setDetailsVehicleId(null)} />}
     </div>
   );
 };
+
+/** Suggestions panel sub-component */
+function SuggestionsPanel({ show, onToggle }: { show: boolean; onToggle: () => void }) {
+  const vehicle = getCurrentVehicle(useAppStore.getState().selectedVehicleId, useAppStore.getState().customVehicles);
+  const result = useAppStore.getState().result;
+
+  const suggestions: PackingSuggestion[] = useMemo(() => {
+    if (!result) return [];
+    return generateSuggestions(result, vehicle);
+  }, [result, vehicle]); // eslint-disable-line
+
+  if (suggestions.length === 0) return null;
+
+  return (
+    <div style={{ flexShrink: 0 }}>
+      <button className="btn btn-sm w-full" onClick={onToggle} style={{ marginBottom: 4 }}>
+        💡 Подсказки ({suggestions.length}) {show ? '▲' : '▼'}
+      </button>
+      {show && (
+        <div className="suggestions-list">
+          {suggestions.map((s) => (
+            <div key={s.id} className="suggestion-item">
+              <span className="suggestion-icon">{s.icon}</span>
+              <span>{s.message}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default App;

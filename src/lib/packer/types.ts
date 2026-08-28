@@ -14,6 +14,8 @@ export interface Box {
   height: number;
   weight: number;
   stackable: boolean;
+  /** Негабаритный груз (может выступать за пределы кузова) */
+  isOversize?: boolean;
   /** Цвет отображения в 3D-сцене */
   color: string;
 }

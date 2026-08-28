@@ -43,6 +43,7 @@ function toBox(cargo: Cargo, index: number): Box {
     height: size.height,
     weight: cargo.weight,
     stackable: cargo.stackable,
+    isOversize: cargo.isOversize,
     color: COLORS[index % COLORS.length],
   };
 }
@@ -182,9 +183,11 @@ function packIntoBin(
         const placedWidth = orientation.dz;
         const placedHeight = orientation.dy;
 
-        if (point.x + placedLength > bin.length) continue;
+        // Для негабаритных грузов разрешаем выступание до 30%
+        const oversizeLimit = box.isOversize ? 1.3 : 1.0;
+        if (point.x + placedLength > bin.length * oversizeLimit) continue;
         if (point.y + placedHeight > bin.height) continue;
-        if (point.z + placedWidth > bin.width) continue;
+        if (point.z + placedWidth > bin.width * oversizeLimit) continue;
 
         if (settings.maxStackHeight > 0 && point.y + placedHeight > settings.maxStackHeight) continue;
         // Если maxStackHeight === 0, штабелирование отключено для ВСЕХ грузов
@@ -399,6 +402,8 @@ function toPackedItem(p: PlacedBox, layerIndex: number): PackedItem {
     rotationY: p.rotY,
     color,
     stackable: p.stackable,
+    isOversize: p.isOversize,
+    layer: layerIndex,
   };
 }
 
