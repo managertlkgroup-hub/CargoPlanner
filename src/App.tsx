@@ -41,7 +41,7 @@ const App: React.FC = () => {
   const [controlSectionOpen, setControlSectionOpen] = useState(true);
   const [detailsCargoId, setDetailsCargoId] = useState<string | null>(null);
 
-  const [activeView, setActiveView] = useState<'3d' | '2d'>('3d');
+  const [activeView, setActiveView] = useState<'3d' | '2d'>('2d');
   const [stacking, setStacking] = useState(settings.maxStackHeight > 0);
 
   // Синхронизация чекбокса с настройками
@@ -188,17 +188,17 @@ const App: React.FC = () => {
           <div className="view-tabs mb-2">
             <button
               type="button"
-              className={`view-tab ${activeView === '3d' ? 'active' : ''}`}
-              onClick={() => setActiveView('3d')}
-            >
-              🧊 3D Вид
-            </button>
-            <button
-              type="button"
               className={`view-tab ${activeView === '2d' ? 'active' : ''}`}
               onClick={() => setActiveView('2d')}
             >
               📐 2D Вид (сверху)
+            </button>
+            <button
+              type="button"
+              className={`view-tab ${activeView === '3d' ? 'active' : ''}`}
+              onClick={() => setActiveView('3d')}
+            >
+              🧊 3D Вид
             </button>
           </div>
           

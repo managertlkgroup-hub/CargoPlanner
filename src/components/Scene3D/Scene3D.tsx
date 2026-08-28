@@ -217,7 +217,7 @@ const Scene3D: React.FC = () => {
       </div>
 
       <div className="scene-overlay scene-hint">
-        ЛКМ вращение · колесо — зум
+        ЛКМ вращение · ПКМ перемещение · колесо — зум
       </div>
 
       {/* Переключатель слоёв */}

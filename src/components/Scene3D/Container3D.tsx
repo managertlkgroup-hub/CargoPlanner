@@ -23,8 +23,35 @@ function getDefaultVisibility(bodyType?: string) {
       return { showRoof: false, showSides: false, showFront: false, showRear: false, showFloor: true };
     case 'dump':
       return { showRoof: false, showSides: true, showFront: true, showRear: true, showFloor: true };
+    case 'side':
+      return { showRoof: false, showSides: true, showFront: false, showRear: false, showFloor: true };
     default:
       return { showRoof: true, showSides: true, showFront: true, showRear: true, showFloor: true };
+  }
+}
+
+/** Определяет визуальный стиль кузова по типу */
+function getBodyStyle(bodyType?: string): {
+  wallOpacity: number; roofOpacity: number; floorColor: string;
+  wallColor: string; roofColor: string; isCylindrical: boolean;
+  wallHeight: number; // 1 = full, 0.3 = low sides
+} {
+  switch (bodyType) {
+    case 'tent': case 'curtain':
+      return { wallOpacity: 0.06, roofOpacity: 0.12, floorColor: '#94a3b8', wallColor: '#3b82f6', roofColor: '#94a3b8', isCylindrical: false, wallHeight: 1 };
+    case 'van': case 'isothermal': case 'refrigerator': case 'refrigerator_partition': case 'refrigerator_multi':
+      return { wallOpacity: 0.18, roofOpacity: 0.25, floorColor: '#94a3b8', wallColor: '#64748b', roofColor: '#64748b', isCylindrical: false, wallHeight: 1 };
+    case 'platform': case 'flatbed': case 'open_container':
+    case 'low_loader': case 'trailer': case 'low_platform': case 'telescopic':
+      return { wallOpacity: 0, roofOpacity: 0, floorColor: '#94a3b8', wallColor: '#94a3b8', roofColor: '#94a3b8', isCylindrical: false, wallHeight: 1 };
+    case 'dump':
+      return { wallOpacity: 0.12, roofOpacity: 0, floorColor: '#94a3b8', wallColor: '#f59e0b', roofColor: '#94a3b8', isCylindrical: false, wallHeight: 1 };
+    case 'side':
+      return { wallOpacity: 0.08, roofOpacity: 0, floorColor: '#94a3b8', wallColor: '#3b82f6', roofColor: '#94a3b8', isCylindrical: false, wallHeight: 0.3 };
+    case 'tanker': case 'container':
+      return { wallOpacity: 0.15, roofOpacity: 0.2, floorColor: '#94a3b8', wallColor: '#64748b', roofColor: '#64748b', isCylindrical: true, wallHeight: 1 };
+    default:
+      return { wallOpacity: 0.08, roofOpacity: 0.15, floorColor: '#94a3b8', wallColor: '#3b82f6', roofColor: '#94a3b8', isCylindrical: false, wallHeight: 1 };
   }
 }
 
@@ -44,6 +71,8 @@ export default function Container3D({ vehicle }: Props) {
   const showFront = vis.showFront ?? defaults.showFront;
   const showRear = vis.showRear ?? defaults.showRear;
   const showFloor = vis.showFloor ?? defaults.showFloor;
+  const bodyStyle = getBodyStyle(vehicle.bodyType);
+  const sideH = h * bodyStyle.wallHeight;
 
   // Каркас кузова через LineSegments (центрирован в начале координат)
   const halfL = l / 2;
@@ -83,50 +112,58 @@ export default function Container3D({ vehicle }: Props) {
       {showFloor && (
         <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[l, w]} />
-          <meshStandardMaterial color="#94a3b8" transparent opacity={0.35} />
+          <meshStandardMaterial color={bodyStyle.floorColor} transparent opacity={0.35} />
         </mesh>
       )}
 
       {/* Каркас (ребра кузова) */}
       <lineSegments geometry={geometry}>
-        <lineBasicMaterial color="#3b82f6" />
+        <lineBasicMaterial color={bodyStyle.wallColor} />
       </lineSegments>
 
-      {/* Задняя стенка (x = -l/2) */}
-      {showRear && (
-        <mesh position={[-halfL, h / 2, 0]}>
-          <boxGeometry args={[0.02, h, w]} />
-          <meshStandardMaterial color="#3b82f6" transparent opacity={0.08} />
+      {/* Задняя стенка */}
+      {showRear && !bodyStyle.isCylindrical && (
+        <mesh position={[-halfL, sideH / 2, 0]}>
+          <boxGeometry args={[0.02, sideH, w]} />
+          <meshStandardMaterial color={bodyStyle.wallColor} transparent opacity={bodyStyle.wallOpacity} />
         </mesh>
       )}
 
-      {/* Передняя стенка (x = l/2) */}
-      {showFront && (
-        <mesh position={[halfL, h / 2, 0]}>
-          <boxGeometry args={[0.02, h, w]} />
-          <meshStandardMaterial color="#3b82f6" transparent opacity={0.08} />
+      {/* Передняя стенка */}
+      {showFront && !bodyStyle.isCylindrical && (
+        <mesh position={[halfL, sideH / 2, 0]}>
+          <boxGeometry args={[0.02, sideH, w]} />
+          <meshStandardMaterial color={bodyStyle.wallColor} transparent opacity={bodyStyle.wallOpacity} />
         </mesh>
       )}
 
-      {/* Боковые стенки (полупрозрачные) */}
-      {showSides && (
+      {/* Боковые стенки */}
+      {showSides && !bodyStyle.isCylindrical && (
         <>
-          <mesh position={[0, h / 2, -halfW]}>
-            <boxGeometry args={[l, h, 0.02]} />
-            <meshStandardMaterial color="#3b82f6" transparent opacity={0.05} />
+          <mesh position={[0, sideH / 2, -halfW]}>
+            <boxGeometry args={[l, sideH, 0.02]} />
+            <meshStandardMaterial color={bodyStyle.wallColor} transparent opacity={bodyStyle.wallOpacity} />
           </mesh>
-          <mesh position={[0, h / 2, halfW]}>
-            <boxGeometry args={[l, h, 0.02]} />
-            <meshStandardMaterial color="#3b82f6" transparent opacity={0.05} />
+          <mesh position={[0, sideH / 2, halfW]}>
+            <boxGeometry args={[l, sideH, 0.02]} />
+            <meshStandardMaterial color={bodyStyle.wallColor} transparent opacity={bodyStyle.wallOpacity} />
           </mesh>
         </>
+      )}
+
+      {/* Цилиндрический кузов (цистерна) */}
+      {bodyStyle.isCylindrical && showSides && (
+        <mesh position={[0, w / 2, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[w / 2, w / 2, l, 24, 1, true]} />
+          <meshStandardMaterial color={bodyStyle.wallColor} transparent opacity={bodyStyle.wallOpacity} side={THREE.DoubleSide} />
+        </mesh>
       )}
 
       {/* Крыша */}
       {showRoof && (
         <mesh position={[0, h, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[l, w]} />
-          <meshStandardMaterial color="#94a3b8" transparent opacity={0.15} side={THREE.DoubleSide} />
+          <meshStandardMaterial color={bodyStyle.roofColor} transparent opacity={bodyStyle.roofOpacity} side={THREE.DoubleSide} />
         </mesh>
       )}
     </group>

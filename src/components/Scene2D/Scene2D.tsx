@@ -22,6 +22,8 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
   const smartStack = useAppStore((s) => s.smartStack);
 
   const [dimensions, setDimensions] = useState({ w: 600, h: 400 });
+  // Текущий выбранный слой для перетаскивания (null = все)
+  const [selectedDragLayer, setSelectedDragLayer] = useState<number | null>(null);
 
   const dragRef = useRef<{
     itemId: string;
@@ -192,6 +194,11 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
         return null;
 
       for (const item of variant.items) {
+        // Фильтрация по слою: если selectedDragLayer задан, ищем только на этом слое
+        if (selectedDragLayer !== null) {
+          const itemLayer = Math.round(item.position.y / Math.max(1, item.dimensions.height));
+          if (itemLayer !== selectedDragLayer) continue;
+        }
         let itemL = item.dimensions.length * scale;
         let itemW = item.dimensions.width * scale;
         const rotY = item.rotationY ?? item.rotation?.y ?? 0;
@@ -204,7 +211,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
       }
       return null;
     },
-    [variant, vehicle],
+    [variant, vehicle, selectedDragLayer],
   );
 
   const handleMouseDown = useCallback(
@@ -408,7 +415,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
         </div>
       )}
 
-      {/* Легенда по слоям */}
+      {/* Легенда по слоям + выбор слоя для перетаскивания */}
       {variant && variant.items.length > 0 && (() => {
         const layers = new Map<number, { name: string; count: number }[]>();
         variant.items.forEach((item) => {
@@ -418,20 +425,44 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
           if (existing) existing.count++;
           else layers.get(layer)!.push({ name: item.name, count: 1 });
         });
-        const maxLayer = Math.max(...layers.keys());
-        if (maxLayer === 0) return null;
+        const sortedEntries = [...layers.entries()].sort((a, b) => a[0] - b[0]);
+        const LAYER_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6'];
         return (
           <div style={{ fontSize: 10, color: 'var(--text-muted)', padding: '4px 8px', borderTop: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
-            <strong>Слои:</strong> {[...layers.entries()].sort((a, b) => a[0] - b[0]).map(([layer, items]) => (
-              <span key={layer} style={{ marginLeft: 8 }}>
-                <span style={{
-                  display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
-                  background: layer === 0 ? '#3b82f6' : layer === 1 ? '#22c55e' : layer === 2 ? '#f59e0b' : '#ef4444',
-                  marginRight: 3, verticalAlign: 'middle',
-                }} />
-                Слой {layer}: {items.map(it => `${it.name} ×${it.count}`).join(', ')}
-              </span>
-            ))}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+              <strong>Слои:</strong>
+              <button
+                onClick={() => setSelectedDragLayer(null)}
+                style={{
+                  padding: '1px 6px', fontSize: 9, borderRadius: 3,
+                  border: '1px solid', borderColor: selectedDragLayer === null ? '#3b82f6' : 'var(--border)',
+                  background: selectedDragLayer === null ? '#3b82f6' : 'transparent',
+                  color: selectedDragLayer === null ? '#fff' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                }}
+              >Все</button>
+              {sortedEntries.map(([layer, items]) => (
+                <button
+                  key={layer}
+                  onClick={() => setSelectedDragLayer(selectedDragLayer === layer ? null : layer)}
+                  style={{
+                    padding: '1px 6px', fontSize: 9, borderRadius: 3,
+                    border: '1px solid', borderColor: selectedDragLayer === layer ? LAYER_COLORS[layer] : 'var(--border)',
+                    background: selectedDragLayer === layer ? LAYER_COLORS[layer] : 'transparent',
+                    color: selectedDragLayer === layer ? '#fff' : 'var(--text-muted)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: LAYER_COLORS[layer], marginRight: 2, verticalAlign: 'middle' }} />
+                  {layer}: {items.map(it => `${it.name} ×${it.count}`).join(', ')}
+                </button>
+              ))}
+            </div>
+            {selectedDragLayer !== null && (
+              <div style={{ fontSize: 9, color: LAYER_COLORS[selectedDragLayer], marginTop: 2 }}>
+                Перетаскивание на слое {selectedDragLayer}
+              </div>
+            )}
           </div>
         );
       })()}
