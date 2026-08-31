@@ -429,6 +429,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
     <div style={{ width: '100%', height: '100%', minHeight: 0, position: 'relative', display: 'flex', flexDirection: 'column' }}>
       <canvas
         ref={canvasRef}
+        data-export-canvas="2d"
         width={dimensions.w}
         height={dimensions.h}
         style={{ width: '100%', flex: 1, minHeight: 0, display: 'block', cursor: 'default' }}

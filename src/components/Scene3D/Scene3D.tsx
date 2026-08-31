@@ -130,6 +130,8 @@ const Scene3D: React.FC = () => {
         shadows
         className="scene-canvas"
         onCreated={({ gl }) => {
+          // Пометка WebGL-канваса, чтобы экспорт 2D не путал его с 2D-схемой
+          if (gl && gl.domElement) gl.domElement.setAttribute('data-export-canvas', 'webgl');
           // Очистка ресурсов при размонтировании
           return () => {
             gl.dispose();

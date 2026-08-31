@@ -24,23 +24,20 @@ export async function exportSceneToPng(
   vehicle?: Vehicle,
   variant?: LayoutVariant,
 ): Promise<void> {
-  // Ищем 2D canvas (не WebGL)
-  let sourceCanvas: HTMLCanvasElement | null = null;
-
-  const sceneContainer = document.querySelector('.scene-container');
-  if (sceneContainer) {
-    const canvases = sceneContainer.querySelectorAll('canvas');
-    for (const c of Array.from(canvases)) {
-      const gl = c.getContext('webgl') || c.getContext('webgl2');
-      if (!gl) { sourceCanvas = c; break; }
-    }
-  }
+  // Ищем 2D canvas (не WebGL) — помечен атрибутом data-export-canvas="2d"
+  let sourceCanvas: HTMLCanvasElement | null =
+    document.querySelector<HTMLCanvasElement>('[data-export-canvas="2d"]');
 
   if (!sourceCanvas) {
+    // Фолбэк: canvas с контекстом 2d и размером (без проверки WebGL, чтобы не
+    // провоцировать ошибку "Canvas has an existing context of a different type")
     const allCanvases = document.querySelectorAll('canvas');
     for (const c of Array.from(allCanvases)) {
-      const test = c.getContext('2d');
-      if (test && c.width > 100 && c.height > 100) { sourceCanvas = c; break; }
+      if (c.width > 100 && c.height > 100) {
+        // Не создаём 2d-контекст на WebGL-канвасе повторно; определяем по data-атрибуту
+        const isWebGL = /^webgl/.test(c.getAttribute('data-export-canvas') || '');
+        if (!isWebGL) { sourceCanvas = c; break; }
+      }
     }
   }
 
