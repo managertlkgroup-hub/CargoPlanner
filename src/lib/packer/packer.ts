@@ -273,34 +273,40 @@ function packIntoBin(
         if (usedWeight + box.weight > maxWeight) continue;
 
         // === SCORING ===
-        // Tiered scoring: Y dominates (floor-first), then directional fill,
-        // then compactness. Stacking happens naturally when floor is full.
+        // Критерии:
+        //   - направление заполнения зависит от режима (вдоль/поперёк/смешанный)
+        //   - компактность (footprint) — чем меньше занимаемый объём, тем лучше
+        //   - штабелирование: предпочитаем ставить груз на другой груз, если это
+        //     уменьшает занимаемый след (stacking включён и груз штабелируемый)
         const newMaxX = Math.max(currentMaxX, point.x + placedLength);
         const newMaxZ = Math.max(currentMaxZ, point.z + placedWidth);
         const footprintMax = Math.max(newMaxX, newMaxZ);
 
-        const Y_W = 1e9;
-        const PRIM = 1e6;
-        const SEC = 1e3;
-        const CMP = 100;
+        const DIR = 1e6;   // направление заполнения (доминирует)
+        const SEC = 1e3;   // вторичная ось внутри ряда
+        const CMP = 100;   // компактность
+        const Y_W = 0;     // не штрафуем вертикаль — поддержка проверяется отдельно
 
         let score: number;
 
         if (sortMode === 'along') {
-          // along: long side along X, fill rows by Z (front→back), within row fill by X
-          score = point.y * Y_W + point.z * PRIM + point.x * SEC + footprintMax * CMP;
+          // along: длинная сторона вдоль X, ряды заполняются по Z (перед→зад)
+          score = point.z * DIR + point.x * SEC + point.y * Y_W + footprintMax * CMP;
         } else if (sortMode === 'across') {
-          // across: long side along Z, fill columns by X (left→right), within column fill by Z
-          score = point.y * Y_W + point.x * PRIM + point.z * SEC + footprintMax * CMP;
+          // across: длинная сторона вдоль Z, колонки заполняются по X (лево→право)
+          score = point.x * DIR + point.z * SEC + point.y * Y_W + footprintMax * CMP;
         } else {
-          // mixed: prefer along orientation (long side along X), fill like along,
-          // with across as fallback when along placement doesn't fit
-          score = point.y * Y_W + point.z * PRIM + point.x * SEC + footprintMax * CMP;
-          // Penalize across orientation (long side not along X) except in leftover gaps
+          // mixed: предпочитаем вдоль (длинная сторона вдоль X), поперёк — в остатках
+          score = point.z * DIR + point.x * SEC + point.y * Y_W + footprintMax * CMP;
           const isAlong = placedLength >= placedWidth;
-          if (!isAlong) {
-            score += PRIM * 100;
-          }
+          if (!isAlong) score += DIR * 100;
+        }
+
+        // Горка/штабель: лёгкое предпочтение нижних слоёв для устойчивости,
+        // но не доминирующее — чтобы штабелирование работало, когда это компактно.
+        if (effY > 0) {
+          // Поощряем штабелирование: уменьшаем след, не плодим пустоты по полу
+          score -= footprintMax * CMP * 0.8;
         }
 
         if (score < bestScore) {
