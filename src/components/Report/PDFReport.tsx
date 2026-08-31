@@ -423,7 +423,7 @@ function ItemLegend({ items }: { items: PackedItem[] }) {
         return (
           <View key={layer} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
             <View style={[styles.legendDot, { backgroundColor: `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`, marginRight: 4 }]} />
-            <Text style={[styles.text, { fontFamily: 'Helvetica-Bold' }]}>Слой {layer}:</Text>
+            <Text style={[styles.text, { fontFamily: 'Roboto', fontWeight: 700 }]}>Слой {layer}:</Text>
             <Text style={[styles.text, { marginLeft: 4 }]}>
               {layerItems.map(({ item, idx }) => `${idx + 1}. ${item.name}`).join('  ·  ')}
             </Text>
@@ -440,32 +440,36 @@ function CargoTable({ cargo, items, unit, weightUnit }: { cargo: Cargo[]; items:
   const maxL = items.length > 0 ? Math.max(...items.map(i => layerOf(i))) : 0;
   const hasLayers = maxL > 0;
 
-  // Ширины колонок
-  const COL_W = {
-    num: 22,
-    name: hasLayers ? 80 : 95,
-    shape: 42,
-    size: 88,
-    weight: 42,
-    qty: 30,
-    layer: hasLayers ? 40 : 0,
-  };
-
-
-  // Маппинг cargo → layer
-  const itemLayersByCargoId = new Map<string, number[]>();
+  // Группируем размещённые грузы по (cargoId, layer) и считаем количество на каждом слое
+  const groups = new Map<string, { layer: number; count: number; item: PackedItem }>();
   items.forEach(item => {
-    const id = item.id.split('-')[0];
-    const arr = itemLayersByCargoId.get(id) || [];
-    arr.push(layerOf(item));
-    itemLayersByCargoId.set(id, arr);
+    const cargoId = item.id.split('-')[0];
+    const layer = layerOf(item);
+    const key = `${cargoId}::${layer}`;
+    const existing = groups.get(key);
+    if (existing) existing.count++;
+    else groups.set(key, { layer, count: 1, item });
   });
 
-  const sorted = cargo.map(c => {
-    const layers = itemLayersByCargoId.get(c.id) || [];
-    const layer = layers.length > 0 ? Math.min(...layers) : 0;
-    return { c, layer };
-  }).sort((a, b) => a.layer - b.layer);
+  // Сопоставляем cargo по id для деталей (имя, форма, размер, вес)
+  const cargoById = new Map(cargo.map(c => [c.id, c]));
+
+  const rows = Array.from(groups.values())
+    .map(g => {
+      const c = cargoById.get(g.item.id.split('-')[0]);
+      return { g, c };
+    })
+    .sort((a, b) => a.g.layer - b.g.layer || String(a.g.item.name).localeCompare(String(b.g.item.name), 'ru'));
+
+  const COL_W = {
+    num: 22,
+    name: hasLayers ? 70 : 95,
+    shape: 40,
+    size: 88,
+    weight: 40,
+    qty: 26,
+    layer: hasLayers ? 30 : 0,
+  };
 
   return (
     <View>
@@ -482,32 +486,40 @@ function CargoTable({ cargo, items, unit, weightUnit }: { cargo: Cargo[]; items:
         {hasLayers && <Text style={[styles.tableHeaderText, { width: COL_W.layer }]}>Слой</Text>}
       </View>
 
-      {/* Строки данных */}
-      {sorted.map(({ c, layer: li }, rowIdx) => {
-        const size = c.shape === 'cylinder'
-          ? `Ø${fmt(c.diameter ?? 0)}×${fmt(c.length)}`
-          : `${fmt(c.length)}×${fmt(c.width ?? 0)}×${fmt(c.height ?? 0)}`;
+      {/* Строки данных — по одному грузу на каждый слой */}
+      {rows.map(({ g, c }, rowIdx) => {
+        const name = c ? c.name : g.item.name;
+        const shape = c ? c.shape : g.item.shape;
+        const len = c ? c.length : g.item.dimensions.length;
+        const wid = c ? c.width : g.item.dimensions.width;
+        const hei = c ? c.height : g.item.dimensions.height;
+        const diam = c ? c.diameter : g.item.diameter;
+        const weight = c ? c.weight : g.item.weight;
+        const qty = c ? c.quantity : 1;
+
+        const size = shape === 'cylinder'
+          ? `Ø${fmt(diam ?? 0)}×${fmt(len)}`
+          : `${fmt(len)}×${fmt(wid ?? 0)}×${fmt(hei ?? 0)}`;
 
         return (
           <View
-            key={c.id}
-            style={[
-              styles.tableRow,
-              rowIdx % 2 === 0 ? styles.tableRowAlt : {},
-            ]}
+            key={`${name}-${g.layer}`}
+            style={[styles.tableRow, rowIdx % 2 === 0 ? styles.tableRowAlt : {}]}
           >
             <Text style={[styles.tableCell, { width: COL_W.num }]}>{rowIdx + 1}</Text>
-            <Text style={[styles.tableCell, { width: COL_W.name }]}>{c.name}</Text>
+            <Text style={[styles.tableCell, { width: COL_W.name }]}>{name}</Text>
             <Text style={[styles.tableCell, { width: COL_W.shape }]}>
-              {c.shape === 'box' ? 'Прямоуг.' : 'Цилиндр'}
+              {shape === 'box' ? 'Прямоуг.' : 'Цилиндр'}
             </Text>
             <Text style={[styles.tableCell, { width: COL_W.size }]}>{size}</Text>
-            <Text style={[styles.tableCell, { width: COL_W.weight }]}>{formatWeight(c.weight, weightUnit)}</Text>
-            <Text style={[styles.tableCell, { width: COL_W.qty }]}>{c.quantity}</Text>
+            <Text style={[styles.tableCell, { width: COL_W.weight }]}>
+              {formatWeight(weight * (c ? g.count : qty), weightUnit)}
+            </Text>
+            <Text style={[styles.tableCell, { width: COL_W.qty }]}>{g.count}</Text>
             {hasLayers && (
               <View style={[styles.tableCell, { width: COL_W.layer, flexDirection: 'row', alignItems: 'center' }]}>
-                <View style={[styles.layerBadge, { backgroundColor: LAYER_COLORS[li % LAYER_COLORS.length] }]} />
-                <Text>{li}</Text>
+                <View style={[styles.layerBadge, { backgroundColor: LAYER_COLORS[g.layer % LAYER_COLORS.length] }]} />
+                <Text>{g.layer}</Text>
               </View>
             )}
           </View>
