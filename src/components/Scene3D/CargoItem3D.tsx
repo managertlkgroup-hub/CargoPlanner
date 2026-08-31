@@ -9,6 +9,8 @@ import { useMemo, useState } from 'react';
 import * as THREE from 'three';
 import { Html, Outlines } from '@react-three/drei';
 import type { PackedItem, Vehicle } from '../../types';
+import { useAppStore } from '../../store/useAppStore';
+import { UNIT_LABEL, toUnit } from '../../utils/helpers';
 import { SCALE } from './Container3D';
 
 interface Props {
@@ -36,6 +38,7 @@ export default function CargoItem3D({
   allItems: _allItems,
 }: Props) {
   const [hovered, setHovered] = useState(false);
+  const unit = useAppStore((s) => s.unit);
 
   const isCylinder = item.shape === 'cylinder';
   const diameter = item.diameter ?? 0;
@@ -138,11 +141,11 @@ export default function CargoItem3D({
           <div className="tooltip-box">
             <strong>{item.name}</strong>
             {`\n${isCylinder
-              ? `Цилиндр Ø${Math.round(diameter)}×${Math.round(item.dimensions.length)} мм`
-              : `${Math.round(item.dimensions.length)}×${Math.round(item.dimensions.width)}×${Math.round(item.dimensions.height)} мм`}`}
+              ? `Цилиндр Ø${Math.round(toUnit(diameter, unit))}×${Math.round(toUnit(item.dimensions.length, unit))} ${UNIT_LABEL[unit]}`
+              : `${Math.round(toUnit(item.dimensions.length, unit))}×${Math.round(toUnit(item.dimensions.width, unit))}×${Math.round(toUnit(item.dimensions.height, unit))} ${UNIT_LABEL[unit]}`}`}
             {`\nВес: ${item.weight} кг`}
             {isOversize ? `\n⚠ Негабаритный` : ''}
-            {`\nПозиция: x=${Math.round(item.position.x)} y=${Math.round(item.position.y)} z=${Math.round(item.position.z)}`}
+            {`\nПозиция: x=${Math.round(toUnit(item.position.x, unit))} y=${Math.round(toUnit(item.position.y, unit))} z=${Math.round(toUnit(item.position.z, unit))} ${UNIT_LABEL[unit]}`}
             {`\nПоворот Y: ${Math.round(item.rotationY ?? 0)}°`}
           </div>
         </Html>

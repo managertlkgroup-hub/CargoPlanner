@@ -5,14 +5,25 @@
 import { useAppStore } from '../../store/useAppStore';
 import { getCurrentVehicle, useAllVehicles } from '../../store/useAppStore';
 import { LOADING_METHOD_LABELS, BODY_TYPE_LABELS } from '../../types';
+import { getDefaultMethodsForBodyType } from '../../lib/packer/presets';
+import { UNIT_LABEL, formatDimension } from '../../utils/helpers';
 
 export default function VehicleSelector() {
   const selectedVehicleId = useAppStore((s) => s.selectedVehicleId);
   const selectVehicle = useAppStore((s) => s.selectVehicle);
   const customVehicles = useAppStore((s) => s.customVehicles);
+  const unit = useAppStore((s) => s.unit);
   const vehicles = useAllVehicles();
 
   const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
+
+  const bodyTypeMethods = vehicle.bodyType ? getDefaultMethodsForBodyType(vehicle.bodyType) : null;
+  const filteredLoadingMethods = vehicle.loadingMethods?.filter(m =>
+    bodyTypeMethods ? bodyTypeMethods.loadingMethods.includes(m) : true
+  ) || [];
+  const filteredUnloadingMethods = vehicle.unloadingMethods?.filter(m =>
+    bodyTypeMethods ? bodyTypeMethods.unloadingMethods.includes(m) : true
+  ) || [];
 
   return (
     <div className="panel">
@@ -40,8 +51,8 @@ export default function VehicleSelector() {
 
       <div className="metrics-grid vehicle-metrics">
         <div className="metric-card">
-          <div className="metric-value">{vehicle.length}×{vehicle.width}×{vehicle.height}</div>
-          <div className="metric-label">Размеры, мм</div>
+          <div className="metric-value">{formatDimension(vehicle.length, unit)}×{formatDimension(vehicle.width, unit)}×{formatDimension(vehicle.height, unit)}</div>
+          <div className="metric-label">Размеры, {UNIT_LABEL[unit]}</div>
         </div>
         <div className="metric-card">
           <div className="metric-value">{vehicle.maxWeight}</div>
@@ -50,13 +61,13 @@ export default function VehicleSelector() {
       </div>
 
       {/* Способы загрузки/выгрузки */}
-      {vehicle.loadingMethods && vehicle.loadingMethods.length > 0 && (
+      {filteredLoadingMethods.length > 0 && (
         <div style={{ marginTop: 8 }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>
             Способы загрузки:
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {vehicle.loadingMethods.map((m) => (
+            {filteredLoadingMethods.map((m) => (
               <span
                 key={m}
                 style={{
@@ -75,13 +86,13 @@ export default function VehicleSelector() {
           </div>
         </div>
       )}
-      {vehicle.unloadingMethods && vehicle.unloadingMethods.length > 0 && (
+      {filteredUnloadingMethods.length > 0 && (
         <div style={{ marginTop: 6 }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>
             Способы выгрузки:
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {vehicle.unloadingMethods.map((m) => (
+            {filteredUnloadingMethods.map((m) => (
               <span
                 key={m}
                 style={{

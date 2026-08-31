@@ -1,12 +1,14 @@
 import { useMemo } from 'react';
 import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { useActiveVariant, useSelectedVehicle } from '../../store/useAppStore';
-import { formatNumber, volumeToM3 } from '../../utils/helpers';
+import { useAppStore } from '../../store/useAppStore';
+import { formatNumber, volumeToM3, UNIT_LABEL, formatDimension } from '../../utils/helpers';
 import { calculateCOG } from '../../lib/physics/cog';
 
 export default function MetricsPanel() {
   // Все хуки ДО любого раннего возврата
   const variant = useActiveVariant();
+  const unit = useAppStore((s) => s.unit);
 
   const layerCount = useMemo(() => {
     if (!variant || variant.items.length === 0) return 0;
@@ -91,9 +93,9 @@ export default function MetricsPanel() {
         <>
           <div className="metric-card">
             <div className="metric-value" style={{ fontSize: '14px' }}>
-              {cargoDimensions.length}×{cargoDimensions.width}×{cargoDimensions.height}
+              {formatDimension(cargoDimensions.length, unit)}×{formatDimension(cargoDimensions.width, unit)}×{formatDimension(cargoDimensions.height, unit)}
             </div>
-            <div className="metric-label">Габариты, мм</div>
+            <div className="metric-label">Габариты, {UNIT_LABEL[unit]}</div>
           </div>
           <div className="metric-card">
             <div className="metric-value">{cargoDimensions.volume} м³</div>
@@ -108,10 +110,10 @@ export default function MetricsPanel() {
           </div>
           <div className="metric-label">
             {cog.status === 'danger'
-              ? `Сильный перевес влево/вправо (${Math.abs(Math.round(cog.z - vehicle.width / 2))} мм). Распределите грузы равномернее!`
+              ? `Сильный перевес влево/вправо (${formatDimension(Math.abs(cog.z - vehicle.width / 2), unit)} ${UNIT_LABEL[unit]}). Распределите грузы равномернее!`
               : cog.status === 'warning'
-                ? `Грузы смещены от центра по ширине на ${Math.abs(Math.round(cog.z - vehicle.width / 2))} мм — рекомендуется выровнять`
-                : `Грузы распределены равномерно (смещение ${Math.abs(Math.round(cog.z - vehicle.width / 2))} мм)`
+                ? `Грузы смещены от центра по ширине на ${formatDimension(Math.abs(cog.z - vehicle.width / 2), unit)} ${UNIT_LABEL[unit]} — рекомендуется выровнять`
+                : `Грузы распределены равномерно (смещение ${formatDimension(Math.abs(cog.z - vehicle.width / 2), unit)} ${UNIT_LABEL[unit]})`
             }
           </div>
           <div className="metric-label" style={{ fontSize: 10, marginTop: 2 }}>

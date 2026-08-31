@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useActiveVariant, useSelectedVehicle, useAppStore } from '../../store/useAppStore';
+import { UNIT_LABEL, toUnit } from '../../utils/helpers';
 
 // Scene2D supports keyboard shortcuts:
 // R — rotate hovered/selected item by 90°
@@ -20,6 +21,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
   const moveCargoUp = useAppStore((s) => s.moveCargoUp);
   const moveCargoDown = useAppStore((s) => s.moveCargoDown);
   const smartStack = useAppStore((s) => s.smartStack);
+  const unit = useAppStore((s) => s.unit);
 
   const [dimensions, setDimensions] = useState({ w: 600, h: 400 });
   // Текущий выбранный слой для перетаскивания (null = все)
@@ -455,7 +457,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
           }}
         >
           <strong>{tooltipData.item.name}</strong>
-          {`\n${Math.round(tooltipData.item.dimensions.length)}×${Math.round(tooltipData.item.dimensions.width)}×${Math.round(tooltipData.item.dimensions.height)} мм`}
+          {`\n${Math.round(toUnit(tooltipData.item.dimensions.length, unit))}×${Math.round(toUnit(tooltipData.item.dimensions.width, unit))}×${Math.round(toUnit(tooltipData.item.dimensions.height, unit))} ${UNIT_LABEL[unit]}`}
           {`\nВес: ${tooltipData.item.weight} кг`}
           {tooltipData.item.isOversize ? '\n⚠ Негабаритный' : ''}
         </div>
@@ -490,7 +492,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
               whiteSpace: 'nowrap',
             }}
           >
-            X: {Math.round(dragged.position.x)} · Z: {Math.round(dragged.position.z)}
+            X: {Math.round(toUnit(dragged.position.x, unit))} · Z: {Math.round(toUnit(dragged.position.z, unit))} {UNIT_LABEL[unit]}
           </div>
         );
       })()}

@@ -36,3 +36,29 @@ export function saveToStorage<T>(key: string, value: T): void {
     // молча игнорируем ошибки квоты
   }
 }
+
+export type Unit = 'mm' | 'cm' | 'm';
+
+/** Множитель: сколько единиц в 1 мм */
+const UNIT_FACTOR: Record<Unit, number> = { mm: 1, cm: 0.1, m: 0.001 };
+
+/** Метка единицы измерения */
+export const UNIT_LABEL: Record<Unit, string> = { mm: 'мм', cm: 'см', m: 'м' };
+
+/** Переводит значение в мм в выбранную единицу */
+export function toUnit(mm: number, unit: Unit): number {
+  return mm * UNIT_FACTOR[unit];
+}
+
+/** Переводит значение из выбранной единицы в мм */
+export function fromUnit(value: number, unit: Unit): number {
+  if (unit === 'm') return value * 1000;
+  if (unit === 'cm') return value * 10;
+  return value;
+}
+
+/** Форматирует размер в мм с учётом единицы (до 2 знаков, без хвостовых нулей) */
+export function formatDimension(mm: number, unit: Unit): string {
+  const raw = toUnit(mm, unit);
+  return (Math.round(raw * 100) / 100).toString();
+}

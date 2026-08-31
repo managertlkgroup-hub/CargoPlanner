@@ -4,6 +4,8 @@
 // ============================================================================
 
 import type { Vehicle, LayoutVariant } from '../../types';
+import { useAppStore } from '../../store/useAppStore';
+import { UNIT_LABEL, toUnit } from '../../utils/helpers';
 
 const LAYER_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
@@ -43,6 +45,9 @@ export async function exportSceneToPng(
   }
 
   if (!sourceCanvas) throw new Error('Не удалось найти 2D-канвас для экспорта');
+
+  const unit = useAppStore.getState().unit;
+  const fmt = (mm: number) => Math.round(toUnit(mm, unit) * 100) / 100;
 
   // Параметры макета
   const S = 3; // scale factor для высокого разрешения
@@ -152,7 +157,7 @@ export async function exportSceneToPng(
     ctx.textAlign = 'left';
 
     const metrics = [
-      `${vehicle.name} (${vehicle.length}×${vehicle.width}×${vehicle.height} мм)`,
+      `${vehicle.name} (${fmt(vehicle.length)}×${fmt(vehicle.width)}×${fmt(vehicle.height)} ${UNIT_LABEL[unit]})`,
       `Грузов: ${variant.items.length}`,
       `Слоёв: ${[...new Set(variant.items.map(i => layerOf(i)))].length}`,
       `Заполнение: ${variant.volumeFill ?? 0}%`,

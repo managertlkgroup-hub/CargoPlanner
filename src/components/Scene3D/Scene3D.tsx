@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useAppStore, useActiveVariant, useSelectedVehicle } from '../../store/useAppStore';
+import { UNIT_LABEL, toUnit } from '../../utils/helpers';
 import CargoItem3D from './CargoItem3D';
 import Container3D from './Container3D';
 import { SCALE } from './Container3D';
@@ -43,6 +44,7 @@ const Scene3D: React.FC = () => {
   const spreadMode = useAppStore((s) => s.spreadMode);
   const toggleSpreadMode = useAppStore((s) => s.toggleSpreadMode);
   const setFocusItemId = useAppStore((s) => s.setFocusItemId);
+  const unit = useAppStore((s) => s.unit);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [topView] = useState(false);
@@ -213,7 +215,7 @@ const Scene3D: React.FC = () => {
 
       {/* Уголок с размерами кузова */}
       <div className="scene-overlay scene-dims">
-        Кузов: {vehicle.length}×{vehicle.width}×{vehicle.height} мм
+        Кузов: {Math.round(toUnit(vehicle.length, unit))}×{Math.round(toUnit(vehicle.width, unit))}×{Math.round(toUnit(vehicle.height, unit))} {UNIT_LABEL[unit]}
       </div>
 
       <div className="scene-overlay scene-hint">

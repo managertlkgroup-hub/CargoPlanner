@@ -8,7 +8,7 @@ import type { Vehicle } from '../../types';
 import { BODY_TYPE_LABELS, LOADING_METHOD_LABELS } from '../../types';
 import { getDefaultMethodsForBodyType } from '../../lib/packer/presets';
 import { useAppStore, getCurrentVehicle } from '../../store/useAppStore';
-import { uid } from '../../utils/helpers';
+import { uid, UNIT_LABEL, toUnit, fromUnit } from '../../utils/helpers';
 
 interface VehiclePanelProps {
   vehicleId: string;
@@ -17,13 +17,24 @@ interface VehiclePanelProps {
 
 export function VehicleDetailsPanel({ vehicleId, onClose }: VehiclePanelProps) {
   const customVehicles = useAppStore((s) => s.customVehicles);
+  const unit = useAppStore((s) => s.unit);
   const vehicle = getCurrentVehicle(vehicleId, customVehicles);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(vehicle.name);
   const [editWeight, setEditWeight] = useState(String(vehicle.maxWeight));
   const addCustomVehicle = useAppStore((s) => s.addCustomVehicle);
+  const updateCustomVehicle = useAppStore((s) => s.updateCustomVehicle);
 
   const handleSave = () => {
+    if (vehicle.isCustom) {
+      updateCustomVehicle(vehicle.id, {
+        name: editName,
+        maxWeight: Number(editWeight) || vehicle.maxWeight,
+      });
+      setEditing(false);
+      onClose();
+      return;
+    }
     addCustomVehicle({
       ...vehicle,
       id: `custom-${Date.now()}`,
@@ -70,7 +81,7 @@ export function VehicleDetailsPanel({ vehicleId, onClose }: VehiclePanelProps) {
           </div>
         )}
         <div style={{ fontSize: 12, marginBottom: 4 }}>
-          Размеры: <strong>{vehicle.length}×{vehicle.width}×{vehicle.height} мм</strong>
+          Размеры: <strong>{toUnit(vehicle.length, unit)}×{toUnit(vehicle.width, unit)}×{toUnit(vehicle.height, unit)} {UNIT_LABEL[unit]}</strong>
         </div>
         {editing ? (
           <div style={{ marginBottom: 8 }}>
@@ -131,17 +142,18 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
   const item = cargo.find(c => c.id === cargoId);
   const updateCargo = useAppStore((s) => s.updateCargo);
   const addCargo = useAppStore((s) => s.addCargo);
+  const unit = useAppStore((s) => s.unit);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(item?.name ?? '');
-  const [editLength, setEditLength] = useState(String(item?.length ?? 0));
-  const [editWidth, setEditWidth] = useState(String(item?.width ?? 0));
-  const [editHeight, setEditHeight] = useState(String(item?.height ?? 0));
+  const [editLength, setEditLength] = useState(item ? String(Math.round(toUnit(item.length, unit) * 100) / 100) : '0');
+  const [editWidth, setEditWidth] = useState(item ? String(Math.round(toUnit(item.width ?? 0, unit) * 100) / 100) : '0');
+  const [editHeight, setEditHeight] = useState(item ? String(Math.round(toUnit(item.height ?? 0, unit) * 100) / 100) : '0');
   const [editWeight, setEditWeight] = useState(String(item?.weight ?? 0));
   const [editQuantity, setEditQuantity] = useState(String(item?.quantity ?? 1));
   const [editShape, setEditShape] = useState(item?.shape ?? 'box');
   const [editStackable, setEditStackable] = useState(item?.stackable ?? true);
   const [editOversize, setEditOversize] = useState(item?.isOversize ?? false);
-  const [editDiameter, setEditDiameter] = useState(String(item?.diameter ?? 0));
+  const [editDiameter, setEditDiameter] = useState(item ? String(Math.round(toUnit(item.diameter ?? 0, unit) * 100) / 100) : '0');
 
   if (!item) return null;
 
@@ -150,15 +162,15 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
   const handleSave = () => {
     updateCargo(item.id, {
       name: editName,
-      length: Number(editLength) || 0,
-      width: Number(editWidth) || 0,
-      height: Number(editHeight) || 0,
+      length: fromUnit(Number(editLength) || 0, unit),
+      width: fromUnit(Number(editWidth) || 0, unit),
+      height: fromUnit(Number(editHeight) || 0, unit),
       weight: Number(editWeight) || 0,
       quantity: Number(editQuantity) || 1,
       shape: editShape as 'box' | 'cylinder',
       stackable: editStackable,
       isOversize: editOversize,
-      diameter: editShape === 'cylinder' ? Number(editDiameter) : undefined,
+      diameter: editShape === 'cylinder' ? fromUnit(Number(editDiameter) || 0, unit) : undefined,
     });
     setEditing(false);
     onClose();
@@ -197,26 +209,26 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
             {editShape === 'cylinder' ? (
               <>
                 <div className="form-group">
-                  <label>Диаметр, мм</label>
+                  <label>Диаметр, {UNIT_LABEL[unit]}</label>
                   <input className="input-compact" type="number" value={editDiameter} onChange={(e) => setEditDiameter(e.target.value)} />
                 </div>
                 <div className="form-group">
-                  <label>Длина, мм</label>
+                  <label>Длина, {UNIT_LABEL[unit]}</label>
                   <input className="input-compact" type="number" value={editLength} onChange={(e) => setEditLength(e.target.value)} />
                 </div>
               </>
             ) : (
               <>
                 <div className="form-group">
-                  <label>Длина, мм</label>
+                  <label>Длина, {UNIT_LABEL[unit]}</label>
                   <input className="input-compact" type="number" value={editLength} onChange={(e) => setEditLength(e.target.value)} />
                 </div>
                 <div className="form-group">
-                  <label>Ширина, мм</label>
+                  <label>Ширина, {UNIT_LABEL[unit]}</label>
                   <input className="input-compact" type="number" value={editWidth} onChange={(e) => setEditWidth(e.target.value)} />
                 </div>
                 <div className="form-group">
-                  <label>Высота, мм</label>
+                  <label>Высота, {UNIT_LABEL[unit]}</label>
                   <input className="input-compact" type="number" value={editHeight} onChange={(e) => setEditHeight(e.target.value)} />
                 </div>
               </>
@@ -251,11 +263,11 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
             </div>
             {item.shape === 'cylinder' ? (
               <div style={{ fontSize: 12, marginBottom: 4 }}>
-                Диаметр: <strong>{item.diameter} мм</strong>, Длина: <strong>{item.length} мм</strong>
+                Диаметр: <strong>{toUnit(item.diameter ?? 0, unit)} {UNIT_LABEL[unit]}</strong>, Длина: <strong>{toUnit(item.length, unit)} {UNIT_LABEL[unit]}</strong>
               </div>
             ) : (
               <div style={{ fontSize: 12, marginBottom: 4 }}>
-                Размеры: <strong>{item.length}×{item.width}×{item.height} мм</strong>
+                Размеры: <strong>{toUnit(item.length, unit)}×{toUnit(item.width ?? 0, unit)}×{toUnit(item.height ?? 0, unit)} {UNIT_LABEL[unit]}</strong>
               </div>
             )}
             <div style={{ fontSize: 12, marginBottom: 4 }}>

@@ -9,6 +9,7 @@ import { shapeLabel } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { getCurrentVehicle } from '../../store/useAppStore';
 import { packItems } from '../../lib/packer/packer';
+import { toUnit, fromUnit } from '../../utils/helpers';
 
 interface Props {
   cargo: Cargo;
@@ -19,6 +20,7 @@ interface Props {
 
 export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsClick }: Props) {
   const updateCargo = useAppStore((s) => s.updateCargo);
+  const unit = useAppStore((s) => s.unit);
   const setFocusItemId = useAppStore((s) => s.setFocusItemId);
   const setHighlightItemId = useAppStore((s) => s.setHighlightItemId);
   const selectedVehicleId = useAppStore((s) => s.selectedVehicleId);
@@ -92,9 +94,9 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
       <td className="cargo-td-num">
         <input
           type="number"
-          value={cargo.length}
+          value={Math.round(toUnit(cargo.length, unit) * 100) / 100}
           className="cargo-num-input"
-          onChange={(e) => updateCargo(cargo.id, { length: Number(e.target.value) })}
+          onChange={(e) => updateCargo(cargo.id, { length: fromUnit(Number(e.target.value), unit) })}
         />
       </td>
       {isCylinder ? (
@@ -103,9 +105,9 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
           <td className="cargo-td-num">
             <input
               type="number"
-              value={cargo.diameter ?? 0}
+              value={Math.round(toUnit(cargo.diameter ?? 0, unit) * 100) / 100}
               className="cargo-num-input"
-              onChange={(e) => updateCargo(cargo.id, { diameter: Number(e.target.value) })}
+              onChange={(e) => updateCargo(cargo.id, { diameter: fromUnit(Number(e.target.value), unit) })}
             />
           </td>
         </>
@@ -114,17 +116,17 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
           <td className="cargo-td-num">
             <input
               type="number"
-              value={cargo.width}
+              value={Math.round(toUnit(cargo.width ?? 0, unit) * 100) / 100}
               className="cargo-num-input"
-              onChange={(e) => updateCargo(cargo.id, { width: Number(e.target.value) })}
+              onChange={(e) => updateCargo(cargo.id, { width: fromUnit(Number(e.target.value), unit) })}
             />
           </td>
           <td className="cargo-td-num">
             <input
               type="number"
-              value={cargo.height}
+              value={Math.round(toUnit(cargo.height ?? 0, unit) * 100) / 100}
               className="cargo-num-input"
-              onChange={(e) => updateCargo(cargo.id, { height: Number(e.target.value) })}
+              onChange={(e) => updateCargo(cargo.id, { height: fromUnit(Number(e.target.value), unit) })}
             />
           </td>
         </>
@@ -180,7 +182,9 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
                 const pristineMap: Record<string, typeof result.variants[number]['items']> = {};
                 result.variants.forEach((v) => { pristineMap[v.id] = v.items; });
                 useAppStore.getState().setPristine(pristineMap);
-                setActiveVariant(result.variants[0].id);
+                const cur = useAppStore.getState().activeVariant;
+                const keep = cur && result.variants.some(v => v.id === cur) ? cur : result.variants[0].id;
+                setActiveVariant(keep);
               }
             } catch (e) { /* recalc error */ }
           }}

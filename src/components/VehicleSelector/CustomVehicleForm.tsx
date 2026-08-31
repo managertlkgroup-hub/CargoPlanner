@@ -5,7 +5,7 @@
 import { useState, useMemo } from 'react';
 import type { FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import { uid } from '../../utils/helpers';
+import { uid, fromUnit, toUnit, UNIT_LABEL } from '../../utils/helpers';
 import { LOADING_METHOD_LABELS, BODY_TYPE_LABELS } from '../../types';
 import type { LoadingMethod, BodyType } from '../../types';
 import { getDefaultMethodsForBodyType } from '../../lib/packer/presets';
@@ -59,6 +59,7 @@ const FIELDS = {
 
 export default function CustomVehicleForm({ onDone }: Props) {
   const addCustomVehicle = useAppStore((s) => s.addCustomVehicle);
+  const unit = useAppStore((s) => s.unit);
   const [error, setError] = useState('');
   const [values, setValues] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -80,14 +81,15 @@ export default function CustomVehicleForm({ onDone }: Props) {
   const errors = useMemo(() => {
     const e: Record<string, string> = {};
     for (const [key, cfg] of Object.entries(FIELDS)) {
-      const num = Number(values[key] || 0);
+      const numRaw = Number(values[key] || 0);
+      const num = key === 'maxWeight' ? numRaw : fromUnit(numRaw, unit);
       const err = key === 'maxWeight'
         ? validateWeight(num, cfg.min, cfg.max)
         : validateField(num, cfg.min, cfg.max, cfg.label);
       if (err) e[key] = err;
     }
     return e;
-  }, [values]);
+  }, [values, unit]);
 
   const hasErrors = !values.name?.trim();
   const isInvalid = (key: string) => touched[key] && errors[key];
@@ -104,9 +106,9 @@ export default function CustomVehicleForm({ onDone }: Props) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const name = String(fd.get('name') || '').trim();
-    const length = Number(fd.get('length'));
-    const width = Number(fd.get('width'));
-    const height = Number(fd.get('height'));
+    const length = fromUnit(Number(fd.get('length')), unit);
+    const width = fromUnit(Number(fd.get('width')), unit);
+    const height = fromUnit(Number(fd.get('height')), unit);
     const maxWeight = Number(fd.get('maxWeight'));
 
     if (!name) return setError('Укажите название');
@@ -117,7 +119,8 @@ export default function CustomVehicleForm({ onDone }: Props) {
     // Validate all fields
     const allErrors: string[] = [];
     for (const [key, cfg] of Object.entries(FIELDS)) {
-      const num = Number(fd.get(key));
+      const numRaw = Number(fd.get(key));
+      const num = key === 'maxWeight' ? numRaw : fromUnit(numRaw, unit);
       const err = key === 'maxWeight'
         ? validateWeight(num, cfg.min, cfg.max)
         : validateField(num, cfg.min, cfg.max, cfg.label);
@@ -167,13 +170,13 @@ export default function CustomVehicleForm({ onDone }: Props) {
         )}
       </div>
       <div className="form-group">
-        <label>Длина, мм</label>
+        <label>Длина, {UNIT_LABEL[unit]}</label>
         <input
           name="length"
           type="number"
-          min={FIELDS.length.min}
-          max={FIELDS.length.max}
-          placeholder="5000"
+          min={toUnit(FIELDS.length.min, unit)}
+          max={toUnit(FIELDS.length.max, unit)}
+          placeholder={String(Math.round(toUnit(5000, unit)))}
           value={values.length ?? ''}
           onChange={(e) => handleChange('length', e.target.value)}
           onBlur={() => handleBlur('length')}
@@ -184,13 +187,13 @@ export default function CustomVehicleForm({ onDone }: Props) {
         )}
       </div>
       <div className="form-group">
-        <label>Ширина, мм</label>
+        <label>Ширина, {UNIT_LABEL[unit]}</label>
         <input
           name="width"
           type="number"
-          min={FIELDS.width.min}
-          max={FIELDS.width.max}
-          placeholder="2400"
+          min={toUnit(FIELDS.width.min, unit)}
+          max={toUnit(FIELDS.width.max, unit)}
+          placeholder={String(Math.round(toUnit(2400, unit)))}
           value={values.width ?? ''}
           onChange={(e) => handleChange('width', e.target.value)}
           onBlur={() => handleBlur('width')}
@@ -201,13 +204,13 @@ export default function CustomVehicleForm({ onDone }: Props) {
         )}
       </div>
       <div className="form-group">
-        <label>Высота, мм</label>
+        <label>Высота, {UNIT_LABEL[unit]}</label>
         <input
           name="height"
           type="number"
-          min={FIELDS.height.min}
-          max={FIELDS.height.max}
-          placeholder="2600"
+          min={toUnit(FIELDS.height.min, unit)}
+          max={toUnit(FIELDS.height.max, unit)}
+          placeholder={String(Math.round(toUnit(2600, unit)))}
           value={values.height ?? ''}
           onChange={(e) => handleChange('height', e.target.value)}
           onBlur={() => handleBlur('height')}

@@ -10,6 +10,8 @@
 import * as XLSX from 'xlsx';
 import type { Cargo, LayoutVariant, Vehicle } from '../../types';
 import { getCargoVolume, shapeLabel } from '../../types';
+import { UNIT_LABEL, toUnit } from '../../utils/helpers';
+import { useAppStore } from '../../store/useAppStore';
 
 /** Массив строк (массив массивов) для одного листа */
 type SheetRows = (string | number)[][];
@@ -26,14 +28,17 @@ export function exportToXLSX(
   variants: LayoutVariant[],
 ): void {
   const wb = XLSX.utils.book_new();
+  const unit = useAppStore.getState().unit;
+  const U = UNIT_LABEL[unit];
+  const fmt = (mm: number) => Math.round(toUnit(mm, unit) * 100) / 100;
 
   // --- Лист «Автомобиль» ---
   const vehicleRows: SheetRows = [
     ['Параметр', 'Значение'],
     ['Название', vehicle.name],
-    ['Длина, мм', vehicle.length],
-    ['Ширина, мм', vehicle.width],
-    ['Высота, мм', vehicle.height],
+    [`Длина, ${U}`, fmt(vehicle.length)],
+    [`Ширина, ${U}`, fmt(vehicle.width)],
+    [`Высота, ${U}`, fmt(vehicle.height)],
     ['Грузоподъёмность, кг', vehicle.maxWeight],
     ['Объём кузова, м³', round2((vehicle.length * vehicle.width * vehicle.height) / 1e9)],
   ];
@@ -43,15 +48,15 @@ export function exportToXLSX(
 
   // --- Лист «Грузы» ---
   const cargoRows: SheetRows = [
-    ['Название', 'Форма', 'Длина, мм', 'Ширина, мм', 'Высота/Диам., мм', 'Вес, кг', 'Кол-во', 'Объём, м³', 'Штабелируемый'],
+    ['Название', 'Форма', `Длина, ${U}`, `Ширина, ${U}`, `Высота/Диам., ${U}`, 'Вес, кг', 'Кол-во', 'Объём, м³', 'Штабелируемый'],
   ];
   cargos.forEach((c) => {
     cargoRows.push([
       c.name,
       shapeLabel(c.shape),
-      c.length,
-      c.shape === 'box' ? (c.width ?? '') : '',
-      c.shape === 'cylinder' ? (c.diameter ?? '') : (c.height ?? ''),
+      fmt(c.length),
+      c.shape === 'box' ? (c.width != null ? fmt(c.width) : '') : '',
+      c.shape === 'cylinder' ? (c.diameter != null ? fmt(c.diameter) : '') : (c.height != null ? fmt(c.height) : ''),
       c.weight,
       c.quantity,
       round2((getCargoVolume(c) * c.quantity) / 1e9),
@@ -73,14 +78,14 @@ export function exportToXLSX(
       ['Суммарный вес, кг', variant.totalWeight, '', ''],
       ['Свободный объём, м³', round2(variant.freeVolume / 1e9), '', ''],
       ['', '', '', ''],
-      ['Название', 'Форма', 'Размер (Д×Ш×В), мм', 'Вес, кг'],
+      ['Название', 'Форма', `Размер (Д×Ш×В), ${U}`, 'Вес, кг'],
     ];
 
     variant.items.forEach((item) => {
       const sizeText =
         item.shape === 'cylinder'
-          ? `Ø${item.diameter ?? 0} × ${Math.round(item.dimensions.length)}`
-          : `${Math.round(item.dimensions.length)}×${Math.round(item.dimensions.width)}×${Math.round(item.dimensions.height)}`;
+          ? `Ø${fmt(item.diameter ?? 0)} × ${fmt(item.dimensions.length)}`
+          : `${fmt(item.dimensions.length)}×${fmt(item.dimensions.width)}×${fmt(item.dimensions.height)}`;
       rows.push([
         item.name,
         shapeLabel(item.shape),

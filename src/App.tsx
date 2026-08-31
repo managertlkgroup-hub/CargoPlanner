@@ -16,6 +16,10 @@ import VehicleVisibilityControls from './components/VehicleSelector/VehicleVisib
 import VehicleMatcher from './components/VehicleSelector/VehicleMatcher';
 import { VehicleDetailsPanel, CargoDetailsPanel } from './components/PresetDetails/PresetDetailsPanel';
 import { generateSuggestions, type PackingSuggestion } from './lib/packer/suggestions';
+import { formatDimension } from './utils/helpers';
+import type { Unit } from './types';
+
+const toUnitDisplay = (mm: number, unit: Unit) => formatDimension(mm, unit);
 
 const App: React.FC = () => {
   const cargo = useAppStore((s) => s.cargo);
@@ -24,6 +28,8 @@ const App: React.FC = () => {
   const customVehicles = useAppStore((s) => s.customVehicles);
   const settings = useAppStore((s) => s.settings);
   const isCalculating = useAppStore((s) => s.isCalculating);
+  const unit = useAppStore((s) => s.unit);
+  const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
 
   const setResult = useAppStore((s) => s.setResult);
   const setPristine = useAppStore((s) => s.setPristine);
@@ -72,15 +78,17 @@ const App: React.FC = () => {
         return;
       }
       setResult(result);
-      // Сохраняем эталонные позиции для кнопки «Сбросить позиции»
       const pristineMap: Record<string, typeof result.variants[number]['items']> = {};
       result.variants.forEach((v) => {
         pristineMap[v.id] = v.items;
       });
       setPristine(pristineMap);
-      // По умолчанию выбираем вариант с лучшим заполнением (первый после сортировки)
-      const best = result.variants[0];
-      setActiveVariant(best.id);
+      // Preserve active variant if it still exists in new results
+      const currentActive = useAppStore.getState().activeVariant;
+      const preserved = currentActive && result.variants.some(v => v.id === currentActive)
+        ? currentActive
+        : result.variants[0].id;
+      setActiveVariant(preserved);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка при расчёте раскладки');
@@ -95,36 +103,52 @@ const App: React.FC = () => {
 
       <main className="app-layout flex-1">
         <div className="left-panel">
-          {/* Секция «Автомобиль» — сворачиваемый аккордеон */}
+          {/* Секция «Автомобиль» */}
           <div className="accordion-section">
-            <button className="accordion-toggle" onClick={() => setVehicleSectionOpen(!vehicleSectionOpen)}>
-              <span><Truck size={14} /> Автомобиль</span>
+            <button className="accordion-toggle" onClick={() => {
+              const next = !vehicleSectionOpen;
+              setVehicleSectionOpen(next);
+              if (next) setCargoSectionOpen(false);
+            }}>
+              <span>
+                <Truck size={14} /> Автомобиль
+                {!vehicleSectionOpen && vehicle && (
+                  <span style={{ fontWeight: 400, marginLeft: 6, fontSize: 11 }}>
+                    — {vehicle.name} ({toUnitDisplay(vehicle.length, unit)}×{toUnitDisplay(vehicle.width, unit)}×{toUnitDisplay(vehicle.height, unit)})
+                  </span>
+                )}
+              </span>
               <span>{vehicleSectionOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</span>
             </button>
             {vehicleSectionOpen && (
               <div className="accordion-content">
                 <VehicleSelector />
-                <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                  <button className="btn btn-sm" onClick={() => setMatcherOpen(true)}><Search size={14} /> Подобрать авто</button>
-                  <button className="btn btn-sm" onClick={() => setDetailsVehicleId(selectedVehicleId)}><ClipboardList size={14} /> Детали</button>
-                </div>
               </div>
             )}
           </div>
 
-          {/* Секция «Грузы» — сворачиваемый аккордеон */}
+          {/* Секция «Грузы» */}
           <div className="accordion-section" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <button className="accordion-toggle" onClick={() => setCargoSectionOpen(!cargoSectionOpen)}>
+            <button className="accordion-toggle" onClick={() => {
+              const next = !cargoSectionOpen;
+              setCargoSectionOpen(next);
+              if (next) setVehicleSectionOpen(false);
+            }}>
               <span><Package size={14} /> Грузы ({cargo.length})</span>
               <span>{cargoSectionOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</span>
             </button>
             {cargoSectionOpen && (
               <div className="cargo-section">
+                <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                  <button className="btn btn-sm" onClick={() => setMatcherOpen(true)}><Search size={14} /> Подобрать авто</button>
+                  <button className="btn btn-sm" onClick={() => setDetailsVehicleId(selectedVehicleId)}><ClipboardList size={14} /> Детали</button>
+                </div>
                 <CargoTable onCargoDetails={setDetailsCargoId} />
               </div>
             )}
           </div>
-          {/* Секция «Управление» — сворачиваемый аккордеон */}
+
+          {/* Секция «Управление» */}
           <div className="accordion-section">
             <button className="accordion-toggle" onClick={() => setControlSectionOpen(!controlSectionOpen)}>
               <span><Settings size={14} /> Управление</span>
@@ -160,7 +184,9 @@ const App: React.FC = () => {
                             const pristineMap: Record<string, typeof result.variants[number]['items']> = {};
                             result.variants.forEach((v) => { pristineMap[v.id] = v.items; });
                             setPristine(pristineMap);
-                            setActiveVariant(result.variants[0].id);
+                            const cur = useAppStore.getState().activeVariant;
+                            const keep = cur && result.variants.some(v => v.id === cur) ? cur : result.variants[0].id;
+                            setActiveVariant(keep);
                           }
                         } catch (err) { /* stacking recalc error */ }
                         finally { setCalculating(false); }
@@ -246,11 +272,12 @@ function SuggestionsPanel({ show, onToggle }: { show: boolean; onToggle: () => v
   const vehicle = getCurrentVehicle(useAppStore.getState().selectedVehicleId, useAppStore.getState().customVehicles);
   const result = useAppStore.getState().result;
   const activeVariant = useAppStore((s) => s.activeVariant);
+  const unit = useAppStore((s) => s.unit);
 
   const suggestions: PackingSuggestion[] = useMemo(() => {
     if (!result) return [];
-    return generateSuggestions(result, vehicle, activeVariant);
-  }, [result, vehicle, activeVariant]);
+    return generateSuggestions(result, vehicle, activeVariant, unit);
+  }, [result, vehicle, activeVariant, unit]);
 
   if (suggestions.length === 0) return null;
 

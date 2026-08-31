@@ -6,7 +6,7 @@ import { useState, useMemo } from 'react';
 import type { FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import type { Cargo, CargoShape } from '../../types';
-import { uid } from '../../utils/helpers';
+import { uid, fromUnit, toUnit, UNIT_LABEL } from '../../utils/helpers';
 import { getCargoPresets } from '../../lib/packer/presets';
 
 /** Валидация числового поля */
@@ -33,6 +33,7 @@ const FIELDS = {
 export default function AddCargoForm() {
   const addCargo = useAppStore((s) => s.addCargo);
   const customCargoPresets = useAppStore((s) => s.customCargoPresets);
+  const unit = useAppStore((s) => s.unit);
   const [error, setError] = useState('');
   const builtInPresets = getCargoPresets();
   const cargoPresets = [...builtInPresets, ...customCargoPresets];
@@ -58,10 +59,10 @@ export default function AddCargoForm() {
     const allErrors: string[] = [];
     const name = String(fd.get('name') || '').trim();
     if (!name) { allErrors.push('Укажите название'); }
-    const length = Number(fd.get('length'));
-    const width = Number(fd.get('width'));
-    const height = Number(fd.get('height'));
-    const diameter = Number(fd.get('diameter'));
+    const length = fromUnit(Number(fd.get('length')), unit);
+    const width = fromUnit(Number(fd.get('width')), unit);
+    const height = fromUnit(Number(fd.get('height')), unit);
+    const diameter = fromUnit(Number(fd.get('diameter')), unit);
     const weight = Number(fd.get('weight'));
     const shape = fd.get('shape') as CargoShape;
     const lengthErr = validateField(length, FIELDS.length.min, FIELDS.length.max, 'Длина');
@@ -93,10 +94,10 @@ export default function AddCargoForm() {
     const fd = new FormData(e.currentTarget);
     const name = String(fd.get('name') || '').trim();
     const shape = (fd.get('shape') as CargoShape) || 'box';
-    const length = Number(fd.get('length'));
-    const width = Number(fd.get('width'));
-    const height = Number(fd.get('height'));
-    const diameter = Number(fd.get('diameter'));
+    const length = fromUnit(Number(fd.get('length')), unit);
+    const width = fromUnit(Number(fd.get('width')), unit);
+    const height = fromUnit(Number(fd.get('height')), unit);
+    const diameter = fromUnit(Number(fd.get('diameter')), unit);
     const weight = Number(fd.get('weight'));
     const quantity = Math.max(1, Math.floor(Number(fd.get('quantity')) || 1));
 
@@ -142,12 +143,13 @@ export default function AddCargoForm() {
     const presetIndex = Number(e.target.value);
     if (presetIndex < 0) return;
     const preset = cargoPresets[presetIndex];
+    const conv = (mm: number) => Math.round(toUnit(mm, unit) * 100) / 100;
     setValues({
       name: preset.name,
-      length: String(preset.length),
-      width: String(preset.width),
-      height: String(preset.height),
-      diameter: String(preset.diameter || preset.width),
+      length: String(conv(preset.length)),
+      width: String(conv(preset.width)),
+      height: String(conv(preset.height)),
+      diameter: String(conv(preset.diameter || preset.width)),
       weight: String(preset.weight),
     });
     setTouched({});
@@ -158,12 +160,12 @@ export default function AddCargoForm() {
     (form.querySelector('[name="name"]') as HTMLInputElement).value = preset.name;
     (form.querySelector('[name="shape"]') as HTMLSelectElement).value = preset.shape;
     setShape(preset.shape);
-    (form.querySelector('[name="length"]') as HTMLInputElement).value = String(preset.length);
+    (form.querySelector('[name="length"]') as HTMLInputElement).value = String(conv(preset.length));
     if (preset.shape === 'box') {
-      (form.querySelector('[name="width"]') as HTMLInputElement).value = String(preset.width);
-      (form.querySelector('[name="height"]') as HTMLInputElement).value = String(preset.height);
+      (form.querySelector('[name="width"]') as HTMLInputElement).value = String(conv(preset.width));
+      (form.querySelector('[name="height"]') as HTMLInputElement).value = String(conv(preset.height));
     } else {
-      (form.querySelector('[name="diameter"]') as HTMLInputElement).value = String(preset.diameter || preset.width);
+      (form.querySelector('[name="diameter"]') as HTMLInputElement).value = String(conv(preset.diameter || preset.width));
     }
     (form.querySelector('[name="weight"]') as HTMLInputElement).value = String(preset.weight);
   };
@@ -182,7 +184,7 @@ export default function AddCargoForm() {
           <optgroup label="Стандартные">
             {builtInPresets.map((preset, idx) => (
               <option key={preset.name} value={idx}>
-                {preset.name} ({preset.length}×{preset.width}×{preset.height} мм, {preset.weight} кг)
+                {preset.name} ({toUnit(preset.length, unit)}×{toUnit(preset.width, unit)}×{toUnit(preset.height, unit)} {UNIT_LABEL[unit]}, {preset.weight} кг)
               </option>
             ))}
           </optgroup>
@@ -190,7 +192,7 @@ export default function AddCargoForm() {
             <optgroup label="Мои пресеты">
               {customCargoPresets.map((preset, idx) => (
                 <option key={preset.name + idx} value={builtInPresets.length + idx}>
-                  {preset.name} ({preset.length}×{preset.width}×{preset.height} мм, {preset.weight} кг)
+                  {preset.name} ({toUnit(preset.length, unit)}×{toUnit(preset.width, unit)}×{toUnit(preset.height, unit)} {UNIT_LABEL[unit]}, {preset.weight} кг)
                 </option>
               ))}
             </optgroup>
@@ -233,13 +235,13 @@ export default function AddCargoForm() {
         </div>
       )}
       <div className="form-group">
-        <label>Длина, мм</label>
+        <label>Длина, {UNIT_LABEL[unit]}</label>
         <input
           name="length"
           type="number"
           step="any"
-          min={FIELDS.length.min}
-          max={FIELDS.length.max}
+          min={toUnit(FIELDS.length.min, unit)}
+          max={toUnit(FIELDS.length.max, unit)}
           placeholder="1200"
           value={values.length ?? ''}
           onChange={(e) => handleChange('length', e.target.value)}
@@ -253,13 +255,13 @@ export default function AddCargoForm() {
       {shape === 'box' ? (
         <>
           <div className="form-group">
-            <label>Ширина, мм</label>
+            <label>Ширина, {UNIT_LABEL[unit]}</label>
             <input
               name="width"
               type="number"
               step="any"
-              min={FIELDS.width.min}
-              max={FIELDS.width.max}
+              min={toUnit(FIELDS.width.min, unit)}
+              max={toUnit(FIELDS.width.max, unit)}
               placeholder="800"
               value={values.width ?? ''}
               onChange={(e) => handleChange('width', e.target.value)}
@@ -271,13 +273,13 @@ export default function AddCargoForm() {
             )}
           </div>
           <div className="form-group">
-            <label>Высота, мм</label>
+            <label>Высота, {UNIT_LABEL[unit]}</label>
             <input
               name="height"
               type="number"
               step="any"
-              min={FIELDS.height.min}
-              max={FIELDS.height.max}
+              min={toUnit(FIELDS.height.min, unit)}
+              max={toUnit(FIELDS.height.max, unit)}
               placeholder="150"
               value={values.height ?? ''}
               onChange={(e) => handleChange('height', e.target.value)}
@@ -291,13 +293,13 @@ export default function AddCargoForm() {
         </>
       ) : (
         <div className="form-group">
-          <label>Диаметр, мм</label>
+          <label>Диаметр, {UNIT_LABEL[unit]}</label>
           <input
             name="diameter"
             type="number"
             step="any"
-            min={FIELDS.diameter.min}
-            max={FIELDS.diameter.max}
+            min={toUnit(FIELDS.diameter.min, unit)}
+            max={toUnit(FIELDS.diameter.max, unit)}
             placeholder="200"
             value={values.diameter ?? ''}
             onChange={(e) => handleChange('diameter', e.target.value)}

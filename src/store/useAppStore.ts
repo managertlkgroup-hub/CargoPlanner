@@ -13,6 +13,7 @@ import type {
   SavedSession,
   Theme,
   UnloadingPoint,
+  Unit,
   Vehicle,
 } from '../types';
 import { getDefaultVehicles, type CargoPreset } from '../lib/packer/presets';
@@ -32,6 +33,7 @@ const KEYS = {
   theme: 'mlp:theme',
   loadingPoints: 'mlp:loading-points',
   unloadingPoints: 'mlp:unloading-points',
+  unit: 'mlp:unit',
 };
 
 /**
@@ -56,6 +58,7 @@ interface AppState {
   selectedVehicleId: string;
   addCustomVehicle: (v: Vehicle) => void;
   removeCustomVehicle: (id: string) => void;
+  updateCustomVehicle: (id: string, patch: Partial<Vehicle>) => void;
   selectVehicle: (id: string) => void;
 
   // Грузы
@@ -78,6 +81,10 @@ interface AppState {
   // Настройки расчёта
   settings: PackSettings;
   setSettings: (s: PackSettings) => void;
+
+  // Глобальные единицы измерения (отображение/ввод)
+  unit: Unit;
+  setUnit: (u: Unit) => void;
 
   // Результат
   result: PackResult | null;
@@ -197,6 +204,13 @@ export const useAppStore = create<AppState>()(
         get().setResult(null);
         get().setActiveVariant(null);
       },
+      updateCustomVehicle: (id, patch) => {
+        const list = get().customVehicles.map((v) => (v.id === id ? { ...v, ...patch } : v));
+        saveToStorage(KEYS.vehicles, list);
+        set({ customVehicles: list });
+        get().setResult(null);
+        get().setActiveVariant(null);
+      },
       selectVehicle: (id) => {
         saveToStorage(KEYS.vehicleId, id);
         set({ selectedVehicleId: id });
@@ -280,6 +294,13 @@ export const useAppStore = create<AppState>()(
       setSettings: (s) => {
         saveToStorage(KEYS.settings, s);
         set({ settings: s });
+      },
+
+      // --- Единицы измерения ---
+      unit: loadFromStorage<Unit>(KEYS.unit, 'mm'),
+      setUnit: (u) => {
+        saveToStorage(KEYS.unit, u);
+        set({ unit: u });
       },
 
       // --- Результат ---
@@ -598,6 +619,7 @@ export const useAppStore = create<AppState>()(
         loadingPoints: s.loadingPoints,
         unloadingPoints: s.unloadingPoints,
         vehicleVisibilityMap: s.vehicleVisibilityMap,
+        unit: s.unit,
       }),
     },
   ),

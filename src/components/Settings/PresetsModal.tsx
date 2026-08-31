@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { getDefaultVehicles, CARGO_PRESETS, type CargoPreset } from '../../lib/packer/presets';
 import type { CargoShape } from '../../types';
+import { UNIT_LABEL, toUnit, fromUnit } from '../../utils/helpers';
 import CustomVehicleForm from '../VehicleSelector/CustomVehicleForm';
 
 interface Props {
@@ -56,6 +57,7 @@ export default function PresetsModal({ onClose }: Props) {
 function VehiclesTab() {
   const customVehicles = useAppStore((s) => s.customVehicles);
   const removeCustomVehicle = useAppStore((s) => s.removeCustomVehicle);
+  const unit = useAppStore((s) => s.unit);
   const [showAdd, setShowAdd] = useState(false);
   const [hiddenBuiltIn, setHiddenBuiltIn] = useState<Set<string>>(new Set());
 
@@ -88,7 +90,7 @@ function VehiclesTab() {
               padding: '6px 8px', borderRadius: 6, marginBottom: 2, fontSize: 13,
             }}
           >
-            <span>{v.name} — {v.length}×{v.width}×{v.height} мм, {v.maxWeight} кг</span>
+            <span>{v.name} — {toUnit(v.length, unit)}×{toUnit(v.width, unit)}×{toUnit(v.height, unit)} {UNIT_LABEL[unit]}, {v.maxWeight} кг</span>
             <button
               type="button"
               onClick={() => handleDeleteBuiltIn(v.id)}
@@ -117,7 +119,7 @@ function VehiclesTab() {
                    padding: '6px 8px', borderRadius: 6, marginBottom: 2, fontSize: 13,
                  }}
                >
-                 <span>{v.name} — {v.length}×{v.width}×{v.height} мм, {v.maxWeight} кг</span>
+            <span>{v.name} — {toUnit(v.length, unit)}×{toUnit(v.width, unit)}×{toUnit(v.height, unit)} {UNIT_LABEL[unit]}, {v.maxWeight} кг</span>
                  <button
                    type="button"
                    onClick={() => handleDeleteCustom(v.id)}
@@ -150,6 +152,7 @@ function VehiclesTab() {
 function CargoTab() {
   const customCargoPresets = useAppStore((s) => s.customCargoPresets);
   const removeCustomCargoPreset = useAppStore((s) => s.removeCustomCargoPreset);
+  const unit = useAppStore((s) => s.unit);
   const builtInPresets = CARGO_PRESETS;
   const [showAdd, setShowAdd] = useState(false);
   const [hiddenBuiltIn, setHiddenBuiltIn] = useState<Set<number>>(new Set());
@@ -170,7 +173,7 @@ function CargoTab() {
                 padding: '6px 8px', borderRadius: 6, marginBottom: 2, fontSize: 13,
               }}
             >
-              <span>{p.name} — {p.length}×{p.width}×{p.height} мм, {p.weight} кг</span>
+              <span>{p.name} — {toUnit(p.length, unit)}×{toUnit(p.width, unit)}×{toUnit(p.height, unit)} {UNIT_LABEL[unit]}, {p.weight} кг</span>
               <button
                 type="button"
                 onClick={() => {
@@ -204,7 +207,7 @@ function CargoTab() {
                   padding: '6px 8px', borderRadius: 6, marginBottom: 2, fontSize: 13,
                 }}
               >
-                <span>{p.name} — {p.length}×{p.width}×{p.height} мм, {p.weight} кг</span>
+                <span>{p.name} — {toUnit(p.length, unit)}×{toUnit(p.width, unit)}×{toUnit(p.height, unit)} {UNIT_LABEL[unit]}, {p.weight} кг</span>
                 <button
                   type="button"
                   onClick={() => removeCustomCargoPreset(idx)}
@@ -238,6 +241,7 @@ function CargoTab() {
 
 function AddCargoPresetForm({ onDone }: { onDone: () => void }) {
   const addCustomCargoPreset = useAppStore((s) => s.addCustomCargoPreset);
+  const unit = useAppStore((s) => s.unit);
   const [name, setName] = useState('');
   const [shape, setShape] = useState<CargoShape>('box');
   const [length, setLength] = useState(0);
@@ -254,8 +258,12 @@ function AddCargoPresetForm({ onDone }: { onDone: () => void }) {
     if (shape === 'cylinder' && !diameter) { setError('Укажите диаметр.'); return; }
 
     const preset: CargoPreset = {
-      name, shape, length, width, height, weight,
-      diameter: shape === 'cylinder' ? diameter : undefined,
+      name, shape,
+      length: fromUnit(length, unit),
+      width: fromUnit(width, unit),
+      height: fromUnit(height, unit),
+      weight,
+      diameter: shape === 'cylinder' ? fromUnit(diameter, unit) : undefined,
     };
     addCustomCargoPreset(preset);
     onDone();
@@ -275,23 +283,23 @@ function AddCargoPresetForm({ onDone }: { onDone: () => void }) {
         </select>
       </div>
       <div className="form-group">
-        <label>Длина, мм</label>
+        <label>Длина, {UNIT_LABEL[unit]}</label>
         <input type="number" min={1} value={length || ''} onChange={(e) => setLength(Number(e.target.value))} />
       </div>
       {shape === 'box' ? (
         <>
           <div className="form-group">
-            <label>Ширина, мм</label>
+            <label>Ширина, {UNIT_LABEL[unit]}</label>
             <input type="number" min={1} value={width || ''} onChange={(e) => setWidth(Number(e.target.value))} />
           </div>
           <div className="form-group">
-            <label>Высота, мм</label>
+            <label>Высота, {UNIT_LABEL[unit]}</label>
             <input type="number" min={1} value={height || ''} onChange={(e) => setHeight(Number(e.target.value))} />
           </div>
         </>
       ) : (
         <div className="form-group">
-          <label>Диаметр, мм</label>
+          <label>Диаметр, {UNIT_LABEL[unit]}</label>
           <input type="number" min={1} value={diameter || ''} onChange={(e) => setDiameter(Number(e.target.value))} />
         </div>
       )}

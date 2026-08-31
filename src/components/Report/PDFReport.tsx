@@ -13,7 +13,9 @@ import {
   pdf,
   Font,
 } from '@react-pdf/renderer';
-import type { Cargo, LayoutVariant, PackedItem, Vehicle } from '../../types';
+import type { Cargo, LayoutVariant, PackedItem, Vehicle, Unit } from '../../types';
+import { useAppStore } from '../../store/useAppStore';
+import { UNIT_LABEL, toUnit } from '../../utils/helpers';
 
 // Регистрация шрифтов с поддержкой кириллицы
 import robotoRegular from '../../assets/Roboto-Regular.ttf';
@@ -235,7 +237,8 @@ function CoverHeader() {
 }
 
 /** Информация об автомобиле */
-function VehicleInfo({ vehicle }: { vehicle: Vehicle }) {
+function VehicleInfo({ vehicle, unit }: { vehicle: Vehicle; unit: Unit }) {
+  const fmt = (mm: number) => Math.round(toUnit(mm, unit) * 100) / 100;
   const BODY_LABELS: Record<string, string> = {
     tent: 'Тентованный', van: 'Фургон', isothermal: 'Изотерм',
     refrigerator: 'Рефрижератор', side: 'Бортовой', platform: 'Платформа',
@@ -249,7 +252,7 @@ function VehicleInfo({ vehicle }: { vehicle: Vehicle }) {
       {vehicle.bodyType && (
         <Text style={styles.text}>Тип: {BODY_LABELS[vehicle.bodyType] || vehicle.bodyType}</Text>
       )}
-      <Text style={styles.text}>Кузов: {vehicle.length} × {vehicle.width} × {vehicle.height} мм</Text>
+      <Text style={styles.text}>Кузов: {fmt(vehicle.length)} × {fmt(vehicle.width)} × {fmt(vehicle.height)} {UNIT_LABEL[unit]}</Text>
       <Text style={styles.text}>Грузоподъёмность: {vehicle.maxWeight} кг</Text>
     </View>
   );
@@ -432,7 +435,8 @@ function ItemLegend({ items }: { items: PackedItem[] }) {
 }
 
 /** Таблица грузов */
-function CargoTable({ cargo, items }: { cargo: Cargo[]; items: PackedItem[] }) {
+function CargoTable({ cargo, items, unit }: { cargo: Cargo[]; items: PackedItem[]; unit: Unit }) {
+  const fmt = (mm: number) => Math.round(toUnit(mm, unit) * 100) / 100;
   const maxL = items.length > 0 ? Math.max(...items.map(i => layerOf(i))) : 0;
   const hasLayers = maxL > 0;
 
@@ -472,7 +476,7 @@ function CargoTable({ cargo, items }: { cargo: Cargo[]; items: PackedItem[] }) {
         <Text style={[styles.tableHeaderText, { width: COL_W.num }]}>№</Text>
         <Text style={[styles.tableHeaderText, { width: COL_W.name }]}>Название</Text>
         <Text style={[styles.tableHeaderText, { width: COL_W.shape }]}>Форма</Text>
-        <Text style={[styles.tableHeaderText, { width: COL_W.size }]}>Размеры, мм</Text>
+        <Text style={[styles.tableHeaderText, { width: COL_W.size }]}>Размеры, {UNIT_LABEL[unit]}</Text>
         <Text style={[styles.tableHeaderText, { width: COL_W.weight }]}>Вес</Text>
         <Text style={[styles.tableHeaderText, { width: COL_W.qty }]}>Кол-во</Text>
         {hasLayers && <Text style={[styles.tableHeaderText, { width: COL_W.layer }]}>Слой</Text>}
@@ -481,8 +485,8 @@ function CargoTable({ cargo, items }: { cargo: Cargo[]; items: PackedItem[] }) {
       {/* Строки данных */}
       {sorted.map(({ c, layer: li }, rowIdx) => {
         const size = c.shape === 'cylinder'
-          ? `Ø${c.diameter}×${c.length}`
-          : `${c.length}×${c.width ?? 0}×${c.height ?? 0}`;
+          ? `Ø${fmt(c.diameter ?? 0)}×${fmt(c.length)}`
+          : `${fmt(c.length)}×${fmt(c.width ?? 0)}×${fmt(c.height ?? 0)}`;
 
         return (
           <View
@@ -515,7 +519,7 @@ function CargoTable({ cargo, items }: { cargo: Cargo[]; items: PackedItem[] }) {
 
 // ─── Основной документ ─────────────────────────────────────
 
-function PDFDocument({ vehicle, cargo, variant }: ReportProps) {
+function PDFDocument({ vehicle, cargo, variant, unit }: ReportProps & { unit: Unit }) {
   const maxLayer = variant.items.length > 0
     ? Math.max(...variant.items.map(i => layerOf(i)))
     : 0;
@@ -529,7 +533,7 @@ function PDFDocument({ vehicle, cargo, variant }: ReportProps) {
         <CoverHeader />
 
         {/* Информация об автомобиле */}
-        <VehicleInfo vehicle={vehicle} />
+        <VehicleInfo vehicle={vehicle} unit={unit} />
 
         {/* Сводка */}
         <Metrics variant={variant} vehicle={vehicle} />
@@ -571,7 +575,7 @@ function PDFDocument({ vehicle, cargo, variant }: ReportProps) {
         <ItemLegend items={variant.items} />
 
         {/* Таблица грузов */}
-        <CargoTable cargo={cargo} items={variant.items} />
+        <CargoTable cargo={cargo} items={variant.items} unit={unit} />
 
         {/* Подвал */}
         <Text style={styles.footer}>CargoPlanner — стр. 1</Text>
@@ -587,8 +591,9 @@ export async function generatePdfWithReactPdf(
   cargo: Cargo[],
   variant: LayoutVariant,
 ): Promise<void> {
+  const unit = useAppStore.getState().unit;
   const blob = await pdf(
-    <PDFDocument vehicle={vehicle} cargo={cargo} variant={variant} />
+    <PDFDocument vehicle={vehicle} cargo={cargo} variant={variant} unit={unit} />
   ).toBlob();
 
   const url = URL.createObjectURL(blob);

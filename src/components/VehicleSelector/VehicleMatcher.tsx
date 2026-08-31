@@ -6,6 +6,7 @@ import { Search, Package, X, Check, AlertTriangle, Scale } from 'lucide-react';
 import { useMemo } from 'react';
 import { useAppStore, useAllVehicles } from '../../store/useAppStore';
 import { matchVehicles, type VehicleMatch } from '../../lib/vehicleMatcher';
+import { UNIT_LABEL, toUnit } from '../../utils/helpers';
 
 interface Props {
   onClose: () => void;
@@ -14,6 +15,7 @@ interface Props {
 export default function VehicleMatcher({ onClose }: Props) {
   const cargo = useAppStore((s) => s.cargo);
   const selectVehicle = useAppStore((s) => s.selectVehicle);
+  const unit = useAppStore((s) => s.unit);
   const vehicles = useAllVehicles();
 
   const matches = useMemo(() => matchVehicles(cargo, vehicles), [cargo, vehicles]);
@@ -72,7 +74,7 @@ export default function VehicleMatcher({ onClose }: Props) {
                   </div>
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                  {m.vehicle.length}×{m.vehicle.width}×{m.vehicle.height} мм • {m.vehicle.maxWeight} кг
+                  {Math.round(toUnit(m.vehicle.length, unit))}×{Math.round(toUnit(m.vehicle.width, unit))}×{Math.round(toUnit(m.vehicle.height, unit))} {UNIT_LABEL[unit]} • {m.vehicle.maxWeight} кг
                 </div>
                 <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 11 }}>
                   <span><Package size={12} /> {m.volumeFill}% объёма</span>

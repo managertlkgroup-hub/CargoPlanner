@@ -4,7 +4,8 @@
 
 import type { ComponentType } from 'react';
 import { Package, AlertTriangle, Scale, Layers, ArrowUp } from 'lucide-react';
-import type { PackResult, Vehicle } from '../../types';
+import type { PackResult, Vehicle, Unit } from '../../types';
+import { UNIT_LABEL, toUnit } from '../../utils/helpers';
 
 export interface PackingSuggestion {
   id: string;
@@ -22,6 +23,7 @@ export function generateSuggestions(
   result: PackResult,
   vehicle: Vehicle,
   activeVariantId?: string | null,
+  unit: Unit = 'mm',
 ): PackingSuggestion[] {
   const suggestions: PackingSuggestion[] = [];
   // Используем активный вариант, а не всегда variants[0]
@@ -82,7 +84,7 @@ export function generateSuggestions(
     suggestions.push({
       id: 'second-layer',
       icon: ArrowUp,
-      message: `Высота загрузки ${Math.round(maxY)} мм из ${vehicle.height} мм. Добавьте второй слой.`,
+      message: `Высота загрузки ${Math.round(toUnit(maxY, unit))} ${UNIT_LABEL[unit]} из ${Math.round(toUnit(vehicle.height, unit))} ${UNIT_LABEL[unit]}. Добавьте второй слой.`,
       cargoIds: [],
     });
   }
@@ -104,11 +106,11 @@ export function generateSuggestions(
     const avgX = cogX / totalW;
     const centerX = vehicle.length / 2;
     if (Math.abs(avgX - centerX) > vehicle.length * 0.2) {
-      const side = avgX < centerX ? 'задней' : 'передней';
+      const side = avgX < centerX ? 'передней' : 'задней';
       suggestions.push({
         id: 'balance-long',
         icon: Scale,
-        message: `Грузы смещены к ${side} части кузова (${Math.abs(Math.round(avgX - centerX))} мм). Распределите тяжёлые грузы равномернее.`,
+        message: `Грузы смещены к ${side} части кузова (${Math.round(toUnit(Math.abs(avgX - centerX), unit))} ${UNIT_LABEL[unit]}). Распределите тяжёлые грузы равномернее.`,
         cargoIds: [],
       });
     }
@@ -122,7 +124,7 @@ export function generateSuggestions(
       suggestions.push({
         id: 'balance-width',
         icon: Scale,
-        message: `Грузы смещены к ${sideZ} стороне кузова (${Math.abs(Math.round(avgZ - centerZ))} мм). Распределите грузы равномернее по ширине.`,
+        message: `Грузы смещены к ${sideZ} стороне кузова (${Math.round(toUnit(Math.abs(avgZ - centerZ), unit))} ${UNIT_LABEL[unit]}). Распределите грузы равномернее по ширине.`,
         cargoIds: [],
       });
     }

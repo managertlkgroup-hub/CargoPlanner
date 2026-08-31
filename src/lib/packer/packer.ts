@@ -156,10 +156,16 @@ function getOrientations(box: Box, mode: 'along' | 'across' | 'mixed'): Orientat
     }
   }
   
-  // Для 'mixed' разрешаем оба варианта для перебора лучшей ориентации
+  // Для 'mixed': сначала длинная сторона вдоль X (along-first), потом поперёк (across)
+  if (isLonger) {
+    return [
+      { dx: box.length, dy: box.height, dz: box.width, rotY: 0 },
+      { dx: box.width, dy: box.height, dz: box.length, rotY: 90 },
+    ];
+  }
   return [
-    { dx: box.length, dy: box.height, dz: box.width, rotY: 0 },
     { dx: box.width, dy: box.height, dz: box.length, rotY: 90 },
+    { dx: box.length, dy: box.height, dz: box.width, rotY: 0 },
   ];
 }
 
@@ -190,10 +196,6 @@ function packIntoBin(
     sorted = [...boxes].sort((a, b) => (b.length * b.width) - (a.length * a.width));
   }
 
-  // Счётчик уже размещённых ориентаций (только для mixed)
-  let alongCount = 0;
-  let acrossCount = 0;
-
   for (let boxIdx = 0; boxIdx < sorted.length; boxIdx++) {
     const box = sorted[boxIdx];
     const orientations = getOrientations(box, sortMode);
@@ -203,25 +205,13 @@ function packIntoBin(
     // Сортируем точки для приоритетного размещения
     points.sort((a, b) => {
       if (a.y !== b.y) return a.y - b.y;
-      if (sortMode === 'along') {
-        // along: длинная сторона вдоль X → заполняем по X (min Z, потом min X)
-        if (a.z !== b.z) return a.z - b.z;
-        return a.x - b.x;
-      } else if (sortMode === 'across') {
-        // across: длинная сторона вдоль Z → заполняем по Z (min X, потом min Z)
+      if (sortMode === 'across') {
         if (a.x !== b.x) return a.x - b.x;
         return a.z - b.z;
       } else {
-        // mixed: гибридный подход — сначала заполняем «вдоль» (по X, min Z), потом «поперёк»
-        if (alongCount <= acrossCount) {
-          // Приоритет «вдоль»: min Z, потом min X
-          if (a.z !== b.z) return a.z - b.z;
-          return a.x - b.x;
-        } else {
-          // Приоритет «поперёк»: min X, потом min Z
-          if (a.x !== b.x) return a.x - b.x;
-          return a.z - b.z;
-        }
+        // along & mixed: min Z, then min X
+        if (a.z !== b.z) return a.z - b.z;
+        return a.x - b.x;
       }
     });
 
@@ -282,53 +272,34 @@ function packIntoBin(
         }
         if (usedWeight + box.weight > maxWeight) continue;
 
-        // === SCORING WITH COMPACTNESS & STACKING ===
-        // Compute bounding box after hypothetical placement
+        // === SCORING ===
+        // Tiered scoring: Y dominates (floor-first), then directional fill,
+        // then compactness. Stacking happens naturally when floor is full.
         const newMaxX = Math.max(currentMaxX, point.x + placedLength);
         const newMaxZ = Math.max(currentMaxZ, point.z + placedWidth);
-        // Compactness: minimize the larger dimension of the bounding box
-        // This favors 5×2 (max=6000) over 10×1 (max=12000)
         const footprintMax = Math.max(newMaxX, newMaxZ);
+
+        const Y_W = 1e9;
+        const PRIM = 1e6;
+        const SEC = 1e3;
+        const CMP = 100;
 
         let score: number;
 
-        // Y multiplier is deliberately reduced (1e4 vs 1e9) so that when
-        // maxStackHeight > 0, the algorithm prefers stacking identical boxes
-        // vertically (footprintMax stays the same) over spreading them on the floor
-        // (footprintMax grows). Without stacking (maxStackHeight=0), only Y=0
-        // points exist, so the Y term is irrelevant.
-        const yMult = 1e4;
-
         if (sortMode === 'along') {
-          // along: Bottom-Left-Fill — Y first, then min Z (front), then min X (left), then compactness
-          score = point.y * yMult + point.z * 1e5 + point.x * 1e3 + footprintMax * 100;
+          // along: long side along X, fill rows by Z (front→back), within row fill by X
+          score = point.y * Y_W + point.z * PRIM + point.x * SEC + footprintMax * CMP;
         } else if (sortMode === 'across') {
-          // across: Bottom-Left-Fill — Y first, then min X (left), then min Z (front), then compactness
-          score = point.y * yMult + point.x * 1e5 + point.z * 1e3 + footprintMax * 100;
+          // across: long side along Z, fill columns by X (left→right), within column fill by Z
+          score = point.y * Y_W + point.x * PRIM + point.z * SEC + footprintMax * CMP;
         } else {
-          // mixed: Bottom-Left-Fill — Y first, then min Z, then min X, then compactness
-          score = point.y * yMult + point.z * 1e5 + point.x * 1e3 + footprintMax * 100;
-          // Гибридный бонус: когда alongCount <= acrossCount, сильно предпочитаем along (rotY=0)
-          const isAlong = orientation.rotY === 0;
-          if (alongCount <= acrossCount) {
-            // Заполняем «вдоль» — предпочитаем rotY=0 и min Z (заполнение строки)
-            score += isAlong ? 0 : 5e5; // сильный штраф за «поперёк» пока заполняем «вдоль»
-            score += point.z * 100 + point.x; // min Z → заполняем строки
-          } else {
-            // Ряд «вдоль» заполнен — заполняем «поперёк»
-            score += isAlong ? 5e5 : 0; // штраф за «вдоль» теперь
-            score += point.x * 100 + point.z; // min X → заполняем столбцы
-          }
-          // Бонус за стекинг: идентичный груз точно поверх
-          if (point.y > 0 && settings.maxStackHeight > 0) {
-            const stackBonus = placed.some(p =>
-              Math.abs(p.x - point.x) < 0.01 &&
-              Math.abs(p.z - point.z) < 0.01 &&
-              Math.abs(p.y + p.placedHeight - point.y) < 0.01 &&
-              Math.abs(p.placedLength - placedLength) < 0.01 &&
-              Math.abs(p.placedWidth - placedWidth) < 0.01
-            ) ? -1e7 : 0;
-            score += stackBonus;
+          // mixed: prefer along orientation (long side along X), fill like along,
+          // with across as fallback when along placement doesn't fit
+          score = point.y * Y_W + point.z * PRIM + point.x * SEC + footprintMax * CMP;
+          // Penalize across orientation (long side not along X) except in leftover gaps
+          const isAlong = placedLength >= placedWidth;
+          if (!isAlong) {
+            score += PRIM * 100;
           }
         }
 
@@ -353,11 +324,6 @@ function packIntoBin(
       };
       placed.push(placedBox);
 
-      // Трекаем количество ориентаций для mixed
-      if (sortMode === 'mixed') {
-        if (orientation.rotY === 0) alongCount++;
-        else acrossCount++;
-      }
       usedWeight += box.weight;
 
       // Добавляем новые крайние точки после размещения груза
