@@ -141,7 +141,7 @@ export default function CargoItem3D({
               ? `Цилиндр Ø${Math.round(diameter)}×${Math.round(item.dimensions.length)} мм`
               : `${Math.round(item.dimensions.length)}×${Math.round(item.dimensions.width)}×${Math.round(item.dimensions.height)} мм`}`}
             {`\nВес: ${item.weight} кг`}
-            {isOversize ? `\n⚠️ Негабаритный` : ''}
+            {isOversize ? `\n⚠ Негабаритный` : ''}
             {`\nПозиция: x=${Math.round(item.position.x)} y=${Math.round(item.position.y)} z=${Math.round(item.position.z)}`}
             {`\nПоворот Y: ${Math.round(item.rotationY ?? 0)}°`}
           </div>

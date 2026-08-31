@@ -3,6 +3,7 @@
 // ============================================================================
 
 import { useState } from 'react';
+import { Save } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 
 interface Props {
@@ -26,7 +27,7 @@ export default function SessionModal({ onClose }: Props) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>💾 Сессии</h3>
+        <h3><Save size={16} /> Сессии</h3>
         <div className="row mb-2">
           <input
             type="text"

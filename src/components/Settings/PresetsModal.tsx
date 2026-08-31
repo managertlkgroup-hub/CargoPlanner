@@ -1,4 +1,4 @@
-import { Package, Truck } from 'lucide-react';
+import { Package, Truck, X, Save } from 'lucide-react';
 // ============================================================================
 // Модальное окно управления пресетами (автомобили + грузы)
 // ============================================================================
@@ -97,37 +97,37 @@ function VehiclesTab() {
                 color: 'var(--color-danger)', fontWeight: 700, fontSize: 14, padding: '0 4px',
               }}
               title="Скрыть"
-            >
-              ✕
-            </button>
-          </div>
-        ))}
-
-        {/* Custom presets */}
-        {customVehicles.length > 0 && (
-          <>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginTop: 12, marginBottom: 4 }}>
-              Пользовательские
-            </div>
-            {customVehicles.map((v) => (
-              <div
-                key={v.id}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '6px 8px', borderRadius: 6, marginBottom: 2, fontSize: 13,
-                }}
               >
-                <span>{v.name} — {v.length}×{v.width}×{v.height} мм, {v.maxWeight} кг</span>
-                <button
-                  type="button"
-                  onClick={() => handleDeleteCustom(v.id)}
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: 'var(--color-danger)', fontWeight: 700, fontSize: 14, padding: '0 4px',
-                  }}
-                  title="Удалить"
-                >
-                  ✕
+               <X size={14} />
+             </button>
+           </div>
+         ))}
+
+         {/* Custom presets */}
+         {customVehicles.length > 0 && (
+           <>
+             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginTop: 12, marginBottom: 4 }}>
+               Пользовательские
+             </div>
+             {customVehicles.map((v) => (
+               <div
+                 key={v.id}
+                 style={{
+                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                   padding: '6px 8px', borderRadius: 6, marginBottom: 2, fontSize: 13,
+                 }}
+               >
+                 <span>{v.name} — {v.length}×{v.width}×{v.height} мм, {v.maxWeight} кг</span>
+                 <button
+                   type="button"
+                   onClick={() => handleDeleteCustom(v.id)}
+                   style={{
+                     background: 'none', border: 'none', cursor: 'pointer',
+                     color: 'var(--color-danger)', fontWeight: 700, fontSize: 14, padding: '0 4px',
+                   }}
+                   title="Удалить"
+                 >
+                   <X size={14} />
                 </button>
               </div>
             ))}
@@ -184,7 +184,7 @@ function CargoTab() {
                 }}
                 title="Скрыть"
               >
-                ✕
+                <X size={14} />
               </button>
             </div>
           )
@@ -214,7 +214,7 @@ function CargoTab() {
                   }}
                   title="Удалить"
                 >
-                  ✕
+                  <X size={14} />
                 </button>
               </div>
             ))}
@@ -302,7 +302,7 @@ function AddCargoPresetForm({ onDone }: { onDone: () => void }) {
       {error && <div className="form-group full text-danger" style={{ fontSize: 12 }}>{error}</div>}
       <div className="form-group full">
         <button type="button" className="btn btn-primary w-full" onClick={handleSave}>
-          💾 Сохранить пресет
+          <Save size={14} /> Сохранить пресет
         </button>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { useActiveVariant, useSelectedVehicle } from '../../store/useAppStore';
 import { formatNumber, volumeToM3 } from '../../utils/helpers';
 import { calculateCOG } from '../../lib/physics/cog';
@@ -103,7 +104,7 @@ export default function MetricsPanel() {
       {cog && (
         <div className="metric-card" style={{ gridColumn: 'span 3' }}>
           <div className={`metric-value ${cog.status === 'ok' ? 'cog-status-ok' : cog.status === 'warning' ? 'cog-status-warning' : 'cog-status-danger'}`} style={{ fontSize: 14 }}>
-            {cog.status === 'ok' ? '✅' : cog.status === 'warning' ? '⚠️' : '❌'} Баланс загрузки
+            {cog.status === 'ok' ? <CheckCircle size={14} /> : cog.status === 'warning' ? <AlertTriangle size={14} /> : <XCircle size={14} />} Баланс загрузки
           </div>
           <div className="metric-label">
             {cog.status === 'danger'
@@ -120,7 +121,7 @@ export default function MetricsPanel() {
       )}
       {oversizeCount > 0 && (
         <div className="metric-card">
-          <div className="metric-value" style={{ color: 'var(--color-danger)', fontSize: 14 }}>⚠️ Негабарит</div>
+          <div className="metric-value" style={{ color: 'var(--color-danger)', fontSize: 14 }}><AlertTriangle size={14} /> Негабарит</div>
           <div className="metric-label">Грузов: {oversizeCount}</div>
         </div>
       )}

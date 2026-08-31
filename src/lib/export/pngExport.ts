@@ -152,11 +152,11 @@ export async function exportSceneToPng(
     ctx.textAlign = 'left';
 
     const metrics = [
-      `🚗 ${vehicle.name} (${vehicle.length}×${vehicle.width}×${vehicle.height} мм)`,
-      `📦 Грузов: ${variant.items.length}`,
-      `📐 Слоёв: ${[...new Set(variant.items.map(i => layerOf(i)))].length}`,
-      `📊 Заполнение: ${variant.volumeFill ?? 0}%`,
-      `⚖️ Вес: ${variant.weightFill ?? 0}%`,
+      `${vehicle.name} (${vehicle.length}×${vehicle.width}×${vehicle.height} мм)`,
+      `Грузов: ${variant.items.length}`,
+      `Слоёв: ${[...new Set(variant.items.map(i => layerOf(i)))].length}`,
+      `Заполнение: ${variant.volumeFill ?? 0}%`,
+      `Вес: ${variant.weightFill ?? 0}%`,
     ];
     metrics.forEach((m, i) => {
       ctx.fillText(m, PAD + 10 * S, metricsY + 18 * S + i * 18 * S);

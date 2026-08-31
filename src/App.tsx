@@ -6,7 +6,7 @@ import Footer from './components/Layout/Footer';
 import VehicleSelector from './components/VehicleSelector/VehicleSelector';
 import CargoTable from './components/CargoTable/CargoTable';
 import Scene3D from './components/Scene3D/Scene3D';
-import { Search, ClipboardList, Package, Box, Grid3x3, Lightbulb, Truck, Settings } from 'lucide-react';
+import { Search, ClipboardList, Package, Box, Grid3x3, Lightbulb, Truck, Settings, ChevronDown, ChevronRight, X } from 'lucide-react';
 import Scene2D from './components/Scene2D/Scene2D';
 import VariantTabs from './components/VariantTabs/VariantTabs';
 import MetricsPanel from './components/MetricsPanel/MetricsPanel';
@@ -99,7 +99,7 @@ const App: React.FC = () => {
           <div className="accordion-section">
             <button className="accordion-toggle" onClick={() => setVehicleSectionOpen(!vehicleSectionOpen)}>
               <span><Truck size={14} /> Автомобиль</span>
-              <span>{vehicleSectionOpen ? '▼' : '▶'}</span>
+              <span>{vehicleSectionOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</span>
             </button>
             {vehicleSectionOpen && (
               <div className="accordion-content">
@@ -116,7 +116,7 @@ const App: React.FC = () => {
           <div className="accordion-section" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <button className="accordion-toggle" onClick={() => setCargoSectionOpen(!cargoSectionOpen)}>
               <span><Package size={14} /> Грузы ({cargo.length})</span>
-              <span>{cargoSectionOpen ? '▼' : '▶'}</span>
+              <span>{cargoSectionOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</span>
             </button>
             {cargoSectionOpen && (
               <div className="cargo-section">
@@ -128,7 +128,7 @@ const App: React.FC = () => {
           <div className="accordion-section">
             <button className="accordion-toggle" onClick={() => setControlSectionOpen(!controlSectionOpen)}>
               <span><Settings size={14} /> Управление</span>
-              <span>{controlSectionOpen ? '▼' : '▶'}</span>
+              <span>{controlSectionOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</span>
             </button>
             {controlSectionOpen && (
               <div className="accordion-content">
@@ -225,7 +225,7 @@ const App: React.FC = () => {
               className="error-toast-close"
               aria-label="Закрыть"
             >
-              ✕
+              <X size={14} />
             </button>
           </div>
         </div>
@@ -257,16 +257,19 @@ function SuggestionsPanel({ show, onToggle }: { show: boolean; onToggle: () => v
   return (
     <div style={{ flexShrink: 0 }}>
       <button className="btn btn-sm w-full" onClick={onToggle} style={{ marginBottom: 4 }}>
-        <Lightbulb size={14} /> Подсказки ({suggestions.length}) {show ? '▲' : '▼'}
+        <Lightbulb size={14} /> Подсказки ({suggestions.length}) {show ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
       </button>
       {show && (
         <div className="suggestions-list">
-          {suggestions.map((s) => (
-            <div key={s.id} className="suggestion-item">
-              <span className="suggestion-icon">{s.icon}</span>
-              <span>{s.message}</span>
-            </div>
-          ))}
+          {suggestions.map((s) => {
+            const Icon = s.icon;
+            return (
+              <div key={s.id} className="suggestion-item">
+                <span className="suggestion-icon"><Icon size={16} /></span>
+                <span>{s.message}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

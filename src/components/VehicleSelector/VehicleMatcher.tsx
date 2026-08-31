@@ -1,4 +1,4 @@
-import { Search, Package } from 'lucide-react';
+import { Search, Package, X, Check, AlertTriangle, Scale } from 'lucide-react';
 // ============================================================================
 // Модальное окно автоподбора автомобиля под грузы
 // ============================================================================
@@ -30,7 +30,7 @@ export default function VehicleMatcher({ onClose }: Props) {
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 560 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h3 style={{ margin: 0 }}><Search size={18} /> Подбор автомобиля</h3>
-          <button onClick={onClose} className="btn btn-sm">✕</button>
+          <button onClick={onClose} className="btn btn-sm"><X size={14} /></button>
         </div>
 
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
@@ -59,7 +59,7 @@ export default function VehicleMatcher({ onClose }: Props) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <strong style={{ fontSize: 13 }}>
-                      {fits ? '✅' : '⚠️'} {m.vehicle.name}
+                      {fits ? <Check size={14} /> : <AlertTriangle size={14} />} {m.vehicle.name}
                     </strong>
                     {m.vehicle.bodyType && (
                       <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 8 }}>
@@ -76,7 +76,7 @@ export default function VehicleMatcher({ onClose }: Props) {
                 </div>
                 <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 11 }}>
                   <span><Package size={12} /> {m.volumeFill}% объёма</span>
-                  <span>⚖️ {m.weightFill}% веса</span>
+                  <span><Scale size={12} /> {m.weightFill}% веса</span>
                 </div>
               </div>
             );

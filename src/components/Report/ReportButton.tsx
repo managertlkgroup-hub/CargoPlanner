@@ -2,6 +2,7 @@
 // Кнопки формирования отчётов (PDF и Excel)
 // ============================================================================
 
+import { FileText, Table } from 'lucide-react';
 import { getCurrentVehicle, useActiveVariant } from '../../store/useAppStore';
 import { useAppStore } from '../../store/useAppStore';
 
@@ -44,10 +45,10 @@ export default function ReportButton() {
   return (
     <div className="row">
       <button className="btn btn-primary" onClick={handlePdf}>
-        📄 Отчёт PDF
+        <FileText size={14} /> Отчёт PDF
       </button>
       <button className="btn btn-success" onClick={handleXlsx}>
-        📊 Экспорт в Excel
+        <Table size={14} /> Экспорт в Excel
       </button>
     </div>
   );

@@ -254,7 +254,7 @@ const Scene3D: React.FC = () => {
                   background: visibleLayer === li ? LAYER_COLORS_3D[li] : 'rgba(0,0,0,0.5)',
                   color: '#fff', cursor: 'pointer', fontWeight: 600,
                 }}
-              >{li === 0 ? '🟢 0' : `🔵 ${li}`}</button>
+              ><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: LAYER_COLORS_3D[li] }} /> {li}</button>
             ))}
           </div>
         );

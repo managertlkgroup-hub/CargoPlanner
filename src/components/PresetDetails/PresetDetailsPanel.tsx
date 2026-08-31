@@ -1,4 +1,4 @@
-import { Truck, Package, Pencil, ClipboardList } from 'lucide-react';
+import { Truck, Package, Pencil, ClipboardList, X, Save, AlertTriangle } from 'lucide-react';
 // ============================================================================
 // Выдвижная панель с деталями пресета (автомобиль или груз)
 // ============================================================================
@@ -61,7 +61,7 @@ export function VehicleDetailsPanel({ vehicleId, onClose }: VehiclePanelProps) {
     <div className="slide-panel">
       <div className="slide-panel-header">
         <strong><Truck size={14} /> {vehicle.name}</strong>
-        <button onClick={onClose} className="btn btn-sm">✕</button>
+        <button onClick={onClose} className="btn btn-sm"><X size={14} /></button>
       </div>
       <div className="slide-panel-body">
         {vehicle.bodyType && (
@@ -178,7 +178,7 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
     <div className="slide-panel">
       <div className="slide-panel-header">
         <strong><Package size={14} /> {item.name}</strong>
-        <button onClick={onClose} className="btn btn-sm">✕</button>
+        <button onClick={onClose} className="btn btn-sm"><X size={14} /></button>
       </div>
       <div className="slide-panel-body">
         {editing ? (
@@ -240,7 +240,7 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
               </label>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button className="btn btn-primary btn-sm" onClick={handleSave}>💾 Сохранить</button>
+              <button className="btn btn-primary btn-sm" onClick={handleSave}><Save size={12} /> Сохранить</button>
               <button className="btn btn-sm" onClick={() => setEditing(false)}>Отмена</button>
             </div>
           </div>
@@ -266,7 +266,7 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
             </div>
             {item.isOversize && (
               <div style={{ fontSize: 12, color: 'var(--color-danger)', marginBottom: 4 }}>
-                ⚠️ Негабаритный груз
+                <AlertTriangle size={12} /> Негабаритный груз
               </div>
             )}
             <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>

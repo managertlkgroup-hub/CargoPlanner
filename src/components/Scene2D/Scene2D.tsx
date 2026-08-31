@@ -31,6 +31,9 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
     offsetZ: number;
   } | null>(null);
 
+  // Состояние перетаскивания для визуальной обратной связи (подсветка + координаты)
+  const [dragState, setDragState] = useState<{ itemId: string } | null>(null);
+
   // Track last hovered item for R key rotation
   const lastHoveredIdRef = useRef<string | null>(null);
 
@@ -173,6 +176,30 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
       const fontSize = Math.min(11, Math.max(7, Math.min(itemL, itemW) / 5));
       ctx.font = 'bold ' + fontSize + 'px system-ui';
 
+      const isDragging = dragRef.current?.itemId === item.id;
+      // Подсветка перетаскиваемого груза
+      if (isDragging) {
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.15)';
+        if (isVertCyl) {
+          const rad3 = Math.min(itemL, itemW) / 2;
+          ctx.beginPath();
+          ctx.arc(itemX + itemL / 2, itemY + itemW / 2, rad3, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillRect(itemX, itemY, itemL, itemW);
+        }
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 4;
+        if (isVertCyl) {
+          const rad4 = Math.min(itemL, itemW) / 2;
+          ctx.beginPath();
+          ctx.arc(itemX + itemL / 2, itemY + itemW / 2, rad4, 0, Math.PI * 2);
+          ctx.stroke();
+        } else {
+          ctx.strokeRect(itemX, itemY, itemL, itemW);
+        }
+      }
+
       // Layer badge in top-right corner (if stacking is active)
       const maxLayer = Math.max(...variant.items.map(it => Math.round(it.position.y / Math.max(1, it.dimensions.height))));
       if (maxLayer > 0) {
@@ -254,6 +281,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
           offsetX: mx - itemX,
           offsetZ: my - itemY,
         };
+        setDragState({ itemId: item.id });
         canvas.style.cursor = 'grabbing';
       }
     },
@@ -327,6 +355,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
   const handleMouseUp = useCallback(() => {
     if (canvasRef.current) canvasRef.current.style.cursor = 'default';
     dragRef.current = null;
+    setDragState(null);
   }, []);
 
   // Keyboard shortcuts: R (rotate), ↑ (up layer), ↓ (down layer), S (smart stack)
@@ -428,9 +457,43 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
           <strong>{tooltipData.item.name}</strong>
           {`\n${Math.round(tooltipData.item.dimensions.length)}×${Math.round(tooltipData.item.dimensions.width)}×${Math.round(tooltipData.item.dimensions.height)} мм`}
           {`\nВес: ${tooltipData.item.weight} кг`}
-          {tooltipData.item.isOversize ? `\n⚠️ Негабаритный` : ''}
+          {tooltipData.item.isOversize ? '\n⚠ Негабаритный' : ''}
         </div>
       )}
+
+      {/* Оверлей координат при перетаскивании */}
+      {dragState && variant && (() => {
+        const dragged = variant.items.find((it) => it.id === dragState.itemId);
+        if (!dragged) return null;
+        const { scale, offsetX, offsetY } = layoutRef.current;
+        const rotY = dragged.rotationY ?? dragged.rotation?.y ?? 0;
+        let dL = dragged.dimensions.length;
+        let dW = dragged.dimensions.width;
+        if (Math.abs(rotY % 180) === 90) { [dL, dW] = [dW, dL]; }
+        const cx = offsetX + (dragged.position.x + dL / 2) * scale;
+        const cy = offsetY + (dragged.position.z + dW / 2) * scale;
+        return (
+          <div
+            style={{
+              position: 'absolute',
+              left: Math.max(0, Math.min(cx - 80, dimensions.w - 160)),
+              top: Math.max(0, cy - 30),
+              background: 'rgba(245,158,11,0.95)',
+              color: '#fff',
+              padding: '3px 8px',
+              borderRadius: 6,
+              fontSize: 11,
+              fontWeight: 600,
+              pointerEvents: 'none',
+              zIndex: 21,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            X: {Math.round(dragged.position.x)} · Z: {Math.round(dragged.position.z)}
+          </div>
+        );
+      })()}
 
       {/* Легенда по слоям + выбор слоя для перетаскивания */}
       {variant && variant.items.length > 0 && (() => {

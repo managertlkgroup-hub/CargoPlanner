@@ -2,11 +2,14 @@
 // AI-подсказки по улучшению упаковки
 // ============================================================================
 
+import type { ComponentType } from 'react';
+import { Package, AlertTriangle, Scale, Layers, ArrowUp } from 'lucide-react';
 import type { PackResult, Vehicle } from '../../types';
 
 export interface PackingSuggestion {
   id: string;
-  icon: string;
+  /** Lucide-иконка (компонент) для отображения рядом с подсказкой */
+  icon: ComponentType<{ size?: number | string; className?: string }>;
   message: string;
   /** Грузы, к которым относится подсказка */
   cargoIds: string[];
@@ -31,7 +34,7 @@ export function generateSuggestions(
   if (variant.volumeFill < 50) {
     suggestions.push({
       id: 'low-fill',
-      icon: '📦',
+      icon: Package,
       message: `Заполнение ${variant.volumeFill}% — попробуйте добавить больше грузов или увеличить количество.`,
       cargoIds: [],
     });
@@ -42,7 +45,7 @@ export function generateSuggestions(
   if (result.variants.some(v => v.items.length < totalCargoCount)) {
     suggestions.push({
       id: 'unplaced',
-      icon: '⚠️',
+      icon: AlertTriangle,
       message: 'Некоторые грузы не поместились. Попробуйте другой режим или включите штабелирование.',
       cargoIds: [],
     });
@@ -52,7 +55,7 @@ export function generateSuggestions(
   if (variant.weightFill > 85) {
     suggestions.push({
       id: 'weight-near-limit',
-      icon: '⚖️',
+      icon: Scale,
       message: `Вес загрузки ${variant.weightFill}% — близко к пределу. Распределите вес равномерно.`,
       cargoIds: variant.items.map(it => it.id),
     });
@@ -66,7 +69,7 @@ export function generateSuggestions(
     if (stackableFloor.length >= 2) {
       suggestions.push({
         id: 'enable-stacking',
-        icon: '📐',
+        icon: Layers,
         message: `${stackableFloor.length} штабелируемых грузов на полу. Включите штабелирование для экономии места.`,
         cargoIds: stackableFloor.map(it => it.id),
       });
@@ -78,7 +81,7 @@ export function generateSuggestions(
   if (maxY < vehicle.height * 0.6 && floorItems.length > 2) {
     suggestions.push({
       id: 'second-layer',
-      icon: '⬆️',
+      icon: ArrowUp,
       message: `Высота загрузки ${Math.round(maxY)} мм из ${vehicle.height} мм. Добавьте второй слой.`,
       cargoIds: [],
     });
@@ -104,7 +107,7 @@ export function generateSuggestions(
       const side = avgX < centerX ? 'задней' : 'передней';
       suggestions.push({
         id: 'balance-long',
-        icon: '⚖️',
+        icon: Scale,
         message: `Грузы смещены к ${side} части кузова (${Math.abs(Math.round(avgX - centerX))} мм). Распределите тяжёлые грузы равномернее.`,
         cargoIds: [],
       });
@@ -118,7 +121,7 @@ export function generateSuggestions(
       const sideZ = avgZ < centerZ ? 'левую' : 'правую';
       suggestions.push({
         id: 'balance-width',
-        icon: '⚖️',
+        icon: Scale,
         message: `Грузы смещены к ${sideZ} стороне кузова (${Math.abs(Math.round(avgZ - centerZ))} мм). Распределите грузы равномернее по ширине.`,
         cargoIds: [],
       });
