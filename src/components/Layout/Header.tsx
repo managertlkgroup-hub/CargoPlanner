@@ -75,31 +75,34 @@ export default function Header({ onOpenSettings }: HeaderProps) {
       </div>
 
       <div className="header-actions">
-        <div style={{ display: 'flex', gap: 2 }} title="Единицы измерения">
-          {UNITS.map((u) => (
-            <button
-              key={u}
-              type="button"
-              className={`btn btn-sm ${unit === u ? 'btn-primary' : ''}`}
-              style={{ padding: '4px 8px' }}
-              onClick={() => setUnit(u)}
-            >
-              {UNIT_LABEL[u]}
-            </button>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: 2 }} title="Единицы веса">
-          {WEIGHT_UNITS.map((u) => (
-            <button
-              key={u}
-              type="button"
-              className={`btn btn-sm ${weightUnit === u ? 'btn-primary' : ''}`}
-              style={{ padding: '4px 8px' }}
-              onClick={() => setWeightUnit(u)}
-            >
-              {WEIGHT_UNIT_LABEL[u]}
-            </button>
-          ))}
+        <div className="unit-switcher">
+          <span className="unit-switcher-title">Единицы измерения</span>
+          <div className="unit-group">
+            <span className="unit-group-label">Размеры:</span>
+            {UNITS.map((u) => (
+              <button
+                key={u}
+                type="button"
+                className={`btn btn-sm unit-btn ${unit === u ? 'btn-primary' : ''}`}
+                onClick={() => setUnit(u)}
+              >
+                {UNIT_LABEL[u]}
+              </button>
+            ))}
+          </div>
+          <div className="unit-group">
+            <span className="unit-group-label">Вес:</span>
+            {WEIGHT_UNITS.map((u) => (
+              <button
+                key={u}
+                type="button"
+                className={`btn btn-sm unit-btn ${weightUnit === u ? 'btn-primary' : ''}`}
+                onClick={() => setWeightUnit(u)}
+              >
+                {WEIGHT_UNIT_LABEL[u]}
+              </button>
+            ))}
+          </div>
         </div>
         <button className="btn btn-sm" onClick={() => setPresetsOpen(true)}>
           <Package size={14} /> Пресеты
