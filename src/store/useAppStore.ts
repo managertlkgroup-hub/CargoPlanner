@@ -69,6 +69,7 @@ interface AppState {
   removeCargo: (ids: string[]) => void;
   clearCargo: () => void;
   updateCargo: (id: string, patch: Partial<Cargo>) => void;
+  updateCustomCargo: (id: string, patch: Partial<Cargo>) => void;
 
   // Точки загрузки/выгрузки
   loadingPoints: LoadingPoint[];
@@ -245,6 +246,16 @@ export const useAppStore = create<AppState>()(
         set({ cargo: [] });
       },
       updateCargo: (id, patch) => {
+        const cargo = get().cargo.map((c) => (c.id === id ? { ...c, ...patch } : c));
+        saveToStorage(KEYS.cargo, cargo);
+        set({ cargo });
+      },
+      updateCustomCargo: (id, patch) => {
+        const item = get().cargo.find((c) => c.id === id);
+        if (!item || !item.isCustom) {
+          get().setError('Можно редактировать только пользовательский груз.');
+          return;
+        }
         const cargo = get().cargo.map((c) => (c.id === id ? { ...c, ...patch } : c));
         saveToStorage(KEYS.cargo, cargo);
         set({ cargo });

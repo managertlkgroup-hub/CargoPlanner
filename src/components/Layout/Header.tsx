@@ -11,6 +11,10 @@ import { Package, Save, Image, FileText, Settings } from 'lucide-react';
 import ThemeToggle from '../Settings/ThemeToggle';
 import SessionModal from '../Settings/SessionModal';
 import PresetsModal from '../Settings/PresetsModal';
+import type { Unit } from '../../types';
+import { UNIT_LABEL } from '../../utils/helpers';
+
+const UNITS: Unit[] = ['mm', 'cm', 'm'];
 
 interface HeaderProps {
   onOpenSettings: () => void;
@@ -24,6 +28,8 @@ export default function Header({ onOpenSettings }: HeaderProps) {
   const selectedVehicleId = useAppStore((s) => s.selectedVehicleId);
   const customVehicles = useAppStore((s) => s.customVehicles);
   const setError = useAppStore((s) => s.setError);
+  const unit = useAppStore((s) => s.unit);
+  const setUnit = useAppStore((s) => s.setUnit);
 
   const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
   const activeVariant = useActiveVariant();
@@ -66,6 +72,19 @@ export default function Header({ onOpenSettings }: HeaderProps) {
       </div>
 
       <div className="header-actions">
+        <div style={{ display: 'flex', gap: 2 }} title="Единицы измерения">
+          {UNITS.map((u) => (
+            <button
+              key={u}
+              type="button"
+              className={`btn btn-sm ${unit === u ? 'btn-primary' : ''}`}
+              style={{ padding: '4px 8px' }}
+              onClick={() => setUnit(u)}
+            >
+              {UNIT_LABEL[u]}
+            </button>
+          ))}
+        </div>
         <button className="btn btn-sm" onClick={() => setPresetsOpen(true)}>
           <Package size={14} /> Пресеты
         </button>

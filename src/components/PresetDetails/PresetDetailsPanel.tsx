@@ -4,7 +4,7 @@ import { Truck, Package, Pencil, ClipboardList, X, Save, AlertTriangle } from 'l
 // ============================================================================
 
 import { useState } from 'react';
-import type { Vehicle } from '../../types';
+import type { Cargo, Vehicle } from '../../types';
 import { BODY_TYPE_LABELS, LOADING_METHOD_LABELS } from '../../types';
 import { getDefaultMethodsForBodyType } from '../../lib/packer/presets';
 import { useAppStore, getCurrentVehicle } from '../../store/useAppStore';
@@ -18,7 +18,8 @@ interface VehiclePanelProps {
 export function VehicleDetailsPanel({ vehicleId, onClose }: VehiclePanelProps) {
   const customVehicles = useAppStore((s) => s.customVehicles);
   const unit = useAppStore((s) => s.unit);
-  const vehicle = getCurrentVehicle(vehicleId, customVehicles);
+  const [editId, setEditId] = useState(vehicleId);
+  const vehicle = getCurrentVehicle(editId, customVehicles);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(vehicle.name);
   const [editWeight, setEditWeight] = useState(String(vehicle.maxWeight));
@@ -31,30 +32,33 @@ export function VehicleDetailsPanel({ vehicleId, onClose }: VehiclePanelProps) {
         name: editName,
         maxWeight: Number(editWeight) || vehicle.maxWeight,
       });
-      setEditing(false);
-      onClose();
-      return;
+    } else {
+      addCustomVehicle({
+        ...vehicle,
+        id: `custom-${Date.now()}`,
+        name: editName,
+        maxWeight: Number(editWeight) || vehicle.maxWeight,
+        isCustom: true,
+      });
     }
-    addCustomVehicle({
-      ...vehicle,
-      id: `custom-${Date.now()}`,
-      name: editName,
-      maxWeight: Number(editWeight) || vehicle.maxWeight,
-      isCustom: true,
-    });
     setEditing(false);
     onClose();
   };
 
   const handleCreateCopy = () => {
+    const copyId = `copy-${Date.now()}`;
     const copy: Vehicle = {
       ...vehicle,
-      id: `copy-${Date.now()}`,
+      id: copyId,
       name: vehicle.name + ' (копия)',
       isCustom: true,
     };
     addCustomVehicle(copy);
-    onClose();
+    // Переключаемся на копию и открываем редактирование
+    setEditId(copyId);
+    setEditName(copy.name);
+    setEditWeight(String(copy.maxWeight));
+    setEditing(true);
   };
 
   const isStandard = !vehicle.isCustom;
@@ -139,11 +143,13 @@ interface CargoPanelProps {
 
 export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
   const cargo = useAppStore((s) => s.cargo);
-  const item = cargo.find(c => c.id === cargoId);
   const updateCargo = useAppStore((s) => s.updateCargo);
+  const updateCustomCargo = useAppStore((s) => s.updateCustomCargo);
   const addCargo = useAppStore((s) => s.addCargo);
   const unit = useAppStore((s) => s.unit);
   const [editing, setEditing] = useState(false);
+  const [editId, setEditId] = useState(cargoId);
+  const item = cargo.find(c => c.id === editId);
   const [editName, setEditName] = useState(item?.name ?? '');
   const [editLength, setEditLength] = useState(item ? String(Math.round(toUnit(item.length, unit) * 100) / 100) : '0');
   const [editWidth, setEditWidth] = useState(item ? String(Math.round(toUnit(item.width ?? 0, unit) * 100) / 100) : '0');
@@ -160,7 +166,7 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
   const isCustom = item.isCustom ?? false;
 
   const handleSave = () => {
-    updateCargo(item.id, {
+    const patch: Partial<Cargo> = {
       name: editName,
       length: fromUnit(Number(editLength) || 0, unit),
       width: fromUnit(Number(editWidth) || 0, unit),
@@ -171,19 +177,38 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
       stackable: editStackable,
       isOversize: editOversize,
       diameter: editShape === 'cylinder' ? fromUnit(Number(editDiameter) || 0, unit) : undefined,
-    });
+    };
+    if (isCustom) {
+      updateCustomCargo(editId, patch);
+    } else {
+      updateCargo(editId, patch);
+    }
     setEditing(false);
     onClose();
   };
 
   const handleCreateCopy = () => {
-    addCargo({
+    const copyId = uid();
+    const copy: Cargo = {
       ...item,
-      id: uid(),
+      id: copyId,
       name: item.name + ' (копия)',
       isCustom: true,
-    });
-    onClose();
+    };
+    addCargo(copy);
+    // Переключаемся на копию и открываем редактирование
+    setEditId(copyId);
+    setEditName(copy.name);
+    setEditLength(String(Math.round(toUnit(copy.length, unit) * 100) / 100));
+    setEditWidth(String(Math.round(toUnit(copy.width ?? 0, unit) * 100) / 100));
+    setEditHeight(String(Math.round(toUnit(copy.height ?? 0, unit) * 100) / 100));
+    setEditWeight(String(copy.weight));
+    setEditQuantity(String(copy.quantity));
+    setEditShape(copy.shape || 'box');
+    setEditStackable(copy.stackable ?? true);
+    setEditOversize(copy.isOversize ?? false);
+    setEditDiameter(String(Math.round(toUnit(copy.diameter ?? 0, unit) * 100) / 100));
+    setEditing(true);
   };
 
   return (
