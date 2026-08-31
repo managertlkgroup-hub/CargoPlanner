@@ -43,9 +43,15 @@ const App: React.FC = () => {
   const [matcherOpen, setMatcherOpen] = useState(false);
   const [detailsVehicleId, setDetailsVehicleId] = useState<string | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [vehicleSectionOpen, setVehicleSectionOpen] = useState(true);
-  const [cargoSectionOpen, setCargoSectionOpen] = useState(true);
-  const [controlSectionOpen, setControlSectionOpen] = useState(true);
+  const [vehicleSectionOpen, setVehicleSectionOpen] = useState<boolean>(() => {
+    try { return localStorage.getItem('cp.vehicleSectionOpen') === '1' ? true : false; } catch { return false; }
+  });
+  const [cargoSectionOpen, setCargoSectionOpen] = useState<boolean>(() => {
+    try { return localStorage.getItem('cp.cargoSectionOpen') === '1' ? true : false; } catch { return false; }
+  });
+  const [controlSectionOpen, setControlSectionOpen] = useState<boolean>(() => {
+    try { return localStorage.getItem('cp.controlSectionOpen') !== '0'; } catch { return true; }
+  });
   const [detailsCargoId, setDetailsCargoId] = useState<string | null>(null);
 
   const [activeView, setActiveView] = useState<'3d' | '2d'>('2d');
@@ -55,6 +61,23 @@ const App: React.FC = () => {
   useEffect(() => {
     setStacking(settings.maxStackHeight > 0);
   }, [settings.maxStackHeight]);
+
+  // Сохранение состояния секций левой панели в localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('cp.vehicleSectionOpen', vehicleSectionOpen ? '1' : '0');
+    } catch { /* ignore */ }
+  }, [vehicleSectionOpen]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('cp.cargoSectionOpen', cargoSectionOpen ? '1' : '0');
+    } catch { /* ignore */ }
+  }, [cargoSectionOpen]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('cp.controlSectionOpen', controlSectionOpen ? '1' : '0');
+    } catch { /* ignore */ }
+  }, [controlSectionOpen]);
 
   // Сброс результатов при смене автомобиля
   useEffect(() => {
@@ -124,7 +147,6 @@ const App: React.FC = () => {
               <div className="accordion-content">
                 <VehicleSelector />
                 <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                  <button className="btn btn-sm" onClick={() => setMatcherOpen(true)}><Search size={14} /> Подобрать авто</button>
                   <button className="btn btn-sm" onClick={() => setDetailsVehicleId(selectedVehicleId)}><ClipboardList size={14} /> Детали</button>
                 </div>
               </div>
@@ -144,6 +166,9 @@ const App: React.FC = () => {
             {cargoSectionOpen && (
               <div className="cargo-section">
                 <CargoTable onCargoDetails={setDetailsCargoId} />
+                <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                  <button className="btn btn-sm" onClick={() => setMatcherOpen(true)}><Search size={14} /> Подобрать авто</button>
+                </div>
               </div>
             )}
           </div>
