@@ -171,11 +171,14 @@ const App: React.FC = () => {
                     onChange={(e) => {
                       const checked = e.target.checked;
                       setStacking(checked);
-                      const newMaxH = checked ? (settings.maxStackHeight > 0 ? settings.maxStackHeight : 2000) : 0;
+                      const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
+                      // maxStackHeight = полная высота кузова — физический потолок,
+                      // чтобы груз любой высоты (напр. 1200мм) мог штабелироваться
+                      // до тех пор, пока суммарная высота не превышает высоту кузова.
+                      const newMaxH = checked ? vehicle.height : 0;
                       const newSettings = { ...settings, maxStackHeight: newMaxH };
                       setSettings(newSettings);
                       if (cargo.length > 0) {
-                        const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
                         setCalculating(true);
                         try {
                           const result = packItems(vehicle, cargo, newSettings, loadingPoints);
