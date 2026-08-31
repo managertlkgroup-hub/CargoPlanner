@@ -202,16 +202,17 @@ function packIntoBin(
     let bestFit: { orientation: Orientation; point: { x: number; y: number; z: number } } | null = null;
     let bestScore = Infinity;
 
-    // Сортируем точки для приоритетного размещения
+    // Сортируем точки для приоритетного размещения (приоритет первичной оси режима)
     points.sort((a, b) => {
       if (a.y !== b.y) return a.y - b.y;
       if (sortMode === 'across') {
-        if (a.x !== b.x) return a.x - b.x;
-        return a.z - b.z;
-      } else {
-        // along & mixed: min Z, then min X
+        // поперёк: первичная ось Z (ширина), вторичная X (длина)
         if (a.z !== b.z) return a.z - b.z;
         return a.x - b.x;
+      } else {
+        // вдоль и смешанный: первичная ось X (длина), вторичная Z (ширина)
+        if (a.x !== b.x) return a.x - b.x;
+        return a.z - b.z;
       }
     });
 
@@ -290,16 +291,25 @@ function packIntoBin(
         let score: number;
 
         if (sortMode === 'along') {
-          // along: длинная сторона вдоль X, ряды заполняются по Z (перед→зад)
-          score = point.z * DIR + point.x * SEC + point.y * Y_W + footprintMax * CMP;
-        } else if (sortMode === 'across') {
-          // across: длинная сторона вдоль Z, колонки заполняются по X (лево→право)
+          // вдоль: приоритет заполнения длины кузова X, ряды укладываются по ширине Z
           score = point.x * DIR + point.z * SEC + point.y * Y_W + footprintMax * CMP;
-        } else {
-          // mixed: предпочитаем вдоль (длинная сторона вдоль X), поперёк — в остатках
+        } else if (sortMode === 'across') {
+          // поперёк: приоритет заполнения ширины кузова Z, ряды укладываются по длине X
           score = point.z * DIR + point.x * SEC + point.y * Y_W + footprintMax * CMP;
-          const isAlong = placedLength >= placedWidth;
-          if (!isAlong) score += DIR * 100;
+        } else {
+          // смешанный: комбинация вдоль и поперёк. Для каждого груза выбираем
+          // ориентацию (вдоль/поперёк) и позицию, дающие максимальную компактность,
+          // с небольшой симпатией к вдоль. Это даёт раскладку, отличную и от чисто
+          // «вдоль», и от чисто «поперёк», и максимально заполняет кузов.
+          if (placedLength >= placedWidth) {
+            // вдоль-ориентация (длинная сторона груза вдоль длины X)
+            score = point.x * DIR + point.z * SEC + point.y * Y_W + footprintMax * CMP;
+          } else {
+            // поперёк-ориентация (длинная сторона груза вдоль ширины Z)
+            score = point.z * DIR + point.x * SEC + point.y * Y_W + footprintMax * CMP;
+          }
+          // лёгкое предпочтение вдоль (важно только при почти равной компактности)
+          if (placedLength < placedWidth) score += DIR * 0.5;
         }
 
         // Горка/штабель: лёгкое предпочтение нижних слоёв для устойчивости,
