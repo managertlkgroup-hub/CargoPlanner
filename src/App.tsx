@@ -297,8 +297,8 @@ const App: React.FC = () => {
 
 /** Suggestions panel sub-component */
 function SuggestionsPanel({ show, onToggle }: { show: boolean; onToggle: () => void }) {
-  const vehicle = getCurrentVehicle(useAppStore.getState().selectedVehicleId, useAppStore.getState().customVehicles);
-  const result = useAppStore.getState().result;
+  const vehicle = useAppStore((s) => getCurrentVehicle(s.selectedVehicleId, s.customVehicles));
+  const result = useAppStore((s) => s.result);
   const activeVariant = useAppStore((s) => s.activeVariant);
   const unit = useAppStore((s) => s.unit);
 
