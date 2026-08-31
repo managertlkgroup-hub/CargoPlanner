@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
+import { WEIGHT_UNIT_LABEL } from '../../utils/helpers';
 import CargoRow from './CargoRow';
 import AddCargoForm from './AddCargoForm';
 import { exportCsv } from '../../lib/csv/exportCsv';
@@ -19,6 +20,7 @@ export default function CargoTable({ onCargoDetails }: CargoTableProps) {
   const removeCargo = useAppStore((s) => s.removeCargo);
   const clearCargo = useAppStore((s) => s.clearCargo);
   const setError = useAppStore((s) => s.setError);
+  const weightUnit = useAppStore((s) => s.weightUnit);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showAdd, setShowAdd] = useState(false);
@@ -122,7 +124,7 @@ export default function CargoTable({ onCargoDetails }: CargoTableProps) {
               <th className="cargo-th-num">Длина</th>
               <th className="cargo-th-num">Ширина</th>
               <th className="cargo-th-num">Выс.</th>
-              <th className="cargo-th-num">Вес</th>
+              <th className="cargo-th-num">Вес, {WEIGHT_UNIT_LABEL[weightUnit]}</th>
               <th className="cargo-th-num">Кол-во</th>
               <th style={{ width: 52, textAlign: 'center' }}>Действия</th>
             </tr>

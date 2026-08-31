@@ -6,7 +6,7 @@ import { useState, useMemo } from 'react';
 import type { FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import type { Cargo, CargoShape } from '../../types';
-import { uid, fromUnit, toUnit, UNIT_LABEL } from '../../utils/helpers';
+import { uid, fromUnit, toUnit, UNIT_LABEL, WEIGHT_UNIT_LABEL, formatWeight, toWeightUnit, fromWeightUnit } from '../../utils/helpers';
 import { getCargoPresets } from '../../lib/packer/presets';
 
 /** Валидация числового поля */
@@ -34,6 +34,7 @@ export default function AddCargoForm() {
   const addCargo = useAppStore((s) => s.addCargo);
   const customCargoPresets = useAppStore((s) => s.customCargoPresets);
   const unit = useAppStore((s) => s.unit);
+  const weightUnit = useAppStore((s) => s.weightUnit);
   const [error, setError] = useState('');
   const builtInPresets = getCargoPresets();
   const cargoPresets = [...builtInPresets, ...customCargoPresets];
@@ -63,7 +64,7 @@ export default function AddCargoForm() {
     const width = fromUnit(Number(fd.get('width')), unit);
     const height = fromUnit(Number(fd.get('height')), unit);
     const diameter = fromUnit(Number(fd.get('diameter')), unit);
-    const weight = Number(fd.get('weight'));
+    const weight = fromWeightUnit(Number(fd.get('weight')), weightUnit);
     const shape = fd.get('shape') as CargoShape;
     const lengthErr = validateField(length, FIELDS.length.min, FIELDS.length.max, 'Длина');
     if (lengthErr) allErrors.push(lengthErr);
@@ -98,7 +99,7 @@ export default function AddCargoForm() {
     const width = fromUnit(Number(fd.get('width')), unit);
     const height = fromUnit(Number(fd.get('height')), unit);
     const diameter = fromUnit(Number(fd.get('diameter')), unit);
-    const weight = Number(fd.get('weight'));
+    const weight = fromWeightUnit(Number(fd.get('weight')), weightUnit);
     const quantity = Math.max(1, Math.floor(Number(fd.get('quantity')) || 1));
 
     if (!name) return setError('Укажите название груза.');
@@ -150,7 +151,7 @@ export default function AddCargoForm() {
       width: String(conv(preset.width)),
       height: String(conv(preset.height)),
       diameter: String(conv(preset.diameter || preset.width)),
-      weight: String(preset.weight),
+      weight: String(weightUnit === 'ton' ? Math.round(toWeightUnit(preset.weight, weightUnit) * 100) / 100 : preset.weight),
     });
     setTouched({});
     setShape(preset.shape);
@@ -167,7 +168,7 @@ export default function AddCargoForm() {
     } else {
       (form.querySelector('[name="diameter"]') as HTMLInputElement).value = String(conv(preset.diameter || preset.width));
     }
-    (form.querySelector('[name="weight"]') as HTMLInputElement).value = String(preset.weight);
+    (form.querySelector('[name="weight"]') as HTMLInputElement).value = String(weightUnit === 'ton' ? Math.round(toWeightUnit(preset.weight, weightUnit) * 100) / 100 : preset.weight);
   };
 
   const inputStyle = (key: string) =>
@@ -184,7 +185,7 @@ export default function AddCargoForm() {
           <optgroup label="Стандартные">
             {builtInPresets.map((preset, idx) => (
               <option key={preset.name} value={idx}>
-                {preset.name} ({toUnit(preset.length, unit)}×{toUnit(preset.width, unit)}×{toUnit(preset.height, unit)} {UNIT_LABEL[unit]}, {preset.weight} кг)
+                {preset.name} ({toUnit(preset.length, unit)}×{toUnit(preset.width, unit)}×{toUnit(preset.height, unit)} {UNIT_LABEL[unit]}, {formatWeight(preset.weight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]})
               </option>
             ))}
           </optgroup>
@@ -192,7 +193,7 @@ export default function AddCargoForm() {
             <optgroup label="Мои пресеты">
               {customCargoPresets.map((preset, idx) => (
                 <option key={preset.name + idx} value={builtInPresets.length + idx}>
-                  {preset.name} ({toUnit(preset.length, unit)}×{toUnit(preset.width, unit)}×{toUnit(preset.height, unit)} {UNIT_LABEL[unit]}, {preset.weight} кг)
+                  {preset.name} ({toUnit(preset.length, unit)}×{toUnit(preset.width, unit)}×{toUnit(preset.height, unit)} {UNIT_LABEL[unit]}, {formatWeight(preset.weight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]})
                 </option>
               ))}
             </optgroup>
@@ -312,7 +313,7 @@ export default function AddCargoForm() {
         </div>
       )}
       <div className="form-group">
-        <label>Вес, кг</label>
+        <label>Вес, {WEIGHT_UNIT_LABEL[weightUnit]}</label>
         <input
           name="weight"
           type="number"

@@ -15,7 +15,7 @@ import {
 } from '@react-pdf/renderer';
 import type { Cargo, LayoutVariant, PackedItem, Vehicle, Unit } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
-import { UNIT_LABEL, toUnit } from '../../utils/helpers';
+import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight, type WeightUnit } from '../../utils/helpers';
 
 // Регистрация шрифтов с поддержкой кириллицы
 import robotoRegular from '../../assets/Roboto-Regular.ttf';
@@ -237,7 +237,7 @@ function CoverHeader() {
 }
 
 /** Информация об автомобиле */
-function VehicleInfo({ vehicle, unit }: { vehicle: Vehicle; unit: Unit }) {
+function VehicleInfo({ vehicle, unit, weightUnit }: { vehicle: Vehicle; unit: Unit; weightUnit: WeightUnit }) {
   const fmt = (mm: number) => Math.round(toUnit(mm, unit) * 100) / 100;
   const BODY_LABELS: Record<string, string> = {
     tent: 'Тентованный', van: 'Фургон', isothermal: 'Изотерм',
@@ -253,13 +253,13 @@ function VehicleInfo({ vehicle, unit }: { vehicle: Vehicle; unit: Unit }) {
         <Text style={styles.text}>Тип: {BODY_LABELS[vehicle.bodyType] || vehicle.bodyType}</Text>
       )}
       <Text style={styles.text}>Кузов: {fmt(vehicle.length)} × {fmt(vehicle.width)} × {fmt(vehicle.height)} {UNIT_LABEL[unit]}</Text>
-      <Text style={styles.text}>Грузоподъёмность: {vehicle.maxWeight} кг</Text>
+          <Text style={styles.text}>Грузоподъёмность: {formatWeight(vehicle.maxWeight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}</Text>
     </View>
   );
 }
 
 /** Сводка по загрузке */
-function Metrics({ variant, vehicle }: { variant: LayoutVariant; vehicle: Vehicle }) {
+function Metrics({ variant, vehicle, weightUnit }: { variant: LayoutVariant; vehicle: Vehicle; weightUnit: WeightUnit }) {
   const maxLayer = variant.items.length > 0
     ? Math.max(...variant.items.map(i => layerOf(i)))
     : 0;
@@ -275,17 +275,17 @@ function Metrics({ variant, vehicle }: { variant: LayoutVariant; vehicle: Vehicl
         </View>
         <View style={styles.metricCell}>
           <Text style={styles.text}>Размещено: {variant.items.length} шт.</Text>
-          <Text style={styles.text}>Вес: {variant.totalWeight} кг</Text>
+          <Text style={styles.text}>Вес: {formatWeight(variant.totalWeight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}</Text>
         </View>
       </View>
       <View style={styles.metricsRow}>
         <View style={styles.metricCell}>
           <Text style={styles.text}>Свободный объём: {volMm3(variant.freeVolume)}</Text>
-          <Text style={styles.text}>Свободный вес: {Math.max(0, vehicle.maxWeight - variant.totalWeight)} кг</Text>
+          <Text style={styles.text}>Свободный вес: {formatWeight(Math.max(0, vehicle.maxWeight - variant.totalWeight), weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}</Text>
         </View>
         <View style={styles.metricCell}>
           {maxLayer > 0 && <Text style={styles.text}>Слоёв: {maxLayer + 1}</Text>}
-          <Text style={styles.text}>Грузоподъёмность: {vehicle.maxWeight} кг</Text>
+      <Text style={styles.text}>Грузоподъёмность: {formatWeight(vehicle.maxWeight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}</Text>
         </View>
       </View>
 
@@ -435,7 +435,7 @@ function ItemLegend({ items }: { items: PackedItem[] }) {
 }
 
 /** Таблица грузов */
-function CargoTable({ cargo, items, unit }: { cargo: Cargo[]; items: PackedItem[]; unit: Unit }) {
+function CargoTable({ cargo, items, unit, weightUnit }: { cargo: Cargo[]; items: PackedItem[]; unit: Unit; weightUnit: WeightUnit }) {
   const fmt = (mm: number) => Math.round(toUnit(mm, unit) * 100) / 100;
   const maxL = items.length > 0 ? Math.max(...items.map(i => layerOf(i))) : 0;
   const hasLayers = maxL > 0;
@@ -502,7 +502,7 @@ function CargoTable({ cargo, items, unit }: { cargo: Cargo[]; items: PackedItem[
               {c.shape === 'box' ? 'Прямоуг.' : 'Цилиндр'}
             </Text>
             <Text style={[styles.tableCell, { width: COL_W.size }]}>{size}</Text>
-            <Text style={[styles.tableCell, { width: COL_W.weight }]}>{c.weight}</Text>
+            <Text style={[styles.tableCell, { width: COL_W.weight }]}>{formatWeight(c.weight, weightUnit)}</Text>
             <Text style={[styles.tableCell, { width: COL_W.qty }]}>{c.quantity}</Text>
             {hasLayers && (
               <View style={[styles.tableCell, { width: COL_W.layer, flexDirection: 'row', alignItems: 'center' }]}>
@@ -519,7 +519,7 @@ function CargoTable({ cargo, items, unit }: { cargo: Cargo[]; items: PackedItem[
 
 // ─── Основной документ ─────────────────────────────────────
 
-function PDFDocument({ vehicle, cargo, variant, unit }: ReportProps & { unit: Unit }) {
+function PDFDocument({ vehicle, cargo, variant, unit, weightUnit }: ReportProps & { unit: Unit; weightUnit: WeightUnit }) {
   const maxLayer = variant.items.length > 0
     ? Math.max(...variant.items.map(i => layerOf(i)))
     : 0;
@@ -533,10 +533,10 @@ function PDFDocument({ vehicle, cargo, variant, unit }: ReportProps & { unit: Un
         <CoverHeader />
 
         {/* Информация об автомобиле */}
-        <VehicleInfo vehicle={vehicle} unit={unit} />
+        <VehicleInfo vehicle={vehicle} unit={unit} weightUnit={weightUnit} />
 
         {/* Сводка */}
-        <Metrics variant={variant} vehicle={vehicle} />
+        <Metrics variant={variant} vehicle={vehicle} weightUnit={weightUnit} />
 
         {/* 2D-схемы по слоям */}
         {numLayers <= 1 ? (
@@ -575,7 +575,7 @@ function PDFDocument({ vehicle, cargo, variant, unit }: ReportProps & { unit: Un
         <ItemLegend items={variant.items} />
 
         {/* Таблица грузов */}
-        <CargoTable cargo={cargo} items={variant.items} unit={unit} />
+        <CargoTable cargo={cargo} items={variant.items} unit={unit} weightUnit={weightUnit} />
 
         {/* Подвал */}
         <Text style={styles.footer}>CargoPlanner — стр. 1</Text>
@@ -590,10 +590,11 @@ export async function generatePdfWithReactPdf(
   vehicle: Vehicle,
   cargo: Cargo[],
   variant: LayoutVariant,
+  weightUnit: WeightUnit = 'kg',
 ): Promise<void> {
   const unit = useAppStore.getState().unit;
   const blob = await pdf(
-    <PDFDocument vehicle={vehicle} cargo={cargo} variant={variant} unit={unit} />
+    <PDFDocument vehicle={vehicle} cargo={cargo} variant={variant} unit={unit} weightUnit={weightUnit} />
   ).toBlob();
 
   const url = URL.createObjectURL(blob);

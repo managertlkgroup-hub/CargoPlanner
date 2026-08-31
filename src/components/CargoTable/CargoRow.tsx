@@ -9,7 +9,7 @@ import { shapeLabel } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { getCurrentVehicle } from '../../store/useAppStore';
 import { packItems } from '../../lib/packer/packer';
-import { toUnit, fromUnit } from '../../utils/helpers';
+import { toUnit, fromUnit, toWeightUnit, fromWeightUnit } from '../../utils/helpers';
 
 interface Props {
   cargo: Cargo;
@@ -21,6 +21,7 @@ interface Props {
 export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsClick }: Props) {
   const updateCargo = useAppStore((s) => s.updateCargo);
   const unit = useAppStore((s) => s.unit);
+  const weightUnit = useAppStore((s) => s.weightUnit);
   const setFocusItemId = useAppStore((s) => s.setFocusItemId);
   const setHighlightItemId = useAppStore((s) => s.setHighlightItemId);
   const selectedVehicleId = useAppStore((s) => s.selectedVehicleId);
@@ -134,9 +135,10 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
       <td className="cargo-td-num">
         <input
           type="number"
-          value={cargo.weight}
+          step="any"
+          value={weightUnit === 'ton' ? Math.round(toWeightUnit(cargo.weight, weightUnit) * 100) / 100 : cargo.weight}
           className="cargo-num-input"
-          onChange={(e) => updateCargo(cargo.id, { weight: Number(e.target.value) })}
+          onChange={(e) => updateCargo(cargo.id, { weight: fromWeightUnit(Number(e.target.value), weightUnit) })}
         />
       </td>
       <td className="cargo-td-num">

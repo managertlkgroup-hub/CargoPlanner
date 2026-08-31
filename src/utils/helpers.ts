@@ -62,3 +62,26 @@ export function formatDimension(mm: number, unit: Unit): string {
   const raw = toUnit(mm, unit);
   return (Math.round(raw * 100) / 100).toString();
 }
+
+// --- Весовые единицы (кг/т) ---
+
+export type WeightUnit = 'kg' | 'ton';
+
+/** Метка весовой единицы */
+export const WEIGHT_UNIT_LABEL: Record<WeightUnit, string> = { kg: 'кг', ton: 'т' };
+
+/** Переводит вес в кг в выбранную единицу */
+export function toWeightUnit(kg: number, unit: WeightUnit): number {
+  return unit === 'ton' ? kg / 1000 : kg;
+}
+
+/** Переводит вес из выбранной единицы в кг */
+export function fromWeightUnit(value: number, unit: WeightUnit): number {
+  return unit === 'ton' ? value * 1000 : value;
+}
+
+/** Форматирует вес с учётом единицы (т — до 2 знаков, кг — целое) */
+export function formatWeight(kg: number, unit: WeightUnit): string {
+  if (unit === 'ton') return (Math.round(kg / 10) / 100).toString();
+  return Math.round(kg).toString();
+}

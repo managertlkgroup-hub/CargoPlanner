@@ -6,7 +6,7 @@ import { Search, Package, X, Check, AlertTriangle, Scale } from 'lucide-react';
 import { useMemo } from 'react';
 import { useAppStore, useAllVehicles } from '../../store/useAppStore';
 import { matchVehicles, type VehicleMatch } from '../../lib/vehicleMatcher';
-import { UNIT_LABEL, toUnit } from '../../utils/helpers';
+import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight } from '../../utils/helpers';
 
 interface Props {
   onClose: () => void;
@@ -16,6 +16,7 @@ export default function VehicleMatcher({ onClose }: Props) {
   const cargo = useAppStore((s) => s.cargo);
   const selectVehicle = useAppStore((s) => s.selectVehicle);
   const unit = useAppStore((s) => s.unit);
+  const weightUnit = useAppStore((s) => s.weightUnit);
   const vehicles = useAllVehicles();
 
   const matches = useMemo(() => matchVehicles(cargo, vehicles), [cargo, vehicles]);
@@ -36,7 +37,7 @@ export default function VehicleMatcher({ onClose }: Props) {
         </div>
 
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
-          Грузов: {cargo.length} шт, общий вес: {Math.round(totalWeight)} кг
+          Грузов: {cargo.length} шт, общий вес: {formatWeight(totalWeight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}
         </div>
 
         <div style={{ maxHeight: 400, overflowY: 'auto' }}>
@@ -74,7 +75,7 @@ export default function VehicleMatcher({ onClose }: Props) {
                   </div>
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                  {Math.round(toUnit(m.vehicle.length, unit))}×{Math.round(toUnit(m.vehicle.width, unit))}×{Math.round(toUnit(m.vehicle.height, unit))} {UNIT_LABEL[unit]} • {m.vehicle.maxWeight} кг
+                  {Math.round(toUnit(m.vehicle.length, unit))}×{Math.round(toUnit(m.vehicle.width, unit))}×{Math.round(toUnit(m.vehicle.height, unit))} {UNIT_LABEL[unit]} • {formatWeight(m.vehicle.maxWeight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}
                 </div>
                 <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 11 }}>
                   <span><Package size={12} /> {m.volumeFill}% объёма</span>

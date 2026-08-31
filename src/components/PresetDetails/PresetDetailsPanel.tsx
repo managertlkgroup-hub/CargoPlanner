@@ -8,7 +8,7 @@ import type { Cargo, Vehicle } from '../../types';
 import { BODY_TYPE_LABELS, LOADING_METHOD_LABELS } from '../../types';
 import { getDefaultMethodsForBodyType } from '../../lib/packer/presets';
 import { useAppStore, getCurrentVehicle } from '../../store/useAppStore';
-import { uid, UNIT_LABEL, toUnit, fromUnit } from '../../utils/helpers';
+import { uid, UNIT_LABEL, toUnit, fromUnit, formatWeight, WEIGHT_UNIT_LABEL, fromWeightUnit, toWeightUnit } from '../../utils/helpers';
 
 interface VehiclePanelProps {
   vehicleId: string;
@@ -18,11 +18,12 @@ interface VehiclePanelProps {
 export function VehicleDetailsPanel({ vehicleId, onClose }: VehiclePanelProps) {
   const customVehicles = useAppStore((s) => s.customVehicles);
   const unit = useAppStore((s) => s.unit);
+  const weightUnit = useAppStore((s) => s.weightUnit);
   const [editId, setEditId] = useState(vehicleId);
   const vehicle = getCurrentVehicle(editId, customVehicles);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(vehicle.name);
-  const [editWeight, setEditWeight] = useState(String(vehicle.maxWeight));
+  const [editWeight, setEditWeight] = useState(String(weightUnit === 'ton' ? Math.round(toWeightUnit(vehicle.maxWeight, weightUnit) * 100) / 100 : vehicle.maxWeight));
   const addCustomVehicle = useAppStore((s) => s.addCustomVehicle);
   const updateCustomVehicle = useAppStore((s) => s.updateCustomVehicle);
 
@@ -30,14 +31,14 @@ export function VehicleDetailsPanel({ vehicleId, onClose }: VehiclePanelProps) {
     if (vehicle.isCustom) {
       updateCustomVehicle(vehicle.id, {
         name: editName,
-        maxWeight: Number(editWeight) || vehicle.maxWeight,
+        maxWeight: Math.round(fromWeightUnit(Number(editWeight) || 0, weightUnit) * 100) / 100,
       });
     } else {
       addCustomVehicle({
         ...vehicle,
         id: `custom-${Date.now()}`,
         name: editName,
-        maxWeight: Number(editWeight) || vehicle.maxWeight,
+        maxWeight: Math.round(fromWeightUnit(Number(editWeight) || 0, weightUnit) * 100) / 100,
         isCustom: true,
       });
     }
@@ -57,7 +58,7 @@ export function VehicleDetailsPanel({ vehicleId, onClose }: VehiclePanelProps) {
     // Переключаемся на копию и открываем редактирование
     setEditId(copyId);
     setEditName(copy.name);
-    setEditWeight(String(copy.maxWeight));
+    setEditWeight(String(weightUnit === 'ton' ? Math.round(toWeightUnit(copy.maxWeight, weightUnit) * 100) / 100 : copy.maxWeight));
     setEditing(true);
   };
 
@@ -91,7 +92,7 @@ export function VehicleDetailsPanel({ vehicleId, onClose }: VehiclePanelProps) {
           <div style={{ marginBottom: 8 }}>
             <label style={{ fontSize: 11, color: 'var(--text-muted)' }}>Название</label>
             <input className="input-compact" value={editName} onChange={(e) => setEditName(e.target.value)} />
-            <label style={{ fontSize: 11, color: 'var(--text-muted)' }}>Грузоподъёмность, кг</label>
+            <label style={{ fontSize: 11, color: 'var(--text-muted)' }}>Грузоподъёмность, {WEIGHT_UNIT_LABEL[weightUnit]}</label>
             <input className="input-compact" type="number" value={editWeight} onChange={(e) => setEditWeight(e.target.value)} />
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               <button className="btn btn-primary btn-sm" onClick={handleSave}>Сохранить</button>
@@ -100,7 +101,7 @@ export function VehicleDetailsPanel({ vehicleId, onClose }: VehiclePanelProps) {
           </div>
         ) : (
           <div style={{ fontSize: 12, marginBottom: 8 }}>
-            Грузоподъёмность: <strong>{vehicle.maxWeight} кг</strong>
+            Грузоподъёмность: <strong>{formatWeight(vehicle.maxWeight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}</strong>
           </div>
         )}
         {filteredLoadingMethods.length > 0 && (
@@ -147,6 +148,7 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
   const updateCustomCargo = useAppStore((s) => s.updateCustomCargo);
   const addCargo = useAppStore((s) => s.addCargo);
   const unit = useAppStore((s) => s.unit);
+  const weightUnit = useAppStore((s) => s.weightUnit);
   const [editing, setEditing] = useState(false);
   const [editId, setEditId] = useState(cargoId);
   const item = cargo.find(c => c.id === editId);
@@ -154,7 +156,7 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
   const [editLength, setEditLength] = useState(item ? String(Math.round(toUnit(item.length, unit) * 100) / 100) : '0');
   const [editWidth, setEditWidth] = useState(item ? String(Math.round(toUnit(item.width ?? 0, unit) * 100) / 100) : '0');
   const [editHeight, setEditHeight] = useState(item ? String(Math.round(toUnit(item.height ?? 0, unit) * 100) / 100) : '0');
-  const [editWeight, setEditWeight] = useState(String(item?.weight ?? 0));
+  const [editWeight, setEditWeight] = useState(item ? String(weightUnit === 'ton' ? Math.round(toWeightUnit(item.weight, weightUnit) * 100) / 100 : item.weight) : '0');
   const [editQuantity, setEditQuantity] = useState(String(item?.quantity ?? 1));
   const [editShape, setEditShape] = useState(item?.shape ?? 'box');
   const [editStackable, setEditStackable] = useState(item?.stackable ?? true);
@@ -171,7 +173,7 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
       length: fromUnit(Number(editLength) || 0, unit),
       width: fromUnit(Number(editWidth) || 0, unit),
       height: fromUnit(Number(editHeight) || 0, unit),
-      weight: Number(editWeight) || 0,
+      weight: Math.round(fromWeightUnit(Number(editWeight) || 0, weightUnit) * 100) / 100,
       quantity: Number(editQuantity) || 1,
       shape: editShape as 'box' | 'cylinder',
       stackable: editStackable,
@@ -202,7 +204,7 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
     setEditLength(String(Math.round(toUnit(copy.length, unit) * 100) / 100));
     setEditWidth(String(Math.round(toUnit(copy.width ?? 0, unit) * 100) / 100));
     setEditHeight(String(Math.round(toUnit(copy.height ?? 0, unit) * 100) / 100));
-    setEditWeight(String(copy.weight));
+    setEditWeight(String(weightUnit === 'ton' ? Math.round(toWeightUnit(copy.weight, weightUnit) * 100) / 100 : copy.weight));
     setEditQuantity(String(copy.quantity));
     setEditShape(copy.shape || 'box');
     setEditStackable(copy.stackable ?? true);
@@ -259,7 +261,7 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
               </>
             )}
             <div className="form-group">
-              <label>Вес, кг</label>
+              <label>Вес, {WEIGHT_UNIT_LABEL[weightUnit]}</label>
               <input className="input-compact" type="number" step="any" value={editWeight} onChange={(e) => setEditWeight(e.target.value)} />
             </div>
             <div className="form-group">
@@ -296,7 +298,7 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
               </div>
             )}
             <div style={{ fontSize: 12, marginBottom: 4 }}>
-              Вес: <strong>{item.weight} кг</strong>, Кол-во: <strong>{item.quantity} шт</strong>
+              Вес: <strong>{formatWeight(item.weight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}</strong>, Кол-во: <strong>{item.quantity} шт</strong>
             </div>
             <div style={{ fontSize: 12, marginBottom: 4 }}>
               Штабелируемый: <strong>{item.stackable ? 'Да' : 'Нет'}</strong>

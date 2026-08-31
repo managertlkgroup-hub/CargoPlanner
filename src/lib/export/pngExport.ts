@@ -5,7 +5,7 @@
 
 import type { Vehicle, LayoutVariant } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
-import { UNIT_LABEL, toUnit } from '../../utils/helpers';
+import { UNIT_LABEL, toUnit, formatWeight, WEIGHT_UNIT_LABEL, type WeightUnit } from '../../utils/helpers';
 
 const LAYER_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
@@ -23,6 +23,7 @@ export async function exportSceneToPng(
   filename: string,
   vehicle?: Vehicle,
   variant?: LayoutVariant,
+  weightUnit: WeightUnit = 'kg',
 ): Promise<void> {
   // Ищем 2D canvas (не WebGL) — помечен атрибутом data-export-canvas="2d"
   let sourceCanvas: HTMLCanvasElement | null =
@@ -158,7 +159,8 @@ export async function exportSceneToPng(
       `Грузов: ${variant.items.length}`,
       `Слоёв: ${[...new Set(variant.items.map(i => layerOf(i)))].length}`,
       `Заполнение: ${variant.volumeFill ?? 0}%`,
-      `Вес: ${variant.weightFill ?? 0}%`,
+      `Вес: ${formatWeight(variant.totalWeight ?? 0, weightUnit)} ${WEIGHT_UNIT_LABEL[weightUnit]}`,
+      `Заполнение по весу: ${variant.weightFill ?? 0}%`,
     ];
     metrics.forEach((m, i) => {
       ctx.fillText(m, PAD + 10 * S, metricsY + 18 * S + i * 18 * S);

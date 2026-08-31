@@ -2,13 +2,14 @@ import { useMemo } from 'react';
 import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { useActiveVariant, useSelectedVehicle } from '../../store/useAppStore';
 import { useAppStore } from '../../store/useAppStore';
-import { formatNumber, volumeToM3, UNIT_LABEL, formatDimension } from '../../utils/helpers';
+import { volumeToM3, UNIT_LABEL, formatDimension, formatWeight, WEIGHT_UNIT_LABEL } from '../../utils/helpers';
 import { calculateCOG } from '../../lib/physics/cog';
 
 export default function MetricsPanel() {
   // Все хуки ДО любого раннего возврата
   const variant = useActiveVariant();
   const unit = useAppStore((s) => s.unit);
+  const weightUnit = useAppStore((s) => s.weightUnit);
 
   const layerCount = useMemo(() => {
     if (!variant || variant.items.length === 0) return 0;
@@ -68,16 +69,16 @@ export default function MetricsPanel() {
         <div className="metric-label">Заполнение по весу</div>
       </div>
       <div className="metric-card">
-        <div className="metric-value">{formatNumber(variant.totalWeight)}</div>
-        <div className="metric-label">Вес, кг</div>
+        <div className="metric-value">{formatWeight(variant.totalWeight, weightUnit)}</div>
+        <div className="metric-label">Вес, {WEIGHT_UNIT_LABEL[weightUnit]}</div>
       </div>
       <div className="metric-card">
         <div className="metric-value">{volumeToM3(variant.freeVolume)}</div>
         <div className="metric-label">Свободный объём</div>
       </div>
       <div className="metric-card">
-        <div className="metric-value">{formatNumber(variant.freeWeight)}</div>
-        <div className="metric-label">Свободный вес, кг</div>
+        <div className="metric-value">{formatWeight(variant.freeWeight, weightUnit)}</div>
+        <div className="metric-label">Свободный вес, {WEIGHT_UNIT_LABEL[weightUnit]}</div>
       </div>
       <div className="metric-card">
         <div className="metric-value">{variant.items.length}</div>

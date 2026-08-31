@@ -12,9 +12,10 @@ import ThemeToggle from '../Settings/ThemeToggle';
 import SessionModal from '../Settings/SessionModal';
 import PresetsModal from '../Settings/PresetsModal';
 import type { Unit } from '../../types';
-import { UNIT_LABEL } from '../../utils/helpers';
+import { UNIT_LABEL, WEIGHT_UNIT_LABEL, type WeightUnit } from '../../utils/helpers';
 
 const UNITS: Unit[] = ['mm', 'cm', 'm'];
+const WEIGHT_UNITS: WeightUnit[] = ['kg', 'ton'];
 
 interface HeaderProps {
   onOpenSettings: () => void;
@@ -30,6 +31,8 @@ export default function Header({ onOpenSettings }: HeaderProps) {
   const setError = useAppStore((s) => s.setError);
   const unit = useAppStore((s) => s.unit);
   const setUnit = useAppStore((s) => s.setUnit);
+  const weightUnit = useAppStore((s) => s.weightUnit);
+  const setWeightUnit = useAppStore((s) => s.setWeightUnit);
 
   const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
   const activeVariant = useActiveVariant();
@@ -44,7 +47,7 @@ export default function Header({ onOpenSettings }: HeaderProps) {
     }
     try {
       const { generatePdfWithReactPdf } = await import('../Report/PDFReport');
-      await generatePdfWithReactPdf(vehicle, cargo, activeVariant);
+      await generatePdfWithReactPdf(vehicle, cargo, activeVariant, weightUnit);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка формирования PDF');
     }
@@ -52,7 +55,7 @@ export default function Header({ onOpenSettings }: HeaderProps) {
 
   const handlePng = async () => {
     try {
-      await exportSceneToPng('scene-3d', `load-scheme-${Date.now()}`, vehicle, activeVariant ?? undefined);
+      await exportSceneToPng('scene-3d', `load-scheme-${Date.now()}`, vehicle, activeVariant ?? undefined, weightUnit);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка экспорта PNG');
     }
@@ -82,6 +85,19 @@ export default function Header({ onOpenSettings }: HeaderProps) {
               onClick={() => setUnit(u)}
             >
               {UNIT_LABEL[u]}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 2 }} title="Единицы веса">
+          {WEIGHT_UNITS.map((u) => (
+            <button
+              key={u}
+              type="button"
+              className={`btn btn-sm ${weightUnit === u ? 'btn-primary' : ''}`}
+              style={{ padding: '4px 8px' }}
+              onClick={() => setWeightUnit(u)}
+            >
+              {WEIGHT_UNIT_LABEL[u]}
             </button>
           ))}
         </div>

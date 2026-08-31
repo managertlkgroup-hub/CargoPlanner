@@ -12,6 +12,7 @@ export default function ReportButton() {
   const selectedVehicleId = useAppStore((s) => s.selectedVehicleId);
   const customVehicles = useAppStore((s) => s.customVehicles);
   const setError = useAppStore((s) => s.setError);
+  const weightUnit = useAppStore((s) => s.weightUnit);
 
   const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
   const variant = useActiveVariant();
@@ -23,7 +24,7 @@ export default function ReportButton() {
     }
     try {
       const { generatePdfWithReactPdf } = await import('./PDFReport');
-      await generatePdfWithReactPdf(vehicle, cargo, variant);
+      await generatePdfWithReactPdf(vehicle, cargo, variant, weightUnit);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка формирования PDF');
     }
@@ -36,7 +37,7 @@ export default function ReportButton() {
     }
     try {
       const { exportToXLSX } = await import('../../lib/export/xlsxExport');
-      exportToXLSX(vehicle, cargo, result.variants);
+      exportToXLSX(vehicle, cargo, result.variants, weightUnit);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка экспорта в Excel');
     }

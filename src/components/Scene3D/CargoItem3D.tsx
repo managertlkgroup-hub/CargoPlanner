@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { Html, Outlines } from '@react-three/drei';
 import type { PackedItem, Vehicle } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
-import { UNIT_LABEL, toUnit } from '../../utils/helpers';
+import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight } from '../../utils/helpers';
 import { SCALE } from './Container3D';
 
 interface Props {
@@ -39,6 +39,7 @@ export default function CargoItem3D({
 }: Props) {
   const [hovered, setHovered] = useState(false);
   const unit = useAppStore((s) => s.unit);
+  const weightUnit = useAppStore((s) => s.weightUnit);
 
   const isCylinder = item.shape === 'cylinder';
   const diameter = item.diameter ?? 0;
@@ -143,7 +144,7 @@ export default function CargoItem3D({
             {`\n${isCylinder
               ? `Цилиндр Ø${Math.round(toUnit(diameter, unit))}×${Math.round(toUnit(item.dimensions.length, unit))} ${UNIT_LABEL[unit]}`
               : `${Math.round(toUnit(item.dimensions.length, unit))}×${Math.round(toUnit(item.dimensions.width, unit))}×${Math.round(toUnit(item.dimensions.height, unit))} ${UNIT_LABEL[unit]}`}`}
-            {`\nВес: ${item.weight} кг`}
+            {`\nВес: ${formatWeight(item.weight, weightUnit)} ${WEIGHT_UNIT_LABEL[weightUnit]}`}
             {isOversize ? `\n⚠ Негабаритный` : ''}
             {`\nПозиция: x=${Math.round(toUnit(item.position.x, unit))} y=${Math.round(toUnit(item.position.y, unit))} z=${Math.round(toUnit(item.position.z, unit))} ${UNIT_LABEL[unit]}`}
             {`\nПоворот Y: ${Math.round(item.rotationY ?? 0)}°`}
