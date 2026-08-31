@@ -5,7 +5,7 @@
 import type { ComponentType } from 'react';
 import { Package, AlertTriangle, Scale, Layers, ArrowUp } from 'lucide-react';
 import type { PackResult, Vehicle, Unit } from '../../types';
-import { UNIT_LABEL, toUnit } from '../../utils/helpers';
+import { UNIT_LABEL, formatDimension } from '../../utils/helpers';
 
 export interface PackingSuggestion {
   id: string;
@@ -84,7 +84,7 @@ export function generateSuggestions(
     suggestions.push({
       id: 'second-layer',
       icon: ArrowUp,
-      message: `Высота загрузки ${Math.round(toUnit(maxY, unit))} ${UNIT_LABEL[unit]} из ${Math.round(toUnit(vehicle.height, unit))} ${UNIT_LABEL[unit]}. Добавьте второй слой.`,
+      message: `Высота загрузки ${formatDimension(maxY, unit)} ${UNIT_LABEL[unit]} из ${formatDimension(vehicle.height, unit)} ${UNIT_LABEL[unit]}. Добавьте второй слой.`,
       cargoIds: [],
     });
   }
@@ -110,7 +110,7 @@ export function generateSuggestions(
       suggestions.push({
         id: 'balance-long',
         icon: Scale,
-        message: `Грузы смещены к ${side} части кузова (${Math.round(toUnit(Math.abs(avgX - centerX), unit))} ${UNIT_LABEL[unit]}). Распределите тяжёлые грузы равномернее.`,
+        message: `Грузы смещены к ${side} части кузова (${formatDimension(Math.abs(avgX - centerX), unit)} ${UNIT_LABEL[unit]}). Распределите тяжёлые грузы равномернее.`,
         cargoIds: [],
       });
     }
@@ -120,11 +120,11 @@ export function generateSuggestions(
     const avgZ = cogZ / totalWz;
     const centerZ = vehicle.width / 2;
     if (Math.abs(avgZ - centerZ) > vehicle.width * 0.2) {
-      const sideZ = avgZ < centerZ ? 'левую' : 'правую';
+      const sideZ = avgZ < centerZ ? 'левой' : 'правой';
       suggestions.push({
         id: 'balance-width',
         icon: Scale,
-        message: `Грузы смещены к ${sideZ} стороне кузова (${Math.round(toUnit(Math.abs(avgZ - centerZ), unit))} ${UNIT_LABEL[unit]}). Распределите грузы равномернее по ширине.`,
+        message: `Грузы смещены к ${sideZ} стороне кузова (${formatDimension(Math.abs(avgZ - centerZ), unit)} ${UNIT_LABEL[unit]}). Распределите грузы равномернее по ширине.`,
         cargoIds: [],
       });
     }
