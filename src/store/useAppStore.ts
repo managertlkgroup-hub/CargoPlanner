@@ -17,7 +17,7 @@ import type {
   Vehicle,
 } from '../types';
 import { getDefaultVehicles, type CargoPreset } from '../lib/packer/presets';
-import { loadFromStorage, saveToStorage, uid } from '../utils/helpers';
+import { loadFromStorage, saveToStorage, uid, type WeightUnit } from '../utils/helpers';
 
 /** Ключи localStorage */
 const KEYS = {
@@ -34,6 +34,7 @@ const KEYS = {
   loadingPoints: 'mlp:loading-points',
   unloadingPoints: 'mlp:unloading-points',
   unit: 'mlp:unit',
+  weightUnit: 'mlp:weight-unit',
 };
 
 /**
@@ -52,6 +53,7 @@ interface AppState {
   customCargoPresets: CargoPreset[];
   addCustomCargoPreset: (p: CargoPreset) => void;
   removeCustomCargoPreset: (idx: number) => void;
+  updateCustomCargoPreset: (idx: number, patch: Partial<CargoPreset>) => void;
 
   // Автомобили
   customVehicles: Vehicle[];
@@ -86,6 +88,8 @@ interface AppState {
   // Глобальные единицы измерения (отображение/ввод)
   unit: Unit;
   setUnit: (u: Unit) => void;
+  weightUnit: WeightUnit;
+  setWeightUnit: (u: WeightUnit) => void;
 
   // Результат
   result: PackResult | null;
@@ -176,6 +180,11 @@ export const useAppStore = create<AppState>()(
       },
       removeCustomCargoPreset: (idx) => {
         const list = get().customCargoPresets.filter((_, i) => i !== idx);
+        saveToStorage(KEYS.customCargoPresets, list);
+        set({ customCargoPresets: list });
+      },
+      updateCustomCargoPreset: (idx, patch) => {
+        const list = get().customCargoPresets.map((p, i) => (i === idx ? { ...p, ...patch } : p));
         saveToStorage(KEYS.customCargoPresets, list);
         set({ customCargoPresets: list });
       },
@@ -312,6 +321,11 @@ export const useAppStore = create<AppState>()(
       setUnit: (u) => {
         saveToStorage(KEYS.unit, u);
         set({ unit: u });
+      },
+      weightUnit: loadFromStorage<WeightUnit>(KEYS.weightUnit, 'kg'),
+      setWeightUnit: (u) => {
+        saveToStorage(KEYS.weightUnit, u);
+        set({ weightUnit: u });
       },
 
       // --- Результат ---
