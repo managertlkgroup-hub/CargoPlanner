@@ -52,7 +52,7 @@ export async function exportSceneToPng(
   const PAD = 40 * S;
   const HEADER_H = 70 * S;
   const LEGEND_H = variant ? Math.max(60, 28 * (variant.items.length > 0 ? [...new Set(variant.items.map(i => layerOf(i)))].length : 1) + 40) * S : 80 * S;
-  const METRICS_H = 60 * S;
+  const METRICS_H = 120 * S;
   const FOOTER_H = 40 * S;
 
   const srcW = sourceCanvas.width;
