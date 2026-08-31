@@ -123,6 +123,10 @@ const App: React.FC = () => {
             {vehicleSectionOpen && (
               <div className="accordion-content">
                 <VehicleSelector />
+                <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                  <button className="btn btn-sm" onClick={() => setMatcherOpen(true)}><Search size={14} /> Подобрать авто</button>
+                  <button className="btn btn-sm" onClick={() => setDetailsVehicleId(selectedVehicleId)}><ClipboardList size={14} /> Детали</button>
+                </div>
               </div>
             )}
           </div>
@@ -139,10 +143,6 @@ const App: React.FC = () => {
             </button>
             {cargoSectionOpen && (
               <div className="cargo-section">
-                <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-                  <button className="btn btn-sm" onClick={() => setMatcherOpen(true)}><Search size={14} /> Подобрать авто</button>
-                  <button className="btn btn-sm" onClick={() => setDetailsVehicleId(selectedVehicleId)}><ClipboardList size={14} /> Детали</button>
-                </div>
                 <CargoTable onCargoDetails={setDetailsCargoId} />
               </div>
             )}
