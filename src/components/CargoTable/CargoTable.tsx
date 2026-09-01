@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { WEIGHT_UNIT_LABEL } from '../../utils/helpers';
+import { tr } from '../../i18n';
 import CargoRow from './CargoRow';
 import AddCargoForm from './AddCargoForm';
 import { exportCsv } from '../../lib/csv/exportCsv';
@@ -21,6 +22,7 @@ export default function CargoTable({ onCargoDetails }: CargoTableProps) {
   const clearCargo = useAppStore((s) => s.clearCargo);
   const setError = useAppStore((s) => s.setError);
   const weightUnit = useAppStore((s) => s.weightUnit);
+  const lang = useAppStore((s) => s.lang);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showAdd, setShowAdd] = useState(false);
@@ -84,22 +86,22 @@ export default function CargoTable({ onCargoDetails }: CargoTableProps) {
       {/* Панель действий */}
       <div className="table-actions">
         <button className="btn btn-sm" onClick={() => setShowAdd((v) => !v)}>
-          {showAdd ? '− Скрыть форму' : '+ Добавить'}
+          {showAdd ? tr(lang, 'cargo.hide') : tr(lang, 'cargo.add')}
         </button>
         <button className="btn btn-sm" onClick={selectAll} disabled={cargo.length === 0}>
-          {selectedIds.size === cargo.length && cargo.length > 0 ? 'Снять всё' : 'Выбрать всё'}
+          {selectedIds.size === cargo.length && cargo.length > 0 ? tr(lang, 'cargo.deselectAll') : tr(lang, 'cargo.selectAll')}
         </button>
         <button className="btn btn-sm btn-danger" onClick={handleDelete} disabled={selectedIds.size === 0}>
-          Удалить ({selectedIds.size})
+          {tr(lang, 'cargo.delete')} ({selectedIds.size})
         </button>
         <button className="btn btn-sm" onClick={handleClear} disabled={cargo.length === 0}>
-          Очистить
+          {tr(lang, 'cargo.clear')}
         </button>
         <button className="btn btn-sm" onClick={handleExport} disabled={cargo.length === 0}>
-          Экспорт CSV
+          {tr(lang, 'cargo.export')}
         </button>
         <label className="btn btn-sm btn-file">
-          Импорт CSV
+          {tr(lang, 'cargo.import')}
           <input
             type="file"
             accept=".csv"

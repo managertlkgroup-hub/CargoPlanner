@@ -13,6 +13,7 @@ import SessionModal from '../Settings/SessionModal';
 import PresetsModal from '../Settings/PresetsModal';
 import type { Unit } from '../../types';
 import { UNIT_LABEL, WEIGHT_UNIT_LABEL, type WeightUnit } from '../../utils/helpers';
+import { LANGS, LANG_LABEL, tr, type Lang } from '../../i18n';
 
 const UNITS: Unit[] = ['mm', 'cm', 'm'];
 const WEIGHT_UNITS: WeightUnit[] = ['kg', 'ton'];
@@ -33,6 +34,8 @@ export default function Header({ onOpenSettings }: HeaderProps) {
   const setUnit = useAppStore((s) => s.setUnit);
   const weightUnit = useAppStore((s) => s.weightUnit);
   const setWeightUnit = useAppStore((s) => s.setWeightUnit);
+  const lang = useAppStore((s) => s.lang);
+  const setLang = useAppStore((s) => s.setLang);
 
   const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
   const activeVariant = useActiveVariant();
@@ -71,14 +74,14 @@ export default function Header({ onOpenSettings }: HeaderProps) {
           <circle cx="20" cy="48" r="6" fill="#1f2937" />
           <circle cx="44" cy="48" r="6" fill="#1f2937" />
         </svg>
-        <span>3D Планировщик загрузки</span>
+        <span>{tr(lang, 'app.title')}</span>
       </div>
 
       <div className="header-actions">
         <div className="unit-switcher">
-          <span className="unit-switcher-title">Единицы измерения</span>
+          <span className="unit-switcher-title">{tr(lang, 'units.title')}</span>
           <div className="unit-group">
-            <span className="unit-group-label">Размеры:</span>
+            <span className="unit-group-label">{tr(lang, 'units.dim')}</span>
             {UNITS.map((u) => (
               <button
                 key={u}
@@ -91,7 +94,7 @@ export default function Header({ onOpenSettings }: HeaderProps) {
             ))}
           </div>
           <div className="unit-group">
-            <span className="unit-group-label">Вес:</span>
+            <span className="unit-group-label">{tr(lang, 'units.weight')}</span>
             {WEIGHT_UNITS.map((u) => (
               <button
                 key={u}
@@ -103,21 +106,35 @@ export default function Header({ onOpenSettings }: HeaderProps) {
               </button>
             ))}
           </div>
+          <div className="unit-group">
+            <span className="unit-group-label">🌐</span>
+            {LANGS.map((l: Lang) => (
+              <button
+                key={l}
+                type="button"
+                className={`btn btn-sm unit-btn ${lang === l ? 'btn-primary' : ''}`}
+                onClick={() => setLang(l)}
+                title={tr(l, 'app.title')}
+              >
+                {LANG_LABEL[l]}
+              </button>
+            ))}
+          </div>
         </div>
         <button className="btn btn-sm" onClick={() => setPresetsOpen(true)}>
-          <Package size={14} /> Пресеты
+          <Package size={14} /> {tr(lang, 'btn.presets')}
         </button>
         <button className="btn btn-sm" onClick={() => setSessionOpen(true)}>
-          <Save size={14} /> Сессии
+          <Save size={14} /> {tr(lang, 'btn.sessions')}
         </button>
         <button className="btn btn-sm" onClick={handlePng}>
-          <Image size={14} /> Экспорт PNG
+          <Image size={14} /> {tr(lang, 'btn.png')}
         </button>
         <button className="btn btn-sm btn-primary" onClick={handlePdf}>
-          <FileText size={14} /> Отчёт PDF
+          <FileText size={14} /> {tr(lang, 'btn.pdf')}
         </button>
         <button className="btn btn-sm" onClick={onOpenSettings}>
-          <Settings size={14} /> Настройки
+          <Settings size={14} /> {tr(lang, 'btn.settings')}
         </button>
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </div>

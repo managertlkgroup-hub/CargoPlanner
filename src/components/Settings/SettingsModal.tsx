@@ -17,7 +17,7 @@ export default function SettingsModal({ onClose }: Props) {
   const [allowRotation, setAllowRotation] = useState(settings.allowRotation);
 
   const handleSave = () => {
-    setSettings({ maxStackHeight: settings.maxStackHeight, allowRotation });
+    setSettings({ maxStackHeight: settings.maxStackHeight, allowRotation, gap: settings.gap ?? 0 });
     onClose();
   };
 

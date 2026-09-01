@@ -429,12 +429,16 @@ export function packItems(
     const resolvedSettings: PackSettings = settings ?? {
       maxStackHeight: 0,
       allowRotation: true,
+      gap: 0,
     };
 
+    const gap = resolvedSettings.gap ?? 0;
+
+    // Зазор уменьшает доступное пространство кузова со всех сторон (отступ от стен).
     const bin = {
-      length: vehicle.length,
-      width: vehicle.width,
-      height: vehicle.height,
+      length: Math.max(0, vehicle.length - 2 * gap),
+      width: Math.max(0, vehicle.width - 2 * gap),
+      height: Math.max(0, vehicle.height - 2 * gap),
     };
 
     // Сортируем грузы по порядку точки загрузки (по возрастанию order),
@@ -481,9 +485,11 @@ export function packItems(
         } else {
           totalVolume += p.placedLength * p.placedWidth * p.placedHeight;
         }
-        // Вычисляем индекс слоя: ищем максимальный Y нижнего края среди уже обработанных
-        const layerIndex = Math.round(p.y / Math.max(1, p.placedHeight));
-        return toPackedItem(p, layerIndex);
+        // Смещаем позицию на величину зазора (груз отстоит от всех стенок кузова)
+        const op = { ...p, x: p.x + gap, y: p.y + gap, z: p.z + gap };
+        // Вычисляем индекс слоя
+        const layerIndex = Math.round(op.y / Math.max(1, op.placedHeight));
+        return toPackedItem(op, layerIndex);
       });
 
       const binVolume = bin.length * bin.width * bin.height;

@@ -18,6 +18,7 @@ import type {
 } from '../types';
 import { getDefaultVehicles, type CargoPreset } from '../lib/packer/presets';
 import { loadFromStorage, saveToStorage, uid, type WeightUnit } from '../utils/helpers';
+import type { Lang } from '../i18n';
 
 /** Ключи localStorage */
 const KEYS = {
@@ -35,6 +36,7 @@ const KEYS = {
   unloadingPoints: 'mlp:unloading-points',
   unit: 'mlp:unit',
   weightUnit: 'mlp:weight-unit',
+  lang: 'mlp:lang',
 };
 
 /**
@@ -90,6 +92,8 @@ interface AppState {
   setUnit: (u: Unit) => void;
   weightUnit: WeightUnit;
   setWeightUnit: (u: WeightUnit) => void;
+  lang: Lang;
+  setLang: (l: Lang) => void;
 
   // Результат
   result: PackResult | null;
@@ -358,6 +362,7 @@ export const useAppStore = create<AppState>()(
       settings: loadFromStorage<PackSettings>(KEYS.settings, {
         maxStackHeight: 0,
         allowRotation: true,
+        gap: 0,
       }),
       setSettings: (s) => {
         saveToStorage(KEYS.settings, s);
@@ -374,6 +379,13 @@ export const useAppStore = create<AppState>()(
       setWeightUnit: (u) => {
         saveToStorage(KEYS.weightUnit, u);
         set({ weightUnit: u });
+      },
+
+      // --- Язык ---
+      lang: loadFromStorage<Lang>(KEYS.lang, 'ru'),
+      setLang: (l) => {
+        saveToStorage(KEYS.lang, l);
+        set({ lang: l });
       },
 
       // --- Результат ---
@@ -744,6 +756,7 @@ export const useAppStore = create<AppState>()(
         unloadingPoints: s.unloadingPoints,
         vehicleVisibilityMap: s.vehicleVisibilityMap,
         unit: s.unit,
+        lang: s.lang,
       }),
     },
   ),

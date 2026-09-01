@@ -16,8 +16,9 @@ import VehicleVisibilityControls from './components/VehicleSelector/VehicleVisib
 import VehicleMatcher from './components/VehicleSelector/VehicleMatcher';
 import { VehicleDetailsPanel, CargoDetailsPanel } from './components/PresetDetails/PresetDetailsPanel';
 import { generateSuggestions, type PackingSuggestion } from './lib/packer/suggestions';
-import { formatDimension } from './utils/helpers';
-import type { Unit } from './types';
+import { formatDimension, toUnit, fromUnit, UNIT_LABEL } from './utils/helpers';
+import type { Unit, PackSettings } from './types';
+import { tr } from './i18n';
 
 const toUnitDisplay = (mm: number, unit: Unit) => formatDimension(mm, unit);
 
@@ -29,6 +30,7 @@ const App: React.FC = () => {
   const settings = useAppStore((s) => s.settings);
   const isCalculating = useAppStore((s) => s.isCalculating);
   const unit = useAppStore((s) => s.unit);
+  const lang = useAppStore((s) => s.lang);
   const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
 
   const setResult = useAppStore((s) => s.setResult);
@@ -61,6 +63,34 @@ const App: React.FC = () => {
   useEffect(() => {
     setStacking(settings.maxStackHeight > 0);
   }, [settings.maxStackHeight]);
+
+  const [gapEnabled, setGapEnabled] = useState((settings.gap ?? 0) > 0);
+
+  // Синхронизация чекбокса зазора с настройками
+  useEffect(() => {
+    setGapEnabled((settings.gap ?? 0) > 0);
+  }, [settings.gap]);
+
+  // Общий пересчёт с заданными настройками (используется для штабелирования и зазора)
+  const recalcWithSettings = (veh: ReturnType<typeof getCurrentVehicle>, nextSettings: PackSettings) => {
+    setSettings(nextSettings);
+    if (cargo.length > 0 && veh) {
+      setCalculating(true);
+      try {
+        const result = packItems(veh, cargo, nextSettings, loadingPoints);
+        if (!result.error) {
+          setResult(result);
+          const pristineMap: Record<string, typeof result.variants[number]['items']> = {};
+          result.variants.forEach((v) => { pristineMap[v.id] = v.items; });
+          setPristine(pristineMap);
+          const cur = useAppStore.getState().activeVariant;
+          const keep = cur && result.variants.some(v => v.id === cur) ? cur : result.variants[0].id;
+          setActiveVariant(keep);
+        }
+      } catch (err) { /* пересчёт зазора */ }
+      finally { setCalculating(false); }
+    }
+  };
 
   // Сохранение состояния секций левой панели в localStorage
   useEffect(() => {
@@ -134,7 +164,7 @@ const App: React.FC = () => {
               if (next) setCargoSectionOpen(false);
             }}>
               <span>
-                <Truck size={14} /> Автомобиль
+                <Truck size={14} /> {tr(lang, 'section.vehicle')}
                 {!vehicleSectionOpen && vehicle && (
                   <span style={{ fontWeight: 400, marginLeft: 6, fontSize: 11 }}>
                     — {vehicle.name} ({toUnitDisplay(vehicle.length, unit)}×{toUnitDisplay(vehicle.width, unit)}×{toUnitDisplay(vehicle.height, unit)})
@@ -160,7 +190,7 @@ const App: React.FC = () => {
               setCargoSectionOpen(next);
               if (next) setVehicleSectionOpen(false);
             }}>
-              <span><Package size={14} /> Грузы ({cargo.length})</span>
+              <span><Package size={14} /> {tr(lang, 'section.cargo')} ({cargo.length})</span>
               <span>{cargoSectionOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</span>
             </button>
             {cargoSectionOpen && (
@@ -176,7 +206,7 @@ const App: React.FC = () => {
           {/* Секция «Управление» */}
           <div className="accordion-section">
             <button className="accordion-toggle" onClick={() => setControlSectionOpen(!controlSectionOpen)}>
-              <span><Settings size={14} /> Управление</span>
+              <span><Settings size={14} /> {tr(lang, 'section.control')}</span>
               <span>{controlSectionOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</span>
             </button>
             {controlSectionOpen && (
@@ -186,7 +216,7 @@ const App: React.FC = () => {
                   disabled={isCalculating || cargo.length === 0}
                   className="btn btn-primary btn-calculate"
                 >
-                  {isCalculating ? 'Расчёт…' : 'Расчёт'}
+                  {isCalculating ? tr(lang, 'btn.calculating') : tr(lang, 'btn.calculate')}
                 </button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
                   <input
@@ -201,32 +231,55 @@ const App: React.FC = () => {
                       // чтобы груз любой высоты (напр. 1200мм) мог штабелироваться
                       // до тех пор, пока суммарная высота не превышает высоту кузова.
                       const newMaxH = checked ? vehicle.height : 0;
-                      const newSettings = { ...settings, maxStackHeight: newMaxH };
-                      setSettings(newSettings);
-                      if (cargo.length > 0) {
-                        setCalculating(true);
-                        try {
-                          const result = packItems(vehicle, cargo, newSettings, loadingPoints);
-                          if (!result.error) {
-                            setResult(result);
-                            const pristineMap: Record<string, typeof result.variants[number]['items']> = {};
-                            result.variants.forEach((v) => { pristineMap[v.id] = v.items; });
-                            setPristine(pristineMap);
-                            const cur = useAppStore.getState().activeVariant;
-                            const keep = cur && result.variants.some(v => v.id === cur) ? cur : result.variants[0].id;
-                            setActiveVariant(keep);
-                          }
-                        } catch (err) { /* stacking recalc error */ }
-                        finally { setCalculating(false); }
-                      }
+                      recalcWithSettings(vehicle, { ...settings, maxStackHeight: newMaxH });
                     }}
                   />
                   <label htmlFor="stacking-toggle" style={{ fontSize: 13, color: 'var(--text)' }}>
-                    <Box size={14} /> Штабелирование
+                    <Box size={14} /> {tr(lang, 'stacking')}
                   </label>
                   <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                    (для всех грузов)
+                    {tr(lang, 'stacking.hint')}
                   </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                  <input
+                    type="checkbox"
+                    id="gap-toggle"
+                    checked={gapEnabled}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setGapEnabled(checked);
+                      const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
+                      // По умолчанию при включении зазор = 5 см (50 мм) — толстый палец/отступ
+                      const newGap = checked ? 50 : 0;
+                      recalcWithSettings(vehicle, { ...settings, gap: newGap });
+                    }}
+                  />
+                  <label htmlFor="gap-toggle" style={{ fontSize: 13, color: 'var(--text)' }}>
+                    <Grid3x3 size={14} /> {tr(lang, 'gap')}
+                  </label>
+                  {gapEnabled && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 4 }}>
+                      <input
+                        type="number"
+                        min="0"
+                        step={unit === 'mm' ? 1 : unit === 'cm' ? 0.5 : 0.05}
+                        value={Number(toUnit((settings.gap ?? 0) || 50, unit).toFixed(unit === 'm' ? 2 : 1))}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value);
+                          if (Number.isFinite(v) && v >= 0) {
+                            const newGap = fromUnit(v, unit);
+                            recalcWithSettings(
+                              getCurrentVehicle(selectedVehicleId, customVehicles),
+                              { ...settings, gap: newGap }
+                            );
+                          }
+                        }}
+                        style={{ width: 70, padding: '3px 6px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13 }}
+                      />
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{UNIT_LABEL[unit]}</span>
+                    </div>
+                  )}
                 </div>
                 <VehicleVisibilityControls vehicleId={selectedVehicleId} />
               </div>

@@ -158,17 +158,19 @@ export default function AddCargoForm() {
     // Also update native form fields for FormData
     const form = e.currentTarget.closest('form');
     if (!form) return;
-    (form.querySelector('[name="name"]') as HTMLInputElement).value = preset.name;
-    (form.querySelector('[name="shape"]') as HTMLSelectElement).value = preset.shape;
+    const q = (n: string) => form.querySelector(n) as HTMLInputElement | HTMLSelectElement | null;
+    const setVal = (n: string, v: string) => { const el = q(n); if (el) el.value = v; };
+    setVal('name', preset.name);
+    setVal('shape', preset.shape);
     setShape(preset.shape);
-    (form.querySelector('[name="length"]') as HTMLInputElement).value = String(conv(preset.length));
+    setVal('length', String(conv(preset.length)));
     if (preset.shape === 'box') {
-      (form.querySelector('[name="width"]') as HTMLInputElement).value = String(conv(preset.width));
-      (form.querySelector('[name="height"]') as HTMLInputElement).value = String(conv(preset.height));
+      setVal('width', String(conv(preset.width)));
+      setVal('height', String(conv(preset.height)));
     } else {
-      (form.querySelector('[name="diameter"]') as HTMLInputElement).value = String(conv(preset.diameter || preset.width));
+      setVal('diameter', String(conv(preset.diameter || preset.width)));
     }
-    (form.querySelector('[name="weight"]') as HTMLInputElement).value = String(weightUnit === 'ton' ? Math.round(toWeightUnit(preset.weight, weightUnit) * 100) / 100 : preset.weight);
+    setVal('weight', String(weightUnit === 'ton' ? Math.round(toWeightUnit(preset.weight, weightUnit) * 100) / 100 : preset.weight));
   };
 
   const inputStyle = (key: string) =>
