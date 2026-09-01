@@ -574,10 +574,12 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
 const STACK_REASONS: Record<string, string> = {
   noresult: 'err.calcFirst',
   nosupport: 's2d.nosupport',
+  insupport: 's2d.insupport',
   toohigh: 's2d.toohigh',
   collide: 's2d.collide',
   onfloor: 's2d.onfloor',
   notstackable: 's2d.notstackable',
+  stackingoff: 's2d.stackingoff',
 };
 
 function stackReason(lang: 'ru' | 'en', reason: string): string {

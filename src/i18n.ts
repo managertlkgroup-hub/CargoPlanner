@@ -90,6 +90,8 @@ const ru: Dict = {
   's2d.collide': 'Препятствие — предмет нельзя поставить',
   's2d.onfloor': 'Груз уже стоит на полу',
   's2d.notstackable': 'Этот груз нельзя штабелировать',
+  's2d.stackingoff': 'Включите штабелирование для перемещения по слоям',
+  's2d.insupport': 'Недостаточная опора — площадка опоры меньше 50% основания груза',
 
   // Кнопки отчётов
   'rb.pdf': 'Отчёт PDF',
@@ -388,6 +390,8 @@ const en: Dict = {
   's2d.collide': 'Obstacle — cannot place item',
   's2d.onfloor': 'Item is already on the floor',
   's2d.notstackable': 'This item cannot be stacked',
+  's2d.stackingoff': 'Enable stacking to move items between layers',
+  's2d.insupport': 'Insufficient support — support area is less than 50% of the item base',
 
   'rb.pdf': 'PDF Report',
   'rb.excel': 'Export Excel',

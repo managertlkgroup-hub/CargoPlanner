@@ -215,18 +215,13 @@ function packIntoBin(
     let bestFit: { orientation: Orientation; point: { x: number; y: number; z: number } } | null = null;
     let bestScore = Infinity;
 
-    // Сортируем точки для приоритетного размещения (приоритет первичной оси режима)
+    // Сортируем точки для приоритетного размещения.
+    // Для вдоль и поперёк приоритет одинаков: сначала длина кузова X
+    // (от передней стенки к задней), затем ширина Z.
     points.sort((a, b) => {
       if (a.y !== b.y) return a.y - b.y;
-      if (sortMode === 'across') {
-        // поперёк: первичная ось Z (ширина), вторичная X (длина)
-        if (a.z !== b.z) return a.z - b.z;
-        return a.x - b.x;
-      } else {
-        // вдоль и смешанный: первичная ось X (длина), вторичная Z (ширина)
-        if (a.x !== b.x) return a.x - b.x;
-        return a.z - b.z;
-      }
+      if (a.x !== b.x) return a.x - b.x;
+      return a.z - b.z;
     });
 
     // Compute current bounding box of placed items for compactness scoring
@@ -306,12 +301,12 @@ function packIntoBin(
 
         let score: number;
 
-        if (sortMode === 'along') {
-          // вдоль: приоритет заполнения длины кузова X, ряды укладываются по ширине Z
+        if (sortMode === 'along' || sortMode === 'across') {
+          // Вдоль и поперёк: одинаковый приоритет заполнения — грузы размещаются
+          // от передней стенки к задней по длине кузова X, ряды укладываются по
+          // ширине кузова Z. Отличие режимов только в ориентации каждого груза
+          // (задаётся в getOrientations), а не в направлении заполнения.
           score = point.x * DIR + point.z * SEC + point.y * Y_W + footprintMax * CMP;
-        } else if (sortMode === 'across') {
-          // поперёк: приоритет заполнения ширины кузова Z, ряды укладываются по длине X
-          score = point.z * DIR + point.x * SEC + point.y * Y_W + footprintMax * CMP;
         } else {
           // смешанный: комбинация вдоль и поперёк. Для каждого груза выбираем
           // ориентацию (вдоль/поперёк) и позицию, дающие максимальную компактность,

@@ -474,6 +474,9 @@ export const useAppStore = create<AppState>()(
         const vehicle = getCurrentVehicle(get().selectedVehicleId, get().customVehicles);
         if (!item) return 'noresult';
 
+        // Штабелирование должно быть включено для перемещения по слоям
+        if ((get().settings.maxStackHeight ?? 0) <= 0) return 'stackingoff';
+
         // === Подъём предмета, уже находящегося на слое выше первого ===
         if (item.position.y > 0) {
           if (!item.stackable && item.position.y > 0) return 'notstackable';
@@ -508,12 +511,23 @@ export const useAppStore = create<AppState>()(
 
           const candidate = { x: item.position.x, y: target, z: item.position.z };
 
-          // Поддержка снизу (на target должна стоять опора)
-          const hasSupport = target <= 0.01 || variant.items.some((o) =>
-            xzOverlap(candidate.x, candidate.z, iL, iW, o) &&
-            Math.abs(o.position.y + o.dimensions.height - candidate.y) < 0.01,
-          );
-          if (!hasSupport) return 'nosupport';
+          // Поддержка снизу (на target должна стоять опора).
+          // Опора должна перекрывать >= 50% площади основания груза.
+          const itemBase = iL * iW;
+          let supportOverlap = 0;
+          if (target > 0.01) {
+            for (const o of variant.items) {
+              if (o.id === item.id) continue;
+              if (Math.abs(o.position.y + o.dimensions.height - candidate.y) >= 0.01) continue;
+              const oD = rotDims(o);
+              const ox = Math.min(candidate.x + iL, o.position.x + oD.L) - Math.max(candidate.x, o.position.x);
+              const oz = Math.min(candidate.z + iW, o.position.z + oD.W) - Math.max(candidate.z, o.position.z);
+              supportOverlap += Math.max(0, ox) * Math.max(0, oz);
+            }
+          } else {
+            supportOverlap = itemBase; // на полу опора — сам пол
+          }
+          if (itemBase <= 0 || supportOverlap / itemBase < 0.5) return 'insupport';
 
           // Коллизии в 3D
           if (variant.items.some((o) => xyzCollide(candidate, iL, iW, item.dimensions.height, o))) return 'collide';
@@ -526,25 +540,36 @@ export const useAppStore = create<AppState>()(
           return null;
         }
         
-        // Find support: another item at y=0 that overlaps in XZ
+        // Find support: another item at y=0 that overlaps in XZ.
+        // Для надёжной опоры перекрытие должно составлять >= 50% площади основания груза.
         const itemL = item.rotationY === 90 || item.rotationY === 270 ? item.dimensions.width : item.dimensions.length;
         const itemW = item.rotationY === 90 || item.rotationY === 270 ? item.dimensions.length : item.dimensions.width;
-        
-        const support = variant.items.find((other) => {
-          if (other.id === item.id) return false;
-          if (other.position.y !== 0) return false;
+        const itemBase = itemL * itemW;
+
+        let bestSupport: { other: typeof variant.items[number]; overlap: number } | null = null;
+        for (const other of variant.items) {
+          if (other.id === item.id) continue;
+          if (other.position.y !== 0) continue;
           const otherL = other.rotationY === 90 || other.rotationY === 270 ? other.dimensions.width : other.dimensions.length;
           const otherW = other.rotationY === 90 || other.rotationY === 270 ? other.dimensions.length : other.dimensions.width;
-          // Check XZ overlap
-          return (
+          if (
             item.position.x < other.position.x + otherL &&
             item.position.x + itemL > other.position.x &&
             item.position.z < other.position.z + otherW &&
             item.position.z + itemW > other.position.z
-          );
-        });
-        if (!support) return 'nosupport'; // No support below
-        
+          ) {
+            const ox = Math.min(item.position.x + itemL, other.position.x + otherL) - Math.max(item.position.x, other.position.x);
+            const oz = Math.min(item.position.z + itemW, other.position.z + otherW) - Math.max(item.position.z, other.position.z);
+            const overlap = Math.max(0, ox) * Math.max(0, oz);
+            if (!bestSupport || overlap > bestSupport.overlap) {
+              bestSupport = { other, overlap };
+            }
+          }
+        }
+        if (!bestSupport) return 'nosupport'; // Нет груза для опоры
+        if (itemBase <= 0 || bestSupport.overlap / itemBase < 0.5) return 'insupport'; // Недостаточная опора
+
+        const support = bestSupport.other;
         const newY = support.position.y + support.dimensions.height;
         // Enforce height limit
         if (newY + item.dimensions.height > vehicle.height) return 'toohigh';
@@ -587,6 +612,10 @@ export const useAppStore = create<AppState>()(
         const variant = result.variants.find((v) => v.id === activeVariant);
         if (!variant) return 'noresult';
         const item = variant.items.find((it) => it.id === cargoId);
+
+        // Штабелирование должно быть включено для перемещения по слоям
+        if ((get().settings.maxStackHeight ?? 0) <= 0) return 'stackingoff';
+
         if (!item || item.position.y === 0) return 'onfloor'; // Already on floor
 
         const iD = rotDims(item);
