@@ -5,7 +5,7 @@
 
 import type { Vehicle, LayoutVariant } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
-import { UNIT_LABEL, toUnit, formatWeight, WEIGHT_UNIT_LABEL, type WeightUnit } from '../../utils/helpers';
+import { UNIT_LABEL, toUnit, formatWeight, WEIGHT_UNIT_LABEL, type WeightUnit, nameOf } from '../../utils/helpers';
 import { tr, trf, type Lang } from '../../i18n';
 
 const LAYER_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -98,7 +98,7 @@ export async function exportSceneToPng(
     ctx.fillStyle = '#3b82f6';
     ctx.font = `bold ${14 * S}px system-ui, sans-serif`;
     ctx.fillText(
-      `${tr(lang, 'png.variant')}: ${variant.label || tr(lang, 'mode.along')}`,
+      `${tr(lang, 'png.variant')}: ${tr(lang, variant.labelKey || 'mode.along')}`,
       canvas.width - PAD, HEADER_H / 2 + 12 * S,
     );
   }
@@ -125,9 +125,9 @@ export async function exportSceneToPng(
     variant.items.forEach((item) => {
       const layer = layerOf(item);
       if (!layers.has(layer)) layers.set(layer, []);
-      const existing = layers.get(layer)!.find(l => l.name === item.name);
+      const existing = layers.get(layer)!.find(l => l.name === nameOf(item, lang));
       if (existing) existing.count++;
-      else layers.get(layer)!.push({ name: item.name, count: 1 });
+      else layers.get(layer)!.push({ name: nameOf(item, lang), count: 1 });
     });
     const sorted = [...layers.entries()].sort((a, b) => a[0] - b[0]);
 
@@ -162,7 +162,7 @@ export async function exportSceneToPng(
     const layers = new Set(variant.items.map(i => layerOf(i))).size;
 
     const metrics = [
-      `${vehicle.name} (${fmt(vehicle.length)}×${fmt(vehicle.width)}×${fmt(vehicle.height)} ${UNIT_LABEL[unit]})`,
+      `${nameOf(vehicle, lang)} (${fmt(vehicle.length)}×${fmt(vehicle.width)}×${fmt(vehicle.height)} ${UNIT_LABEL[unit]})`,
       `${tr(lang, 'png.items')}: ${variant.items.length}`,
       `${tr(lang, 'png.layers')}: ${layers}`,
       `${tr(lang, 'png.fillVolume')}: ${variant.volumeFill ?? 0}%`,

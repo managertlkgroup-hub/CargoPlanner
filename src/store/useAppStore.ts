@@ -17,7 +17,7 @@ import type {
   Vehicle,
 } from '../types';
 import { getDefaultVehicles, type CargoPreset } from '../lib/packer/presets';
-import { loadFromStorage, saveToStorage, uid, type WeightUnit } from '../utils/helpers';
+import { loadFromStorage, saveToStorage, uid, setCurrentLang, type WeightUnit } from '../utils/helpers';
 import type { Lang } from '../i18n';
 
 /** Ключи localStorage */
@@ -211,6 +211,8 @@ function xyzCollide(
   );
 }
 
+setCurrentLang(loadFromStorage<Lang>(KEYS.lang, 'ru'));
+
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
@@ -385,6 +387,7 @@ export const useAppStore = create<AppState>()(
       lang: loadFromStorage<Lang>(KEYS.lang, 'ru'),
       setLang: (l) => {
         saveToStorage(KEYS.lang, l);
+        setCurrentLang(l);
         set({ lang: l });
       },
 

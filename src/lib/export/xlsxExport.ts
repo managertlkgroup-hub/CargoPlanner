@@ -10,7 +10,7 @@
 import * as XLSX from 'xlsx';
 import type { Cargo, LayoutVariant, Vehicle } from '../../types';
 import { getCargoVolume } from '../../types';
-import { UNIT_LABEL, toUnit, formatWeight, WEIGHT_UNIT_LABEL, type WeightUnit } from '../../utils/helpers';
+import { UNIT_LABEL, toUnit, formatWeight, WEIGHT_UNIT_LABEL, type WeightUnit, nameOf } from '../../utils/helpers';
 import { useAppStore } from '../../store/useAppStore';
 import { tr, trf, type Lang } from '../../i18n';
 
@@ -39,7 +39,7 @@ export function exportToXLSX(
   // --- Лист «Автомобиль» ---
   const vehicleRows: SheetRows = [
     [tr(lang, 'xls.parameter'), tr(lang, 'xls.value')],
-    [tr(lang, 'xls.name'), vehicle.name],
+    [tr(lang, 'xls.name'), nameOf(vehicle, lang)],
     [trf(lang, 'xls.lengthU', { u: U }), fmt(vehicle.length)],
     [trf(lang, 'xls.widthU', { u: U }), fmt(vehicle.width)],
     [trf(lang, 'xls.heightU', { u: U }), fmt(vehicle.height)],
@@ -56,7 +56,7 @@ export function exportToXLSX(
   ];
   cargos.forEach((c) => {
     cargoRows.push([
-      c.name,
+      nameOf(c, lang),
       c.shape === 'cylinder' ? tr(lang, 'shape.cylinder') : tr(lang, 'shape.rect'),
       fmt(c.length),
       c.shape === 'box' ? (c.width != null ? fmt(c.width) : '') : '',
@@ -75,7 +75,7 @@ export function exportToXLSX(
   variants.forEach((variant, idx) => {
     const sheetName = trf(lang, 'xls.sheet.variant', { n: idx + 1 });
     const rows: SheetRows = [
-      [trf(lang, 'xls.variantLabel', { label: variant.label }), '', '', ''],
+      [trf(lang, 'xls.variantLabel', { label: tr(lang, variant.labelKey) }), '', '', ''],
       [tr(lang, 'xls.fillVolume'), variant.volumeFill, '', ''],
       [tr(lang, 'xls.fillWeight'), variant.weightFill, '', ''],
       [trf(lang, 'xls.totalWeightU', { u: W }), formatWeight(variant.totalWeight, weightUnit), '', ''],
@@ -90,7 +90,7 @@ export function exportToXLSX(
           ? `Ø${fmt(item.diameter ?? 0)} × ${fmt(item.dimensions.length)}`
           : `${fmt(item.dimensions.length)}×${fmt(item.dimensions.width)}×${fmt(item.dimensions.height)}`;
       rows.push([
-        item.name,
+        nameOf(item, lang),
         item.shape === 'cylinder' ? tr(lang, 'shape.cylinder') : tr(lang, 'shape.rect'),
         sizeText,
         formatWeight(item.weight, weightUnit),

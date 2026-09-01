@@ -5,6 +5,8 @@ import type { CargoShape, CylinderOrientation } from '../../types';
 export interface Box {
   id: string;
   name: string;
+  /** i18n-ключ названия (для стандартных пресетов грузов) */
+  nameKey?: string;
   shape: CargoShape;
   /** Диаметр для цилиндров (мм), undefined для прямоугольников */
   diameter?: number;

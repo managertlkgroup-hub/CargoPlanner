@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Save } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { tr } from '../../i18n';
+import { nameOf } from '../../utils/helpers';
 
 interface Props {
   onClose: () => void;
@@ -51,7 +52,7 @@ export default function SessionModal({ onClose }: Props) {
                 <div>
                   <div className="session-name">{s.name}</div>
                   <div className="text-muted">
-                    {s.vehicle.name} · {new Date(s.createdAt).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US')}
+                    {nameOf(s.vehicle, lang)} · {new Date(s.createdAt).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US')}
                   </div>
                 </div>
                 <div className="row">

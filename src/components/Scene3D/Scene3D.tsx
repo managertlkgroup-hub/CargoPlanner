@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useAppStore, useActiveVariant, useSelectedVehicle } from '../../store/useAppStore';
-import { UNIT_LABEL, toUnit } from '../../utils/helpers';
+import { unitLabel, formatDimension } from '../../utils/helpers';
 import CargoItem3D from './CargoItem3D';
 import Container3D from './Container3D';
 import { SCALE } from './Container3D';
@@ -91,7 +91,7 @@ const Scene3D: React.FC = () => {
   if (!vehicle || !containerSize) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
-        <p className="text-gray-500 dark:text-gray-400">Выберите автомобиль</p>
+        <p className="text-gray-500 dark:text-gray-400">{tr(lang, 's3d.vehicleEmpty')}</p>
       </div>
     );
   }
@@ -100,7 +100,7 @@ const Scene3D: React.FC = () => {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
         <p className="text-gray-500 dark:text-gray-400">
-          Загрузите грузы и нажмите «Рассчитать»
+          {tr(lang, 's3d.cargoEmpty')}
         </p>
       </div>
     );
@@ -219,11 +219,11 @@ const Scene3D: React.FC = () => {
 
       {/* Уголок с размерами кузова */}
       <div className="scene-overlay scene-dims">
-        Кузов: {Math.round(toUnit(vehicle.length, unit))}×{Math.round(toUnit(vehicle.width, unit))}×{Math.round(toUnit(vehicle.height, unit))} {UNIT_LABEL[unit]}
+        {tr(lang, 's3d.body')}: {formatDimension(vehicle.length, unit)}×{formatDimension(vehicle.width, unit)}×{formatDimension(vehicle.height, unit)} {unitLabel(lang, unit)}
       </div>
 
       <div className="scene-overlay scene-hint">
-        ЛКМ вращение · ПКМ перемещение · колесо — зум
+        {tr(lang, 's3d.bodyHint')}
       </div>
 
       {/* Переключатель слоёв */}
@@ -240,7 +240,7 @@ const Scene3D: React.FC = () => {
             top: 40, right: 10, display: 'flex', flexDirection: 'column', gap: 4,
             pointerEvents: 'auto',
           }}>
-            <div style={{ fontSize: 9, color: '#94a3b8', textAlign: 'center', marginBottom: 2 }}>Слои:</div>
+            <div style={{ fontSize: 9, color: '#94a3b8', textAlign: 'center', marginBottom: 2 }}>{tr(lang, 's3d.layers')}</div>
             <button
               onClick={() => setVisibleLayer(null)}
               style={{
@@ -249,7 +249,7 @@ const Scene3D: React.FC = () => {
                 background: visibleLayer === null ? '#3b82f6' : 'rgba(0,0,0,0.5)',
                 color: '#fff', cursor: 'pointer', fontWeight: 600,
               }}
-            >Все</button>
+            >{tr(lang, 's3d.allLayers')}</button>
             {sortedLayers.map(li => (
               <button
                 key={li}

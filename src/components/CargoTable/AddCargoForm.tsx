@@ -6,7 +6,7 @@ import { useState, useMemo } from 'react';
 import type { FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import type { Cargo, CargoShape } from '../../types';
-import { uid, fromUnit, toUnit, UNIT_LABEL, WEIGHT_UNIT_LABEL, formatWeight, toWeightUnit, fromWeightUnit } from '../../utils/helpers';
+import { uid, fromUnit, toUnit, UNIT_LABEL, WEIGHT_UNIT_LABEL, formatWeight, toWeightUnit, fromWeightUnit, nameOf } from '../../utils/helpers';
 import { getCargoPresets } from '../../lib/packer/presets';
 import { tr, trf, type Lang } from '../../i18n';
 
@@ -87,7 +87,12 @@ export default function AddCargoForm() {
   };
 
   const handleChange = (key: string, val: string) => {
-    setValues((prev) => ({ ...prev, [key]: val }));
+    setValues((prev) => {
+      const next = { ...prev, [key]: val };
+      // Ручное редактирование имени отвязывает от пресета
+      if (key === 'name') delete next.nameKey;
+      return next;
+    });
   };
 
   const handleBlur = (key: string) => {
@@ -122,6 +127,7 @@ export default function AddCargoForm() {
     const cargo: Cargo = {
       id: uid(),
       name,
+      nameKey: values.nameKey as string | undefined,
       shape,
       length,
       width: shape === 'box' ? width : undefined,
@@ -149,8 +155,10 @@ export default function AddCargoForm() {
     if (presetIndex < 0) return;
     const preset = cargoPresets[presetIndex];
     const conv = (mm: number) => Math.round(toUnit(mm, unit) * 100) / 100;
+    const pName = nameOf(preset, lang);
     setValues({
-      name: preset.name,
+      name: pName,
+      ...(preset.nameKey ? { nameKey: preset.nameKey } : {}),
       length: String(conv(preset.length)),
       width: String(conv(preset.width)),
       height: String(conv(preset.height)),
@@ -164,7 +172,7 @@ export default function AddCargoForm() {
     if (!form) return;
     const q = (n: string) => form.querySelector(n) as HTMLInputElement | HTMLSelectElement | null;
     const setVal = (n: string, v: string) => { const el = q(n); if (el) el.value = v; };
-    setVal('name', preset.name);
+    setVal('name', pName);
     setVal('shape', preset.shape);
     setShape(preset.shape);
     setVal('length', String(conv(preset.length)));
@@ -185,13 +193,13 @@ export default function AddCargoForm() {
   return (
     <form className="form-grid mt-2 add-cargo-form" onSubmit={handleSubmit}>
       <div className="form-group full">
-        <label>Быстрый выбор груза</label>
+        <label>{tr(lang, 'form.quickPick')}</label>
         <select onChange={handlePresetChange} defaultValue="">
-          <option value="" disabled>-- Выберите пресет --</option>
+          <option value="" disabled>{tr(lang, 'form.selectPreset')}</option>
           <optgroup label={tr(lang, 'form.optgroupStandard')}>
             {builtInPresets.map((preset, idx) => (
-              <option key={preset.name} value={idx}>
-                {preset.name} ({toUnit(preset.length, unit)}×{toUnit(preset.width, unit)}×{toUnit(preset.height, unit)} {UNIT_LABEL[unit]}, {formatWeight(preset.weight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]})
+              <option key={preset.nameKey} value={idx}>
+                {nameOf(preset, lang)} ({toUnit(preset.length, unit)}×{toUnit(preset.width, unit)}×{toUnit(preset.height, unit)} {UNIT_LABEL[unit]}, {formatWeight(preset.weight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]})
               </option>
             ))}
           </optgroup>
@@ -207,7 +215,7 @@ export default function AddCargoForm() {
         </select>
       </div>
       <div className="form-group full">
-        <label>Название</label>
+        <label>{tr(lang, 'form.name')}</label>
         <input
           name="name"
           placeholder={tr(lang, 'form.placeholderPallet')}
@@ -222,22 +230,22 @@ export default function AddCargoForm() {
         )}
       </div>
       <div className="form-group">
-        <label>Форма</label>
+        <label>{tr(lang, 'pd.form')}</label>
         <select
           name="shape"
           value={shape}
           onChange={(e) => setShape(e.target.value as CargoShape)}
         >
-          <option value="box">Прямоугольный</option>
-          <option value="cylinder">Цилиндр</option>
+          <option value="box">{tr(lang, 'shape.rect')}</option>
+          <option value="cylinder">{tr(lang, 'shape.cylinder')}</option>
         </select>
       </div>
       {shape === 'cylinder' && (
         <div className="form-group">
-          <label>Ориентация</label>
+          <label>{tr(lang, 'form.orientation')}</label>
           <select name="cylinderOrientation" defaultValue="horizontal">
-            <option value="horizontal">Горизонтально</option>
-            <option value="vertical">Вертикально</option>
+            <option value="horizontal">{tr(lang, 'form.horizontal')}</option>
+            <option value="vertical">{tr(lang, 'form.vertical')}</option>
           </select>
         </div>
       )}

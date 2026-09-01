@@ -9,7 +9,7 @@ import { shapeLabel } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { getCurrentVehicle } from '../../store/useAppStore';
 import { packItems } from '../../lib/packer/packer';
-import { toUnit, fromUnit, toWeightUnit, fromWeightUnit } from '../../utils/helpers';
+import { toUnit, fromUnit, toWeightUnit, fromWeightUnit, nameOf } from '../../utils/helpers';
 import { tr } from '../../i18n';
 
 interface Props {
@@ -46,7 +46,7 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
   const commitName = () => {
     const trimmed = editValue.trim();
     if (trimmed && trimmed !== cargo.name) {
-      updateCargo(cargo.id, { name: trimmed });
+      updateCargo(cargo.id, { name: trimmed, nameKey: undefined });
     }
     setEditingName(false);
   };
@@ -89,7 +89,7 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
             onDoubleClick={startEditName}
             title={cargo.name}
           >
-            {cargo.name}
+            {nameOf(cargo, lang)}
           </div>
         )}
       </td>

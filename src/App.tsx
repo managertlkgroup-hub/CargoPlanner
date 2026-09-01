@@ -16,7 +16,7 @@ import VehicleVisibilityControls from './components/VehicleSelector/VehicleVisib
 import VehicleMatcher from './components/VehicleSelector/VehicleMatcher';
 import { VehicleDetailsPanel, CargoDetailsPanel } from './components/PresetDetails/PresetDetailsPanel';
 import { generateSuggestions, type PackingSuggestion } from './lib/packer/suggestions';
-import { formatDimension, toUnit, fromUnit, UNIT_LABEL } from './utils/helpers';
+import { formatDimension, toUnit, fromUnit, UNIT_LABEL, nameOf } from './utils/helpers';
 import type { Unit, PackSettings } from './types';
 import { tr } from './i18n';
 
@@ -70,6 +70,22 @@ const App: React.FC = () => {
   useEffect(() => {
     setGapEnabled((settings.gap ?? 0) > 0);
   }, [settings.gap]);
+
+  // Авто-скрытие всплывающей ошибки через 3 сек с плавным затуханием
+  const [toastLeaving, setToastLeaving] = useState(false);
+  useEffect(() => {
+    if (!error) {
+      setToastLeaving(false);
+      return;
+    }
+    setToastLeaving(false);
+    const t1 = setTimeout(() => setToastLeaving(true), 2800);
+    const t2 = setTimeout(() => setError(null), 3100);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [error]);
 
   // Общий пересчёт с заданными настройками (используется для штабелирования и зазора)
   const recalcWithSettings = (veh: ReturnType<typeof getCurrentVehicle>, nextSettings: PackSettings) => {
@@ -167,7 +183,7 @@ const App: React.FC = () => {
                 <Truck size={14} /> {tr(lang, 'section.vehicle')}
                 {!vehicleSectionOpen && vehicle && (
                   <span style={{ fontWeight: 400, marginLeft: 6, fontSize: 11 }}>
-                    — {vehicle.name} ({toUnitDisplay(vehicle.length, unit)}×{toUnitDisplay(vehicle.width, unit)}×{toUnitDisplay(vehicle.height, unit)})
+                    — {nameOf(vehicle, lang)} ({toUnitDisplay(vehicle.length, unit)}×{toUnitDisplay(vehicle.width, unit)}×{toUnitDisplay(vehicle.height, unit)})
                   </span>
                 )}
               </span>
@@ -324,7 +340,7 @@ const App: React.FC = () => {
       </main>
 
       {error && (
-        <div className="error-toast">
+        <div className={`error-toast ${toastLeaving ? 'error-toast-hiding' : ''}`}>
           <div className="error-toast-content">
             <span>{error}</span>
             <button

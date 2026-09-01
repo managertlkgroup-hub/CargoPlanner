@@ -78,6 +78,8 @@ export const LOADING_METHOD_LABELS: Record<LoadingMethod, string> = {
 export interface Vehicle extends Dimensions {
   id: string;
   name: string;
+  /** i18n-ключ названия (для стандартных пресетов) */
+  nameKey?: string;
   /** Грузоподъёмность в кг */
   maxWeight: number;
   /** true — пользовательский пресет, false — стандартный */
@@ -134,6 +136,8 @@ export type CylinderOrientation = 'horizontal' | 'vertical';
 export interface Cargo {
   id: string;
   name: string;
+  /** i18n-ключ названия (для стандартных пресетов грузов) */
+  nameKey?: string;
   shape: CargoShape;
   /** Длина груза (для цилиндра — длина трубы/бочки), мм */
   length: number;
@@ -179,6 +183,8 @@ export interface Rotation {
 export interface PackedItem {
   id: string;
   name: string;
+  /** i18n-ключ названия (для стандартных пресетов грузов) */
+  nameKey?: string;
   shape: CargoShape;
   /** Диаметр для цилиндров (мм) */
   diameter?: number;
@@ -203,6 +209,8 @@ export interface LayoutVariant {
   /** 'along' | 'across' | 'mixed' */
   id: string;
   label: string;
+  /** i18n-ключ названия режима (mode.along/mode.across/mode.mixed) */
+  labelKey: string;
   items: PackedItem[];
   /** Заполнение по объёму, % (0..100) */
   volumeFill: number;

@@ -10,8 +10,9 @@ import * as THREE from 'three';
 import { Html, Outlines } from '@react-three/drei';
 import type { PackedItem, Vehicle } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
-import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight } from '../../utils/helpers';
+import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight, nameOf } from '../../utils/helpers';
 import { SCALE } from './Container3D';
+import { tr } from '../../i18n';
 
 interface Props {
   item: PackedItem;
@@ -40,6 +41,7 @@ export default function CargoItem3D({
   const [hovered, setHovered] = useState(false);
   const unit = useAppStore((s) => s.unit);
   const weightUnit = useAppStore((s) => s.weightUnit);
+  const lang = useAppStore((s) => s.lang);
 
   const isCylinder = item.shape === 'cylinder';
   const diameter = item.diameter ?? 0;
@@ -140,14 +142,14 @@ export default function CargoItem3D({
       {hovered && (
         <Html position={[0, labelY + 0.3, 0]} center style={{ pointerEvents: 'none' }}>
           <div className="tooltip-box">
-            <strong>{item.name}</strong>
+            <strong>{nameOf(item, lang)}</strong>
             {`\n${isCylinder
-              ? `Цилиндр Ø${Math.round(toUnit(diameter, unit))}×${Math.round(toUnit(item.dimensions.length, unit))} ${UNIT_LABEL[unit]}`
+              ? `${tr(lang, 'shape.cylinder')} Ø${Math.round(toUnit(diameter, unit))}×${Math.round(toUnit(item.dimensions.length, unit))} ${UNIT_LABEL[unit]}`
               : `${Math.round(toUnit(item.dimensions.length, unit))}×${Math.round(toUnit(item.dimensions.width, unit))}×${Math.round(toUnit(item.dimensions.height, unit))} ${UNIT_LABEL[unit]}`}`}
-            {`\nВес: ${formatWeight(item.weight, weightUnit)} ${WEIGHT_UNIT_LABEL[weightUnit]}`}
-            {isOversize ? `\n⚠ Негабаритный` : ''}
-            {`\nПозиция: x=${Math.round(toUnit(item.position.x, unit))} y=${Math.round(toUnit(item.position.y, unit))} z=${Math.round(toUnit(item.position.z, unit))} ${UNIT_LABEL[unit]}`}
-            {`\nПоворот Y: ${Math.round(item.rotationY ?? 0)}°`}
+            {`\n${tr(lang, 's2d.weight')}: ${formatWeight(item.weight, weightUnit)} ${WEIGHT_UNIT_LABEL[weightUnit]}`}
+            {isOversize ? `\n⚠ ${tr(lang, 's2d.oversize')}` : ''}
+            {`\n${tr(lang, 's3d.position')}: x=${Math.round(toUnit(item.position.x, unit))} y=${Math.round(toUnit(item.position.y, unit))} z=${Math.round(toUnit(item.position.z, unit))} ${UNIT_LABEL[unit]}`}
+            {`\n${tr(lang, 's3d.rotationY')}: ${Math.round(item.rotationY ?? 0)}°`}
           </div>
         </Html>
       )}

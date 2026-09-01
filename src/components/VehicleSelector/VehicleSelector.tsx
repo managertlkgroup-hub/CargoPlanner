@@ -4,10 +4,9 @@
 
 import { useAppStore } from '../../store/useAppStore';
 import { getCurrentVehicle, useAllVehicles } from '../../store/useAppStore';
-import { LOADING_METHOD_LABELS, BODY_TYPE_LABELS } from '../../types';
 import { getDefaultMethodsForBodyType } from '../../lib/packer/presets';
-import { UNIT_LABEL, formatDimension, WEIGHT_UNIT_LABEL, formatWeight } from '../../utils/helpers';
-import { tr } from '../../i18n';
+import { UNIT_LABEL, formatDimension, WEIGHT_UNIT_LABEL, formatWeight, nameOf } from '../../utils/helpers';
+import { tr, trf } from '../../i18n';
 
 export default function VehicleSelector() {
   const selectedVehicleId = useAppStore((s) => s.selectedVehicleId);
@@ -43,7 +42,7 @@ export default function VehicleSelector() {
     <div className="panel">
 
       <div className="form-group mb-1">
-        <label htmlFor="vehicle-select">Модель кузова</label>
+        <label htmlFor="vehicle-select">{tr(lang, 'veh.model')}</label>
         <select
           id="vehicle-select"
           value={selectedVehicleId}
@@ -51,7 +50,7 @@ export default function VehicleSelector() {
         >
           {vehicles.map((v) => (
             <option key={v.id} value={v.id}>
-              {v.name} {v.isCustom ? `(${tr(lang, 'veh.custom')})` : ''}
+              {nameOf(v, lang)} {v.isCustom ? `(${tr(lang, 'veh.custom')})` : ''}
             </option>
           ))}
         </select>
@@ -59,18 +58,18 @@ export default function VehicleSelector() {
 
       {vehicle.bodyType && (
         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>
-          Тип: <strong>{BODY_TYPE_LABELS[vehicle.bodyType] || vehicle.bodyType}</strong>
+          {tr(lang, 'veh.type')}: <strong>{tr(lang, `bt.${vehicle.bodyType}`) || vehicle.bodyType}</strong>
         </div>
       )}
 
       <div className="metrics-grid vehicle-metrics">
         <div className="metric-card">
           <div className="metric-value">{formatDimension(vehicle.length, unit)}×{formatDimension(vehicle.width, unit)}×{formatDimension(vehicle.height, unit)}</div>
-          <div className="metric-label">Размеры, {UNIT_LABEL[unit]}</div>
+          <div className="metric-label">{trf(lang, 'veh.dimensions', { u: UNIT_LABEL[unit] })}</div>
         </div>
         <div className="metric-card">
           <div className="metric-value">{formatWeight(vehicle.maxWeight, weightUnit)}</div>
-          <div className="metric-label">Грузоподъёмность, {WEIGHT_UNIT_LABEL[weightUnit]}</div>
+          <div className="metric-label">{trf(lang, 'veh.payload', { u: WEIGHT_UNIT_LABEL[weightUnit] })}</div>
         </div>
       </div>
 
@@ -78,7 +77,7 @@ export default function VehicleSelector() {
       {loadingMethodsToShow.length > 0 && (
         <div style={{ marginTop: 8 }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>
-            Способы загрузки:
+            {tr(lang, 'veh.loading')}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
             {loadingMethodsToShow.map((m) => {
@@ -96,9 +95,9 @@ export default function VehicleSelector() {
                     border: '1px solid var(--border)',
                     opacity: added ? 1 : 0.85,
                   }}
-                  title={LOADING_METHOD_LABELS[m]}
+                  title={tr(lang, `lm.${m}`)}
                 >
-                  {LOADING_METHOD_LABELS[m]}
+                  {tr(lang, `lm.${m}`)}
                 </span>
               );
             })}
@@ -108,7 +107,7 @@ export default function VehicleSelector() {
       {unloadingMethodsToShow.length > 0 && (
         <div style={{ marginTop: 6 }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>
-            Способы выгрузки:
+            {tr(lang, 'veh.unloading')}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
             {unloadingMethodsToShow.map((m) => {
@@ -126,9 +125,9 @@ export default function VehicleSelector() {
                     border: '1px solid var(--border)',
                     opacity: added ? 1 : 0.85,
                   }}
-                  title={LOADING_METHOD_LABELS[m]}
+                  title={tr(lang, `lm.${m}`)}
                 >
-                  {LOADING_METHOD_LABELS[m]}
+                  {tr(lang, `lm.${m}`)}
                 </span>
               );
             })}

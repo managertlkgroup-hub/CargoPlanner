@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { Text } from '@react-three/drei';
 import type { Vehicle } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
+import { tr } from '../../i18n';
 
 /** Масштабный коэффициент: переводим мм в "сценные" единицы */
 export const SCALE = 0.001;
@@ -38,24 +39,25 @@ function getBodyStyle(bodyType?: string): {
   wallHeight: number; // 1 = full, 0.3 = low sides
   hasFrame: boolean; // каркас (для тента)
   lowSides: boolean; // невысокие борта (для бортового)
-  label: string; // название типа
+  labelKey: string; // ключ i18n для названия типа
+  isPlatform: boolean;
 } {
   switch (bodyType) {
     case 'tent': case 'curtain':
-      return { wallOpacity: 0.05, roofOpacity: 0.08, floorColor: '#64748b', wallColor: '#3b82f6', roofColor: '#3b82f6', isCylindrical: false, wallHeight: 1, hasFrame: true, lowSides: false, label: 'Тент' };
+      return { wallOpacity: 0.05, roofOpacity: 0.08, floorColor: '#64748b', wallColor: '#3b82f6', roofColor: '#3b82f6', isCylindrical: false, wallHeight: 1, hasFrame: true, lowSides: false, labelKey: 'tent', isPlatform: false };
     case 'van': case 'isothermal': case 'refrigerator': case 'refrigerator_partition': case 'refrigerator_multi':
-      return { wallOpacity: 0.22, roofOpacity: 0.3, floorColor: '#64748b', wallColor: '#475569', roofColor: '#475569', isCylindrical: false, wallHeight: 1, hasFrame: false, lowSides: false, label: 'Фургон' };
+      return { wallOpacity: 0.22, roofOpacity: 0.3, floorColor: '#64748b', wallColor: '#475569', roofColor: '#475569', isCylindrical: false, wallHeight: 1, hasFrame: false, lowSides: false, labelKey: 'van', isPlatform: false };
     case 'platform': case 'flatbed': case 'open_container':
     case 'low_loader': case 'trailer': case 'low_platform': case 'telescopic':
-      return { wallOpacity: 0, roofOpacity: 0, floorColor: '#94a3b8', wallColor: '#94a3b8', roofColor: '#94a3b8', isCylindrical: false, wallHeight: 1, hasFrame: false, lowSides: false, label: 'Платформа' };
+      return { wallOpacity: 0, roofOpacity: 0, floorColor: '#94a3b8', wallColor: '#94a3b8', roofColor: '#94a3b8', isCylindrical: false, wallHeight: 1, hasFrame: false, lowSides: false, labelKey: 'platform', isPlatform: true };
     case 'dump':
-      return { wallOpacity: 0.15, roofOpacity: 0, floorColor: '#94a3b8', wallColor: '#f59e0b', roofColor: '#f59e0b', isCylindrical: false, wallHeight: 1, hasFrame: false, lowSides: false, label: 'Самосвал' };
+      return { wallOpacity: 0.15, roofOpacity: 0, floorColor: '#94a3b8', wallColor: '#f59e0b', roofColor: '#f59e0b', isCylindrical: false, wallHeight: 1, hasFrame: false, lowSides: false, labelKey: 'dump', isPlatform: false };
     case 'side':
-      return { wallOpacity: 0.1, roofOpacity: 0, floorColor: '#94a3b8', wallColor: '#2563eb', roofColor: '#94a3b8', isCylindrical: false, wallHeight: 0.3, hasFrame: false, lowSides: true, label: 'Бортовой' };
+      return { wallOpacity: 0.1, roofOpacity: 0, floorColor: '#94a3b8', wallColor: '#2563eb', roofColor: '#94a3b8', isCylindrical: false, wallHeight: 0.3, hasFrame: false, lowSides: true, labelKey: 'side', isPlatform: false };
     case 'tanker': case 'container':
-      return { wallOpacity: 0.18, roofOpacity: 0.22, floorColor: '#64748b', wallColor: '#64748b', roofColor: '#64748b', isCylindrical: true, wallHeight: 1, hasFrame: false, lowSides: false, label: 'Цистерна' };
+      return { wallOpacity: 0.18, roofOpacity: 0.22, floorColor: '#64748b', wallColor: '#64748b', roofColor: '#64748b', isCylindrical: true, wallHeight: 1, hasFrame: false, lowSides: false, labelKey: 'tanker', isPlatform: false };
     default:
-      return { wallOpacity: 0.08, roofOpacity: 0.15, floorColor: '#94a3b8', wallColor: '#3b82f6', roofColor: '#94a3b8', isCylindrical: false, wallHeight: 1, hasFrame: false, lowSides: false, label: 'Тент' };
+      return { wallOpacity: 0.08, roofOpacity: 0.15, floorColor: '#94a3b8', wallColor: '#3b82f6', roofColor: '#94a3b8', isCylindrical: false, wallHeight: 1, hasFrame: false, lowSides: false, labelKey: 'tent', isPlatform: false };
   }
 }
 
@@ -64,6 +66,7 @@ interface Props {
 }
 
 export default function Container3D({ vehicle }: Props) {
+  const lang = useAppStore((s) => s.lang);
   const w = vehicle.width * SCALE;
   const h = vehicle.height * SCALE;
   const l = vehicle.length * SCALE;
@@ -120,7 +123,7 @@ export default function Container3D({ vehicle }: Props) {
             <meshStandardMaterial color={bodyStyle.floorColor} transparent opacity={0.35} />
           </mesh>
           {/* Балки пола для платформы (3 продольные линии) */}
-          {bodyStyle.label === 'Платформа' && (
+          {bodyStyle.isPlatform && (
             <>
               {[-halfW * 0.5, 0, halfW * 0.5].map((z, i) => (
                 <mesh key={`beam-${i}`} position={[0, -0.005, z]}>
@@ -271,7 +274,7 @@ export default function Container3D({ vehicle }: Props) {
         anchorX="center"
         anchorY="middle"
       >
-        {bodyStyle.label}
+        {tr(lang, `s3d.bodyType.${bodyStyle.labelKey}`)}
       </Text>
     </group>
   );

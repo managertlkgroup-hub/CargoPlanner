@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { getDefaultVehicles, CARGO_PRESETS, type CargoPreset } from '../../lib/packer/presets';
 import type { CargoShape, Vehicle } from '../../types';
-import { UNIT_LABEL, toUnit, fromUnit } from '../../utils/helpers';
+import { UNIT_LABEL, toUnit, fromUnit, nameOf } from '../../utils/helpers';
 import CustomVehicleForm from '../VehicleSelector/CustomVehicleForm';
 import { tr, trf } from '../../i18n';
 
@@ -95,7 +95,7 @@ function VehiclesTab() {
               padding: '6px 8px', borderRadius: 6, marginBottom: 2, fontSize: 13,
             }}
           >
-            <span>{v.name} — {toUnit(v.length, unit)}×{toUnit(v.width, unit)}×{toUnit(v.height, unit)} {UNIT_LABEL[unit]}, {trf(lang, 'form.maxWeightKgFmt', { weight: v.maxWeight })}</span>
+            <span>{nameOf(v, lang)} — {toUnit(v.length, unit)}×{toUnit(v.width, unit)}×{toUnit(v.height, unit)} {UNIT_LABEL[unit]}, {trf(lang, 'form.maxWeightKgFmt', { weight: v.maxWeight })}</span>
             <button
               type="button"
               onClick={() => handleDeleteBuiltIn(v.id)}
@@ -124,7 +124,7 @@ function VehiclesTab() {
                     padding: '6px 8px', borderRadius: 6, marginBottom: 2, fontSize: 13,
                   }}
                 >
-            <span>{v.name} — {toUnit(v.length, unit)}×{toUnit(v.width, unit)}×{toUnit(v.height, unit)} {UNIT_LABEL[unit]}, {trf(lang, 'form.maxWeightKgFmt', { weight: v.maxWeight })}</span>
+            <span>{nameOf(v, lang)} — {toUnit(v.length, unit)}×{toUnit(v.width, unit)}×{toUnit(v.height, unit)} {UNIT_LABEL[unit]}, {trf(lang, 'form.maxWeightKgFmt', { weight: v.maxWeight })}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <button
                       type="button"
@@ -257,7 +257,7 @@ function CargoTab() {
                 padding: '6px 8px', borderRadius: 6, marginBottom: 2, fontSize: 13,
               }}
             >
-              <span>{p.name} — {toUnit(p.length, unit)}×{toUnit(p.width, unit)}×{toUnit(p.height, unit)} {UNIT_LABEL[unit]}, {trf(lang, 'form.maxWeightKgFmt', { weight: p.weight })}</span>
+              <span>{nameOf(p, lang)} — {toUnit(p.length, unit)}×{toUnit(p.width, unit)}×{toUnit(p.height, unit)} {UNIT_LABEL[unit]}, {trf(lang, 'form.maxWeightKgFmt', { weight: p.weight })}</span>
               <button
                 type="button"
                 onClick={() => {
@@ -291,7 +291,7 @@ function CargoTab() {
                     padding: '6px 8px', borderRadius: 6, marginBottom: 2, fontSize: 13,
                   }}
                 >
-                  <span>{p.name} — {toUnit(p.length, unit)}×{toUnit(p.width, unit)}×{toUnit(p.height, unit)} {UNIT_LABEL[unit]}, {trf(lang, 'form.maxWeightKgFmt', { weight: p.weight })}</span>
+                  <span>{nameOf(p, lang)} — {toUnit(p.length, unit)}×{toUnit(p.width, unit)}×{toUnit(p.height, unit)} {UNIT_LABEL[unit]}, {trf(lang, 'form.maxWeightKgFmt', { weight: p.weight })}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <button
                       type="button"

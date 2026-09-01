@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { useActiveVariant, useSelectedVehicle } from '../../store/useAppStore';
 import { useAppStore } from '../../store/useAppStore';
-import { volumeToM3, UNIT_LABEL, formatDimension, formatWeight, WEIGHT_UNIT_LABEL } from '../../utils/helpers';
+import { volumeToM3, unitLabel, formatDimension, formatWeight, weightUnitLabel } from '../../utils/helpers';
 import { calculateCOG } from '../../lib/physics/cog';
 import { tr, trf } from '../../i18n';
 
@@ -40,7 +40,7 @@ export default function MetricsPanel() {
       length: Math.round(maxX),
       width: Math.round(maxZ),
       height: Math.round(maxY),
-      volume: (maxX * maxZ * maxY / 1e9).toFixed(2),
+      volumeMm3: maxX * maxZ * maxY,
     };
   }, [variant]);
 
@@ -61,7 +61,7 @@ export default function MetricsPanel() {
   if (!variant) return null;
 
   const balVal = cog ? formatDimension(Math.abs(cog.z - vehicle.width / 2), unit) : '';
-  const balUnit = UNIT_LABEL[unit];
+  const balUnit = unitLabel(lang, unit);
 
   return (
     <div className="metrics-grid">
@@ -75,15 +75,15 @@ export default function MetricsPanel() {
       </div>
       <div className="metric-card">
         <div className="metric-value">{formatWeight(variant.totalWeight, weightUnit)}</div>
-        <div className="metric-label">{trf(lang, 'th.weight', { u: WEIGHT_UNIT_LABEL[weightUnit] })}</div>
+        <div className="metric-label">{trf(lang, 'th.weight', { u: weightUnitLabel(lang, weightUnit) })}</div>
       </div>
       <div className="metric-card">
-        <div className="metric-value">{volumeToM3(variant.freeVolume)}</div>
+        <div className="metric-value">{volumeToM3(variant.freeVolume, lang)}</div>
         <div className="metric-label">{tr(lang, 'metric.freeVolume')}</div>
       </div>
       <div className="metric-card">
         <div className="metric-value">{formatWeight(variant.freeWeight, weightUnit)}</div>
-        <div className="metric-label">{tr(lang, 'metric.freeWeight')}, {WEIGHT_UNIT_LABEL[weightUnit]}</div>
+        <div className="metric-label">{tr(lang, 'metric.freeWeight')}, {weightUnitLabel(lang, weightUnit)}</div>
       </div>
       <div className="metric-card">
         <div className="metric-value">{variant.items.length}</div>
@@ -101,10 +101,10 @@ export default function MetricsPanel() {
             <div className="metric-value" style={{ fontSize: '14px' }}>
               {formatDimension(cargoDimensions.length, unit)}×{formatDimension(cargoDimensions.width, unit)}×{formatDimension(cargoDimensions.height, unit)}
             </div>
-            <div className="metric-label">{tr(lang, 'metric.dimensions')}, {UNIT_LABEL[unit]}</div>
+            <div className="metric-label">{tr(lang, 'metric.dimensions')}, {unitLabel(lang, unit)}</div>
           </div>
           <div className="metric-card">
-            <div className="metric-value">{cargoDimensions.volume} м³</div>
+            <div className="metric-value">{volumeToM3(cargoDimensions.volumeMm3, lang)}</div>
             <div className="metric-label">{tr(lang, 'metric.cargoVolume')}</div>
           </div>
         </>

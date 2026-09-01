@@ -15,7 +15,7 @@ import {
 } from '@react-pdf/renderer';
 import type { Cargo, LayoutVariant, PackedItem, Vehicle, Unit } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
-import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight, type WeightUnit } from '../../utils/helpers';
+import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight, type WeightUnit, nameOf } from '../../utils/helpers';
 import { tr, trf, type Lang } from '../../i18n';
 
 // Регистрация шрифтов с поддержкой кириллицы
@@ -251,7 +251,7 @@ function VehicleInfo({ vehicle, unit, weightUnit, lang }: { vehicle: Vehicle; un
   return (
     <View style={{ marginBottom: 12 }}>
       <Text style={styles.sectionTitle}>{tr(lang, 'pdf.section.vehicle')}</Text>
-      <Text style={styles.textBold}>{vehicle.name}</Text>
+      <Text style={styles.textBold}>{nameOf(vehicle, lang)}</Text>
       {vehicle.bodyType && (
         <Text style={styles.text}>{tr(lang, 'pdf.type')}: {BODY_LABELS[vehicle.bodyType] || vehicle.bodyType}</Text>
       )}
@@ -270,7 +270,7 @@ function Metrics({ variant, vehicle, weightUnit, lang }: { variant: LayoutVarian
   return (
     <View style={{ marginBottom: 12 }}>
       <Text style={styles.sectionTitle}>{tr(lang, 'pdf.section.summary')}</Text>
-      <Text style={styles.textBold}>{variant.label}</Text>
+      <Text style={styles.textBold}>{tr(lang, variant.labelKey || 'mode.along')}</Text>
       <View style={styles.metricsRow}>
         <View style={styles.metricCell}>
           <Text style={styles.text}>{tr(lang, 'pdf.fillVolume')}: {variant.volumeFill}%</Text>
@@ -405,7 +405,7 @@ function ItemLegend({ items, lang }: { items: PackedItem[]; lang: Lang }) {
         <View style={styles.legendRow}>
           {items.map((item, idx2) => (
             <Text key={item.id} style={styles.legendText}>
-              {idx2 + 1}. {item.name}
+              {idx2 + 1}. {nameOf(item, lang)}
               {idx2 < items.length - 1 ? '  ·  ' : ''}
             </Text>
           ))}
@@ -430,7 +430,7 @@ function ItemLegend({ items, lang }: { items: PackedItem[]; lang: Lang }) {
             <View style={[styles.legendDot, { backgroundColor: `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`, marginRight: 4 }]} />
             <Text style={[styles.text, { fontFamily: 'Roboto', fontWeight: 700 }]}>{trf(lang, 'pdf.layerLabel', { layer })}</Text>
             <Text style={[styles.text, { marginLeft: 4 }]}>
-              {layerItems.map(({ item, idx }) => `${idx + 1}. ${item.name}`).join('  ·  ')}
+              {layerItems.map(({ item, idx }) => `${idx + 1}. ${nameOf(item, lang)}`).join('  ·  ')}
             </Text>
           </View>
         );
@@ -493,7 +493,7 @@ function CargoTable({ cargo, items, unit, weightUnit, lang }: { cargo: Cargo[]; 
 
       {/* Строки данных — по одному грузу на каждый слой */}
       {rows.map(({ g, c }, rowIdx) => {
-        const name = c ? c.name : g.item.name;
+        const name = nameOf(c ?? g.item, lang);
         const shape = c ? c.shape : g.item.shape;
         const len = c ? c.length : g.item.dimensions.length;
         const wid = c ? c.width : g.item.dimensions.width;

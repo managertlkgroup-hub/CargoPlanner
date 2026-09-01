@@ -70,54 +70,63 @@ export const VEHICLE_PRESETS: Vehicle[] = [
   {
     id: 'truck-1t',
     name: '1 тонна',
+    nameKey: 'vehP.1t',
     length: 2800, width: 1800, height: 1800, maxWeight: 1000,
     bodyType: 'tent', ...getDefaultMethodsForBodyType('tent'),
   },
   {
     id: 'truck-15t',
     name: '1.5 тонны',
+    nameKey: 'vehP.15t',
     length: 3000, width: 1950, height: 1700, maxWeight: 1500,
     bodyType: 'tent', ...getDefaultMethodsForBodyType('tent'),
   },
   {
     id: 'truck-2t',
     name: '2 тонны',
+    nameKey: 'vehP.2t',
     length: 3800, width: 1900, height: 1900, maxWeight: 2000,
     bodyType: 'tent', ...getDefaultMethodsForBodyType('tent'),
   },
   {
     id: 'truck-3t',
     name: '3 тонны',
+    nameKey: 'vehP.3t',
     length: 4200, width: 2000, height: 2000, maxWeight: 3000,
     bodyType: 'tent', ...getDefaultMethodsForBodyType('tent'),
   },
   {
     id: 'truck-5t',
     name: '5 тонн',
+    nameKey: 'vehP.5t',
     length: 6200, width: 2450, height: 2400, maxWeight: 5000,
     bodyType: 'tent', ...getDefaultMethodsForBodyType('tent'),
   },
   {
     id: 'truck-7t',
     name: '7 тонн',
+    nameKey: 'vehP.7t',
     length: 7200, width: 2450, height: 2400, maxWeight: 7000,
     bodyType: 'tent', ...getDefaultMethodsForBodyType('tent'),
   },
   {
     id: 'truck-10t',
     name: '10 тонн',
+    nameKey: 'vehP.10t',
     length: 8200, width: 2450, height: 2400, maxWeight: 10000,
     bodyType: 'tent', ...getDefaultMethodsForBodyType('tent'),
   },
   {
     id: 'truck-20t',
     name: '20 тонн (фура)',
+    nameKey: 'vehP.20t',
     length: 13600, width: 2460, height: 2600, maxWeight: 20000,
     bodyType: 'tent', ...getDefaultMethodsForBodyType('tent'),
   },
   {
     id: 'truck-20t-train',
     name: '20 тонн (автопоезд)',
+    nameKey: 'vehP.20t-train',
     length: 15900, width: 2500, height: 2500, maxWeight: 20000,
     bodyType: 'tent', ...getDefaultMethodsForBodyType('tent'),
   },
@@ -140,6 +149,8 @@ export function getDefaultVehicles(): Vehicle[] {
 /** Тип груза для быстрого добавления */
 export interface CargoPreset {
   name: string;
+  /** i18n-ключ названия (есть только у стандартных пресетов) */
+  nameKey?: string;
   length: number;
   width: number;
   height: number;
@@ -151,36 +162,36 @@ export interface CargoPreset {
 /** Доступные пресеты грузов */
 export const CARGO_PRESETS: CargoPreset[] = [
   // Паллеты
-  { name: 'Европаллета', length: 1200, width: 800, height: 145, weight: 25, shape: 'box' },
-  { name: 'Американская паллета', length: 1200, width: 1200, height: 150, weight: 30, shape: 'box' },
-  { name: 'Финская паллета', length: 1200, width: 1000, height: 145, weight: 28, shape: 'box' },
-  
+  { name: 'Европаллета', nameKey: 'cp.euroPallet', length: 1200, width: 800, height: 145, weight: 25, shape: 'box' },
+  { name: 'Американская паллета', nameKey: 'cp.amPallet', length: 1200, width: 1200, height: 150, weight: 30, shape: 'box' },
+  { name: 'Финская паллета', nameKey: 'cp.finPallet', length: 1200, width: 1000, height: 145, weight: 28, shape: 'box' },
+
   // Еврокуб и биг-бэг
-  { name: 'Еврокуб (IBC)', length: 1200, width: 1000, height: 1160, weight: 70, shape: 'box' },
-  { name: 'Биг-бэг', length: 950, width: 950, height: 1400, weight: 50, shape: 'box' },
-  
+  { name: 'Еврокуб (IBC)', nameKey: 'cp.ibc', length: 1200, width: 1000, height: 1160, weight: 70, shape: 'box' },
+  { name: 'Биг-бэг', nameKey: 'cp.bigbag', length: 950, width: 950, height: 1400, weight: 50, shape: 'box' },
+
   // Бочка
-  { name: 'Стальная бочка (216.5 л)', length: 880, width: 585, height: 585, weight: 20, shape: 'cylinder', diameter: 585 },
-  
+  { name: 'Стальная бочка (216.5 л)', nameKey: 'cp.barrel', length: 880, width: 585, height: 585, weight: 20, shape: 'cylinder', diameter: 585 },
+
   // Картонные коробки
-  { name: 'Картонная коробка маленькая', length: 200, width: 150, height: 100, weight: 1, shape: 'box' },
-  { name: 'Картонная коробка средняя', length: 500, width: 400, height: 300, weight: 5, shape: 'box' },
-  { name: 'Картонная коробка большая', length: 900, width: 700, height: 500, weight: 15, shape: 'box' },
-  
+  { name: 'Картонная коробка маленькая', nameKey: 'cp.cBoxSmall', length: 200, width: 150, height: 100, weight: 1, shape: 'box' },
+  { name: 'Картонная коробка средняя', nameKey: 'cp.cBoxMed', length: 500, width: 400, height: 300, weight: 5, shape: 'box' },
+  { name: 'Картонная коробка большая', nameKey: 'cp.cBoxBig', length: 900, width: 700, height: 500, weight: 15, shape: 'box' },
+
   // Деревянные ящики
-  { name: 'Деревянный ящик маленький', length: 500, width: 400, height: 300, weight: 10, shape: 'box' },
-  { name: 'Деревянный ящик средний', length: 800, width: 600, height: 500, weight: 25, shape: 'box' },
-  { name: 'Деревянный ящик большой', length: 1200, width: 800, height: 1000, weight: 45, shape: 'box' },
-  
+  { name: 'Деревянный ящик маленький', nameKey: 'cp.wBoxSmall', length: 500, width: 400, height: 300, weight: 10, shape: 'box' },
+  { name: 'Деревянный ящик средний', nameKey: 'cp.wBoxMed', length: 800, width: 600, height: 500, weight: 25, shape: 'box' },
+  { name: 'Деревянный ящик большой', nameKey: 'cp.wBoxBig', length: 1200, width: 800, height: 1000, weight: 45, shape: 'box' },
+
   // Пластиковые ящики
-  { name: 'Пластиковый ящик маленький', length: 400, width: 300, height: 200, weight: 3, shape: 'box' },
-  { name: 'Пластиковый ящик средний', length: 800, width: 600, height: 400, weight: 8, shape: 'box' },
-  { name: 'Пластиковый ящик большой', length: 1200, width: 1000, height: 600, weight: 18, shape: 'box' },
-  
+  { name: 'Пластиковый ящик маленький', nameKey: 'cp.pBoxSmall', length: 400, width: 300, height: 200, weight: 3, shape: 'box' },
+  { name: 'Пластиковый ящик средний', nameKey: 'cp.pBoxMed', length: 800, width: 600, height: 400, weight: 8, shape: 'box' },
+  { name: 'Пластиковый ящик большой', nameKey: 'cp.pBoxBig', length: 1200, width: 1000, height: 600, weight: 18, shape: 'box' },
+
   // Мешки
-  { name: 'Мешок маленький', length: 500, width: 700, height: 300, weight: 10, shape: 'box' },
-  { name: 'Мешок средний', length: 700, width: 1000, height: 400, weight: 20, shape: 'box' },
-  { name: 'Мешок большой', length: 1000, width: 1500, height: 500, weight: 35, shape: 'box' },
+  { name: 'Мешок маленький', nameKey: 'cp.bagSmall', length: 500, width: 700, height: 300, weight: 10, shape: 'box' },
+  { name: 'Мешок средний', nameKey: 'cp.bagMed', length: 700, width: 1000, height: 400, weight: 20, shape: 'box' },
+  { name: 'Мешок большой', nameKey: 'cp.bagBig', length: 1000, width: 1500, height: 500, weight: 35, shape: 'box' },
 ];
 
 /**

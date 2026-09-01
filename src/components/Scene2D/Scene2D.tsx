@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useActiveVariant, useSelectedVehicle, useAppStore } from '../../store/useAppStore';
-import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight } from '../../utils/helpers';
-import { tr } from '../../i18n';
+import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight, unitLabel, formatDimension, nameOf } from '../../utils/helpers';
+import { tr, trf } from '../../i18n';
 
 // Scene2D supports keyboard shortcuts:
 // R — rotate hovered/selected item by 90°
@@ -105,7 +105,12 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
     ctx.font = 'bold 11px system-ui';
     ctx.textAlign = 'left';
     ctx.fillText(
-      'Body: ' + vehicle.length + 'x' + vehicle.width + 'x' + vehicle.height + ' mm',
+      trf(lang, 's2d.bodyDims', {
+        l: formatDimension(vehicle.length, unit),
+        w: formatDimension(vehicle.width, unit),
+        h: formatDimension(vehicle.height, unit),
+        u: unitLabel(lang, unit),
+      }),
       offsetX + 5,
       offsetY - 10,
     );
@@ -242,6 +247,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
       )
         return null;
 
+      let best: (typeof variant.items)[number] | null = null;
       for (const item of variant.items) {
         // Фильтрация по слою: если selectedDragLayer задан, ищем только на этом слое
         if (selectedDragLayer !== null) {
@@ -256,9 +262,12 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
         }
         const itemX = offsetX + item.position.x * scale;
         const itemY = offsetY + item.position.z * scale;
-        if (mx >= itemX && mx <= itemX + itemL && my >= itemY && my <= itemY + itemW) return item;
+        if (mx >= itemX && mx <= itemX + itemL && my >= itemY && my <= itemY + itemW) {
+          // При «Все» слоях выбираем верхний груз (по высоте), иначе нижние перекрывают верхние
+          if (!best || item.position.y > best.position.y) best = item;
+        }
       }
-      return null;
+      return best;
     },
     [variant, vehicle, selectedDragLayer],
   );
@@ -460,7 +469,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
             boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
           }}
         >
-          <strong>{tooltipData.item.name}</strong>
+          <strong>{nameOf(tooltipData.item, lang)}</strong>
           {`\n${Math.round(toUnit(tooltipData.item.dimensions.length, unit))}×${Math.round(toUnit(tooltipData.item.dimensions.width, unit))}×${Math.round(toUnit(tooltipData.item.dimensions.height, unit))} ${UNIT_LABEL[unit]}`}
           {`\n${tr(lang, 's2d.weight')}: ${formatWeight(tooltipData.item.weight, weightUnit)} ${WEIGHT_UNIT_LABEL[weightUnit]}`}
           {tooltipData.item.isOversize ? `\n⚠ ${tr(lang, 's2d.oversize')}` : ''}
@@ -507,16 +516,16 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
         variant.items.forEach((item) => {
           const layer = Math.round(item.position.y / Math.max(1, item.dimensions.height));
           if (!layers.has(layer)) layers.set(layer, []);
-          const existing = layers.get(layer)!.find(l => l.name === item.name);
+          const existing = layers.get(layer)!.find(l => l.name === nameOf(item, lang));
           if (existing) existing.count++;
-          else layers.get(layer)!.push({ name: item.name, count: 1 });
+          else layers.get(layer)!.push({ name: nameOf(item, lang), count: 1 });
         });
         const sortedEntries = [...layers.entries()].sort((a, b) => a[0] - b[0]);
         const LAYER_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6'];
         return (
           <div style={{ fontSize: 10, color: 'var(--text-muted)', padding: '4px 8px', borderTop: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
-              <strong>Слои:</strong>
+              <strong>{tr(lang, 's2d.layers')}</strong>
               <button
                 onClick={() => setSelectedDragLayer(null)}
                 style={{
@@ -526,7 +535,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
                   color: selectedDragLayer === null ? '#fff' : 'var(--text-muted)',
                   cursor: 'pointer',
                 }}
-              >Все</button>
+              >{tr(lang, 's2d.allLayers')}</button>
               {sortedEntries.map(([layer, items]) => (
                 <button
                   key={layer}
@@ -546,7 +555,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
             </div>
             {selectedDragLayer !== null && (
               <div style={{ fontSize: 9, color: LAYER_COLORS[selectedDragLayer], marginTop: 2 }}>
-                Перетаскивание на слое {selectedDragLayer}
+                {tr(lang, 's2d.dragOnLayer')} {selectedDragLayer}
               </div>
             )}
             {/* Текстовая легенда по слоям */}

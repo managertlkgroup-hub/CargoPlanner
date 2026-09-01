@@ -36,6 +36,7 @@ function toBox(cargo: Cargo, index: number): Box {
   return {
     id: cargo.id,
     name: cargo.name,
+    nameKey: cargo.nameKey,
     shape: cargo.shape,
     diameter: cargo.diameter,
     cylinderOrientation: cargo.cylinderOrientation,
@@ -308,19 +309,13 @@ function packIntoBin(
           // (задаётся в getOrientations), а не в направлении заполнения.
           score = point.x * DIR + point.z * SEC + point.y * Y_W + footprintMax * CMP;
         } else {
-          // смешанный: комбинация вдоль и поперёк. Для каждого груза выбираем
-          // ориентацию (вдоль/поперёк) и позицию, дающие максимальную компактность,
-          // с небольшой симпатией к вдоль. Это даёт раскладку, отличную и от чисто
-          // «вдоль», и от чисто «поперёк», и максимально заполняет кузов.
-          if (placedLength >= placedWidth) {
-            // вдоль-ориентация (длинная сторона груза вдоль длины X)
-            score = point.x * DIR + point.z * SEC + point.y * Y_W + footprintMax * CMP;
-          } else {
-            // поперёк-ориентация (длинная сторона груза вдоль ширины Z)
-            score = point.z * DIR + point.x * SEC + point.y * Y_W + footprintMax * CMP;
-          }
-          // лёгкое предпочтение вдоль (важно только при почти равной компактности)
-          if (placedLength < placedWidth) score += DIR * 0.5;
+          // смешанный: единое направление заполнения (вдоль X, ряды по Z),
+          // но в каждой позиции пробуем обе ориентации и выбираем более
+          // компактную по площади следа. «Вдоль» слегка предпочтительнее,
+          // чтобы ряды оставались аккуратными и груз выглядел естественно.
+          const areaFootprint = newMaxX * newMaxZ;
+          score = point.x * DIR + point.z * SEC + point.y * Y_W + areaFootprint * CMP;
+          if (placedLength < placedWidth) score += CMP;
         }
 
         // Горка/штабель: лёгкое предпочтение нижних слоёв для устойчивости,
@@ -416,6 +411,7 @@ function toPackedItem(p: PlacedBox, layerIndex: number): PackedItem {
   return {
     id: `${p.id}-${p.x}-${p.y}-${p.z}`,
     name: p.name,
+    nameKey: p.nameKey,
     shape: p.shape,
     diameter: p.diameter,
     dimensions: dims,
@@ -525,6 +521,7 @@ export function packItems(
       return {
         id: mode,
         label,
+        labelKey: `mode.${mode}`,
         items,
         volumeFill: Math.round(volumeFill * 10) / 10,
         weightFill: Math.round(weightFill * 10) / 10,

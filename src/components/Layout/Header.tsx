@@ -13,7 +13,7 @@ import ThemeToggle from '../Settings/ThemeToggle';
 import SessionModal from '../Settings/SessionModal';
 import PresetsModal from '../Settings/PresetsModal';
 import type { Unit } from '../../types';
-import { UNIT_LABEL, WEIGHT_UNIT_LABEL, type WeightUnit } from '../../utils/helpers';
+import { unitLabel, weightUnitLabel, type WeightUnit } from '../../utils/helpers';
 import { LANGS, tr, type Lang } from '../../i18n';
 
 const UNITS: Unit[] = ['mm', 'cm', 'm'];
@@ -148,13 +148,13 @@ export default function Header({ onOpenSettings }: HeaderProps) {
           <Menu<Unit>
             title={tr(lang, 'units.dim')}
             current={unit}
-            options={UNITS.map((u) => ({ value: u, label: UNIT_LABEL[u] }))}
+            options={UNITS.map((u) => ({ value: u, label: unitLabel(lang, u) }))}
             onSelect={setUnit}
           />
           <Menu<WeightUnit>
             title={tr(lang, 'units.weight')}
             current={weightUnit}
-            options={WEIGHT_UNITS.map((u) => ({ value: u, label: WEIGHT_UNIT_LABEL[u] }))}
+            options={WEIGHT_UNITS.map((u) => ({ value: u, label: weightUnitLabel(lang, u) }))}
             onSelect={setWeightUnit}
           />
           <Menu<Lang>

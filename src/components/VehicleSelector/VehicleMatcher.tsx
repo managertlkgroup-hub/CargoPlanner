@@ -6,8 +6,8 @@ import { Search, Package, X, Check, AlertTriangle, Scale } from 'lucide-react';
 import { useMemo } from 'react';
 import { useAppStore, useAllVehicles } from '../../store/useAppStore';
 import { matchVehicles, type VehicleMatch } from '../../lib/vehicleMatcher';
-import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight } from '../../utils/helpers';
-import { tr } from '../../i18n';
+import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight, nameOf } from '../../utils/helpers';
+import { tr, trf } from '../../i18n';
 
 interface Props {
   onClose: () => void;
@@ -34,12 +34,12 @@ export default function VehicleMatcher({ onClose }: Props) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 560 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h3 style={{ margin: 0 }}><Search size={18} /> Подбор автомобиля</h3>
+          <h3 style={{ margin: 0 }}><Search size={18} /> {tr(lang, 'vm.title')}</h3>
           <button onClick={onClose} className="btn btn-sm"><X size={14} /></button>
         </div>
 
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
-          Грузов: {cargo.length} шт, общий вес: {formatWeight(totalWeight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}
+          {trf(lang, 'vm.cargoSummary', { n: cargo.length, w: `${formatWeight(totalWeight, weightUnit)} ${WEIGHT_UNIT_LABEL[weightUnit]}` })}
         </div>
 
         <div style={{ maxHeight: 400, overflowY: 'auto' }}>
@@ -64,11 +64,11 @@ export default function VehicleMatcher({ onClose }: Props) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <strong style={{ fontSize: 13 }}>
-                      {fits ? <Check size={14} /> : <AlertTriangle size={14} />} {m.vehicle.name}
+                      {fits ? <Check size={14} /> : <AlertTriangle size={14} />} {nameOf(m.vehicle, lang)}
                     </strong>
                     {m.vehicle.bodyType && (
                       <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 8 }}>
-                        {m.vehicle.bodyType}
+                        {tr(lang, `bt.${m.vehicle.bodyType}`)}
                       </span>
                     )}
                   </div>
@@ -80,14 +80,14 @@ export default function VehicleMatcher({ onClose }: Props) {
                   {Math.round(toUnit(m.vehicle.length, unit))}×{Math.round(toUnit(m.vehicle.width, unit))}×{Math.round(toUnit(m.vehicle.height, unit))} {UNIT_LABEL[unit]} • {formatWeight(m.vehicle.maxWeight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}
                 </div>
                 <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 11 }}>
-                  <span><Package size={12} /> {m.volumeFill}% объёма</span>
-                  <span><Scale size={12} /> {m.weightFill}% веса</span>
+                  <span><Package size={12} /> {trf(lang, 'vm.volumeFill', { p: m.volumeFill })}</span>
+                  <span><Scale size={12} /> {trf(lang, 'vm.weightFill', { p: m.weightFill })}</span>
                 </div>
               </div>
             );
           })}
           {matches.length === 0 && (
-            <div className="empty-state">Нет доступных автомобилей</div>
+            <div className="empty-state">{tr(lang, 'vm.empty')}</div>
           )}
         </div>
       </div>

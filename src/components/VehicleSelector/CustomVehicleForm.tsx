@@ -6,7 +6,6 @@ import { useState, useMemo } from 'react';
 import type { FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { uid, fromUnit, toUnit, UNIT_LABEL } from '../../utils/helpers';
-import { LOADING_METHOD_LABELS, BODY_TYPE_LABELS } from '../../types';
 import type { LoadingMethod, BodyType } from '../../types';
 import { getDefaultMethodsForBodyType } from '../../lib/packer/presets';
 import { tr, trf, type Lang } from '../../i18n';
@@ -161,7 +160,7 @@ export default function CustomVehicleForm({ onDone }: Props) {
   return (
     <form className="form-grid mt-2" onSubmit={handleSubmit}>
       <div className="form-group full">
-        <label>Название</label>
+        <label>{tr(lang, 'form.name')}</label>
         <input
           name="name"
           placeholder={tr(lang, 'form.placeholderOwnVan')}
@@ -226,7 +225,7 @@ export default function CustomVehicleForm({ onDone }: Props) {
         )}
       </div>
       <div className="form-group">
-        <label>{tr(lang, 'form.maxWeight')}, кг</label>
+        <label>{tr(lang, 'form.maxWeightKg')}</label>
         <input
           name="maxWeight"
           type="number"
@@ -244,22 +243,22 @@ export default function CustomVehicleForm({ onDone }: Props) {
       </div>
       {/* Тип кузова */}
       <div className="form-group full">
-        <label>Тип кузова</label>
+        <label>{tr(lang, 'veh.bodyType')}</label>
         <select
           value={selectedBodyType}
           onChange={(e) => handleBodyTypeChange(e.target.value as BodyType)}
         >
           {BODY_TYPES.map(bt => (
-            <option key={bt} value={bt}>{BODY_TYPE_LABELS[bt]}</option>
+            <option key={bt} value={bt}>{tr(lang, `bt.${bt}`)}</option>
           ))}
         </select>
         <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
-          Способы загрузки/выгрузки предустановлены для выбранного типа. Можно изменить вручную.
+          {tr(lang, 'veh.methodsHint')}
         </div>
       </div>
       {/* Способы загрузки */}
       <div className="form-group full">
-        <label style={{ fontWeight: 600, marginBottom: 4, display: 'block' }}>Способы загрузки</label>
+        <label style={{ fontWeight: 600, marginBottom: 4, display: 'block' }}>{tr(lang, 'veh.loading')}</label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {ALL_METHODS.map(m => (
             <label key={m} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer' }}>
@@ -268,14 +267,14 @@ export default function CustomVehicleForm({ onDone }: Props) {
                 checked={loadingMethods.includes(m)}
                 onChange={() => toggleMethod(loadingMethods, setLoadingMethods, m)}
               />
-              {LOADING_METHOD_LABELS[m]}
+              {tr(lang, `lm.${m}`)}
             </label>
           ))}
         </div>
       </div>
       {/* Способы выгрузки */}
       <div className="form-group full">
-        <label style={{ fontWeight: 600, marginBottom: 4, display: 'block' }}>Способы выгрузки</label>
+        <label style={{ fontWeight: 600, marginBottom: 4, display: 'block' }}>{tr(lang, 'veh.unloading')}</label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {ALL_METHODS.map(m => (
             <label key={m} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer' }}>
@@ -284,7 +283,7 @@ export default function CustomVehicleForm({ onDone }: Props) {
                 checked={unloadingMethods.includes(m)}
                 onChange={() => toggleMethod(unloadingMethods, setUnloadingMethods, m)}
               />
-              {LOADING_METHOD_LABELS[m]}
+              {tr(lang, `lm.${m}`)}
             </label>
           ))}
         </div>
@@ -296,7 +295,7 @@ export default function CustomVehicleForm({ onDone }: Props) {
           className="btn btn-primary w-full"
           disabled={hasErrors}
         >
-          Добавить автомобиль
+          {tr(lang, 'form.addOwnVehicle')}
         </button>
       </div>
     </form>
