@@ -1,22 +1,88 @@
 // ============================================================================
-// Шапка приложения: логотип, кнопки тем/сессий/отчётов
+// Шапка приложения: логотип, компактные dropdown (ед. измерения, вес, язык),
+// кнопки тем/сессий/отчётов
 // ============================================================================
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { exportSceneToPng } from '../../lib/export/pngExport';
 import { getCurrentVehicle } from '../../store/useAppStore';
 import { useActiveVariant } from '../../store/useAppStore';
-import { Package, Save, Image, FileText, Settings } from 'lucide-react';
+import { Package, Save, Image, FileText, Settings, ChevronDown, Globe } from 'lucide-react';
 import ThemeToggle from '../Settings/ThemeToggle';
 import SessionModal from '../Settings/SessionModal';
 import PresetsModal from '../Settings/PresetsModal';
 import type { Unit } from '../../types';
 import { UNIT_LABEL, WEIGHT_UNIT_LABEL, type WeightUnit } from '../../utils/helpers';
-import { LANGS, LANG_LABEL, tr, type Lang } from '../../i18n';
+import { LANGS, tr, type Lang } from '../../i18n';
 
 const UNITS: Unit[] = ['mm', 'cm', 'm'];
 const WEIGHT_UNITS: WeightUnit[] = ['kg', 'ton'];
+const FLAGS: Record<Lang, string> = { ru: '🇷🇺', en: '🇺🇸' };
+const LANG_FULL: Record<Lang, string> = { ru: 'Русский', en: 'English' };
+
+interface MenuOption<T extends string> {
+  value: T;
+  label: string;
+}
+
+interface MenuProps<T extends string> {
+  title: string;
+  current: T;
+  options: MenuOption<T>[];
+  onSelect: (v: T) => void;
+}
+
+function Menu<T extends string>({ title, current, options, onSelect }: MenuProps<T>) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const curOption = options.find((o) => o.value === current);
+
+  return (
+    <div className="settings-menu" ref={ref}>
+      <button
+        type="button"
+        className="settings-menu-trigger"
+        onClick={() => setOpen((v) => !v)}
+        title={title}
+      >
+        <span className="settings-menu-title">{title}</span>
+        <span className="settings-menu-current">{curOption?.label}</span>
+        <ChevronDown size={12} />
+      </button>
+      {open && (
+        <div className="settings-menu-panel">
+          {options.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              className={`settings-menu-item ${o.value === current ? 'active' : ''}`}
+              onClick={() => { onSelect(o.value); setOpen(false); }}
+            >
+              <span>{o.label}</span>
+              {o.value === current && <span className="settings-menu-check">✓</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface HeaderProps {
   onOpenSettings: () => void;
@@ -45,14 +111,14 @@ export default function Header({ onOpenSettings }: HeaderProps) {
 
   const handlePdf = async () => {
     if (!result || !activeVariant) {
-      setError('Раскладка не рассчитана, рассчитайте сначала.');
+      setError(tr(lang, 'err.calcFirst'));
       return;
     }
     try {
       const { generatePdfWithReactPdf } = await import('../Report/PDFReport');
-      await generatePdfWithReactPdf(vehicle, cargo, activeVariant, weightUnit);
+      await generatePdfWithReactPdf(vehicle, cargo, activeVariant, weightUnit, lang);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка формирования PDF');
+      setError(e instanceof Error ? e.message : tr(lang, 'err.pdf'));
     }
   };
 
@@ -60,7 +126,7 @@ export default function Header({ onOpenSettings }: HeaderProps) {
     try {
       await exportSceneToPng('scene-3d', `load-scheme-${Date.now()}`, vehicle, activeVariant ?? undefined, weightUnit);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка экспорта PNG');
+      setError(e instanceof Error ? e.message : tr(lang, 'err.png'));
     }
   };
 
@@ -78,48 +144,28 @@ export default function Header({ onOpenSettings }: HeaderProps) {
       </div>
 
       <div className="header-actions">
-        <div className="unit-switcher">
-          <span className="unit-switcher-title">{tr(lang, 'units.title')}</span>
-          <div className="unit-group">
-            <span className="unit-group-label">{tr(lang, 'units.dim')}</span>
-            {UNITS.map((u) => (
-              <button
-                key={u}
-                type="button"
-                className={`btn btn-sm unit-btn ${unit === u ? 'btn-primary' : ''}`}
-                onClick={() => setUnit(u)}
-              >
-                {UNIT_LABEL[u]}
-              </button>
-            ))}
-          </div>
-          <div className="unit-group">
-            <span className="unit-group-label">{tr(lang, 'units.weight')}</span>
-            {WEIGHT_UNITS.map((u) => (
-              <button
-                key={u}
-                type="button"
-                className={`btn btn-sm unit-btn ${weightUnit === u ? 'btn-primary' : ''}`}
-                onClick={() => setWeightUnit(u)}
-              >
-                {WEIGHT_UNIT_LABEL[u]}
-              </button>
-            ))}
-          </div>
-          <div className="unit-group">
-            <span className="unit-group-label">🌐</span>
-            {LANGS.map((l: Lang) => (
-              <button
-                key={l}
-                type="button"
-                className={`btn btn-sm unit-btn ${lang === l ? 'btn-primary' : ''}`}
-                onClick={() => setLang(l)}
-                title={tr(l, 'app.title')}
-              >
-                {LANG_LABEL[l]}
-              </button>
-            ))}
-          </div>
+        <div className="settings-menus">
+          <Menu<Unit>
+            title={tr(lang, 'units.dim')}
+            current={unit}
+            options={UNITS.map((u) => ({ value: u, label: UNIT_LABEL[u] }))}
+            onSelect={setUnit}
+          />
+          <Menu<WeightUnit>
+            title={tr(lang, 'units.weight')}
+            current={weightUnit}
+            options={WEIGHT_UNITS.map((u) => ({ value: u, label: WEIGHT_UNIT_LABEL[u] }))}
+            onSelect={setWeightUnit}
+          />
+          <Menu<Lang>
+            title={tr(lang, 'units.lang')}
+            current={lang}
+            options={LANGS.map((l) => ({ value: l, label: `${FLAGS[l]} ${LANG_FULL[l]}` }))}
+            onSelect={setLang}
+          />
+          <span className="settings-menu-globe" title={tr(lang, 'units.title')}>
+            <Globe size={14} />
+          </span>
         </div>
         <button className="btn btn-sm" onClick={() => setPresetsOpen(true)}>
           <Package size={14} /> {tr(lang, 'btn.presets')}

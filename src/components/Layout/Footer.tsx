@@ -2,10 +2,14 @@
 // Нижний колонтитул приложения
 // ============================================================================
 
+import { useAppStore } from '../../store/useAppStore';
+import { tr } from '../../i18n';
+
 export default function Footer() {
+  const lang = useAppStore((s) => s.lang);
   return (
     <footer className="app-footer">
-      3D Планировщик загрузки · React + Three.js · Данные хранятся локально в вашем браузере
+      {tr(lang, 'footer.text')}
     </footer>
   );
 }

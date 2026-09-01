@@ -10,6 +10,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { getCurrentVehicle } from '../../store/useAppStore';
 import { packItems } from '../../lib/packer/packer';
 import { toUnit, fromUnit, toWeightUnit, fromWeightUnit } from '../../utils/helpers';
+import { tr } from '../../i18n';
 
 interface Props {
   cargo: Cargo;
@@ -30,6 +31,7 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
   const loadingPoints = useAppStore((s) => s.loadingPoints);
   const setResult = useAppStore((s) => s.setResult);
   const setActiveVariant = useAppStore((s) => s.setActiveVariant);
+  const lang = useAppStore((s) => s.lang);
   const isCylinder = cargo.shape === 'cylinder';
   const [editingName, setEditingName] = useState(false);
   const [editValue, setEditValue] = useState(cargo.name);
@@ -63,7 +65,7 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
           type="checkbox"
           checked={cargo.stackable}
           onChange={(e) => updateCargo(cargo.id, { stackable: e.target.checked })}
-          title="Можно ставить сверху"
+          title={tr(lang, 'cargo.stackTitle')}
         />
       </td>
       <td className="cargo-td-name">
@@ -155,7 +157,7 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
         <button
           className="btn btn-sm"
           style={{ padding: '1px 4px', fontSize: 10 }}
-          title="Показать в 3D"
+          title={tr(lang, 'cargo.3dTitle')}
           onClick={() => {
             setFocusItemId(cargo.id);
             setHighlightItemId(cargo.id);
@@ -168,7 +170,7 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
         <button
           className="btn btn-sm"
           style={{ padding: '1px 4px', fontSize: 10 }}
-          title="Повернуть на 90° (поменять длину и ширину)"
+          title={tr(lang, 'cargo.rotateTitle')}
           onClick={() => {
             if (isCylinder) return; // Цилиндры не вращаем так
             const newLength = cargo.width ?? cargo.length;
@@ -198,7 +200,7 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
           <button
             className="btn btn-sm"
             style={{ padding: '1px 4px', fontSize: 10 }}
-            title="Детали груза"
+            title={tr(lang, 'cargo.detailsTitle')}
             onClick={() => onDetailsClick(cargo.id)}
           >
             <ClipboardList size={12} />

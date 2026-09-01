@@ -6,22 +6,24 @@ import { Home, Package, ArrowRight, ArrowLeft, Square } from 'lucide-react';
 
 
 import { useAppStore, getCurrentVehicle } from '../../store/useAppStore';
+import { tr } from '../../i18n';
 
 interface Props {
   vehicleId: string;
 }
 
-const PARTS: { key: 'showRoof' | 'showSides' | 'showFront' | 'showRear' | 'showFloor'; label: string; icon: React.ReactNode }[] = [
-  { key: 'showRoof', label: 'Крыша', icon: <Home size={12} /> },
-  { key: 'showSides', label: 'Борта', icon: <Package size={12} /> },
-  { key: 'showFront', label: 'Перед', icon: <ArrowRight size={12} /> },
-  { key: 'showRear', label: 'Зад', icon: <ArrowLeft size={12} /> },
-  { key: 'showFloor', label: 'Пол', icon: <Square size={12} /> },
+const PARTS: { key: 'showRoof' | 'showSides' | 'showFront' | 'showRear' | 'showFloor'; i18nKey: string; icon: React.ReactNode }[] = [
+  { key: 'showRoof', i18nKey: 'vis.roof', icon: <Home size={12} /> },
+  { key: 'showSides', i18nKey: 'vis.sides', icon: <Package size={12} /> },
+  { key: 'showFront', i18nKey: 'vis.front', icon: <ArrowRight size={12} /> },
+  { key: 'showRear', i18nKey: 'vis.rear', icon: <ArrowLeft size={12} /> },
+  { key: 'showFloor', i18nKey: 'vis.floor', icon: <Square size={12} /> },
 ];
 
 export default function VehicleVisibilityControls({ vehicleId }: Props) {
   const customVehicles = useAppStore((s) => s.customVehicles);
   const vehicle = getCurrentVehicle(vehicleId, customVehicles);
+  const lang = useAppStore((s) => s.lang);
 
   // Visibility defaults based on bodyType
   const getDefaults = () => {
@@ -66,10 +68,10 @@ export default function VehicleVisibilityControls({ vehicleId }: Props) {
   return (
     <div style={{ marginTop: 8 }}>
       <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>
-        Видимость кузова:
+        {tr(lang, 'vis.title')}:
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-        {PARTS.map(({ key, label, icon }) => (
+        {PARTS.map(({ key, i18nKey, icon }) => (
           <label
             key={key}
             style={{
@@ -86,7 +88,7 @@ export default function VehicleVisibilityControls({ vehicleId }: Props) {
               onChange={(e) => handleChange(key, e.target.checked)}
               style={{ width: 12, height: 12 }}
             />
-            {icon} {label}
+            {icon} {tr(lang, i18nKey)}
           </label>
         ))}
       </div>

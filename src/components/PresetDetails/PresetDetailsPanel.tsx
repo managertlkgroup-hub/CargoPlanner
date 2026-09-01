@@ -9,6 +9,7 @@ import { BODY_TYPE_LABELS, LOADING_METHOD_LABELS } from '../../types';
 import { getDefaultMethodsForBodyType } from '../../lib/packer/presets';
 import { useAppStore, getCurrentVehicle } from '../../store/useAppStore';
 import { uid, UNIT_LABEL, toUnit, fromUnit, formatWeight, WEIGHT_UNIT_LABEL, fromWeightUnit, toWeightUnit } from '../../utils/helpers';
+import { tr } from '../../i18n';
 
 interface VehiclePanelProps {
   vehicleId: string;
@@ -19,6 +20,7 @@ export function VehicleDetailsPanel({ vehicleId, onClose }: VehiclePanelProps) {
   const customVehicles = useAppStore((s) => s.customVehicles);
   const unit = useAppStore((s) => s.unit);
   const weightUnit = useAppStore((s) => s.weightUnit);
+  const lang = useAppStore((s) => s.lang);
   const [editId, setEditId] = useState(vehicleId);
   const vehicle = getCurrentVehicle(editId, customVehicles);
   const [editing, setEditing] = useState(false);
@@ -51,7 +53,7 @@ export function VehicleDetailsPanel({ vehicleId, onClose }: VehiclePanelProps) {
     const copy: Vehicle = {
       ...vehicle,
       id: copyId,
-      name: vehicle.name + ' (копия)',
+      name: vehicle.name + ` (${tr(lang, 'pd.copy')})`,
       isCustom: true,
     };
     addCustomVehicle(copy);
@@ -149,6 +151,7 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
   const addCargo = useAppStore((s) => s.addCargo);
   const unit = useAppStore((s) => s.unit);
   const weightUnit = useAppStore((s) => s.weightUnit);
+  const lang = useAppStore((s) => s.lang);
   const [editing, setEditing] = useState(false);
   const [editId, setEditId] = useState(cargoId);
   const item = cargo.find(c => c.id === editId);
@@ -194,7 +197,7 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
     const copy: Cargo = {
       ...item,
       id: copyId,
-      name: item.name + ' (копия)',
+      name: item.name + ` (${tr(lang, 'pd.copy')})`,
       isCustom: true,
     };
     addCargo(copy);
@@ -286,7 +289,7 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
         ) : (
           <>
             <div style={{ fontSize: 12, marginBottom: 4 }}>
-              Форма: <strong>{item.shape === 'cylinder' ? 'Цилиндр' : 'Прямоугольный'}</strong>
+              {tr(lang, 'pd.form')}: <strong>{item.shape === 'cylinder' ? tr(lang, 'shape.cylinder') : tr(lang, 'shape.rect')}</strong>
             </div>
             {item.shape === 'cylinder' ? (
               <div style={{ fontSize: 12, marginBottom: 4 }}>
@@ -301,7 +304,7 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
               Вес: <strong>{formatWeight(item.weight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}</strong>, Кол-во: <strong>{item.quantity} шт</strong>
             </div>
             <div style={{ fontSize: 12, marginBottom: 4 }}>
-              Штабелируемый: <strong>{item.stackable ? 'Да' : 'Нет'}</strong>
+              {tr(lang, 'pd.stackable')}: <strong>{item.stackable ? tr(lang, 'pd.yes') : tr(lang, 'pd.no')}</strong>
             </div>
             {item.isOversize && (
               <div style={{ fontSize: 12, color: 'var(--color-danger)', marginBottom: 4 }}>

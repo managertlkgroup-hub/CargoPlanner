@@ -9,6 +9,7 @@ import { getDefaultVehicles, CARGO_PRESETS, type CargoPreset } from '../../lib/p
 import type { CargoShape, Vehicle } from '../../types';
 import { UNIT_LABEL, toUnit, fromUnit } from '../../utils/helpers';
 import CustomVehicleForm from '../VehicleSelector/CustomVehicleForm';
+import { tr } from '../../i18n';
 
 interface Props {
   onClose: () => void;
@@ -59,6 +60,7 @@ function VehiclesTab() {
   const removeCustomVehicle = useAppStore((s) => s.removeCustomVehicle);
   const updateCustomVehicle = useAppStore((s) => s.updateCustomVehicle);
   const unit = useAppStore((s) => s.unit);
+  const lang = useAppStore((s) => s.lang);
   const [showAdd, setShowAdd] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [hiddenBuiltIn, setHiddenBuiltIn] = useState<Set<string>>(new Set());
@@ -66,13 +68,13 @@ function VehiclesTab() {
   const builtIn = getDefaultVehicles();
 
   const handleDeleteBuiltIn = (id: string) => {
-    if (window.confirm('Скрыть стандартный пресет? (можно восстановить перезагрузкой)')) {
+    if (window.confirm(tr(lang, 'form.confirmHidePreset'))) {
       setHiddenBuiltIn((prev) => new Set(prev).add(id));
     }
   };
 
   const handleDeleteCustom = (id: string) => {
-    if (window.confirm('Удалить пользовательский автомобиль?')) {
+    if (window.confirm(tr(lang, 'form.confirmDeleteVehicle'))) {
       removeCustomVehicle(id);
     }
   };
@@ -160,7 +162,7 @@ function VehiclesTab() {
 
       <div style={{ marginTop: 8 }}>
         <button className="btn btn-sm w-full" onClick={() => setShowAdd(!showAdd)}>
-          {showAdd ? '− Скрыть форму' : '+ Добавить свой автомобиль'}
+          {showAdd ? tr(lang, 'form.hideForm') : tr(lang, 'form.addOwnVehicle')}
         </button>
         {showAdd && <CustomVehicleForm onDone={() => setShowAdd(false)} />}
       </div>
@@ -174,6 +176,7 @@ function EditVehicleForm({ vehicle, unit, onSave, onCancel }: {
   onSave: (patch: Partial<Vehicle>) => void;
   onCancel: () => void;
 }) {
+  const lang = useAppStore((s) => s.lang);
   const [name, setName] = useState(vehicle.name);
   const [length, setLength] = useState(Math.round(toUnit(vehicle.length, unit) * 100) / 100);
   const [width, setWidth] = useState(Math.round(toUnit(vehicle.width, unit) * 100) / 100);
@@ -182,8 +185,8 @@ function EditVehicleForm({ vehicle, unit, onSave, onCancel }: {
   const [error, setError] = useState('');
 
   const handleSave = () => {
-    if (!name) { setError('Укажите название.'); return; }
-    if (!length || !width || !height || !weight) { setError('Заполните все поля.'); return; }
+    if (!name) { setError(tr(lang, 'form.nameRequired')); return; }
+    if (!length || !width || !height || !weight) { setError(tr(lang, 'form.fillAll')); return; }
     onSave({
       name,
       length: fromUnit(length, unit),
@@ -231,6 +234,7 @@ function CargoTab() {
   const removeCustomCargoPreset = useAppStore((s) => s.removeCustomCargoPreset);
   const updateCustomCargoPreset = useAppStore((s) => s.updateCustomCargoPreset);
   const unit = useAppStore((s) => s.unit);
+  const lang = useAppStore((s) => s.lang);
   const builtInPresets = CARGO_PRESETS;
   const [showAdd, setShowAdd] = useState(false);
   const [editIdx, setEditIdx] = useState<number | null>(null);
@@ -256,7 +260,7 @@ function CargoTab() {
               <button
                 type="button"
                 onClick={() => {
-                  if (window.confirm('Скрыть стандартный пресет?')) {
+                  if (window.confirm(tr(lang, 'form.confirmHideVehicle'))) {
                     setHiddenBuiltIn((prev) => new Set(prev).add(idx));
                   }
                 }}
@@ -327,7 +331,7 @@ function CargoTab() {
 
       <div style={{ marginTop: 8 }}>
         <button className="btn btn-sm w-full" onClick={() => setShowAdd(!showAdd)}>
-          {showAdd ? '− Скрыть форму' : '+ Добавить свой пресет'}
+          {showAdd ? tr(lang, 'form.hideForm') : tr(lang, 'form.addOwnPreset')}
         </button>
         {showAdd && <AddCargoPresetForm onDone={() => setShowAdd(false)} />}
       </div>
@@ -342,6 +346,7 @@ function CargoTab() {
 function AddCargoPresetForm({ onDone }: { onDone: () => void }) {
   const addCustomCargoPreset = useAppStore((s) => s.addCustomCargoPreset);
   const unit = useAppStore((s) => s.unit);
+  const lang = useAppStore((s) => s.lang);
   const [name, setName] = useState('');
   const [shape, setShape] = useState<CargoShape>('box');
   const [length, setLength] = useState(0);
@@ -352,10 +357,10 @@ function AddCargoPresetForm({ onDone }: { onDone: () => void }) {
   const [error, setError] = useState('');
 
   const handleSave = () => {
-    if (!name) { setError('Укажите название.'); return; }
-    if (!length || !weight) { setError('Длина и вес обязательны.'); return; }
-    if (shape === 'box' && (!width || !height)) { setError('Укажите ширину и высоту.'); return; }
-    if (shape === 'cylinder' && !diameter) { setError('Укажите диаметр.'); return; }
+    if (!name) { setError(tr(lang, 'form.nameRequired')); return; }
+    if (!length || !weight) { setError(tr(lang, 'form.lenWeightRequired')); return; }
+    if (shape === 'box' && (!width || !height)) { setError(tr(lang, 'form.whRequired')); return; }
+    if (shape === 'cylinder' && !diameter) { setError(tr(lang, 'form.diameterRequired')); return; }
 
     const preset: CargoPreset = {
       name, shape,
@@ -373,7 +378,7 @@ function AddCargoPresetForm({ onDone }: { onDone: () => void }) {
     <div className="form-grid mt-2" style={{ gap: 8 }}>
       <div className="form-group full">
         <label>Название</label>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Мой пресет" />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={tr(lang, 'form.myPreset')} />
       </div>
       <div className="form-group">
         <label>Форма</label>
@@ -423,6 +428,7 @@ function EditCargoPresetForm({ preset, onSave, onCancel }: {
   onCancel: () => void;
 }) {
   const unit = useAppStore((s) => s.unit);
+  const lang = useAppStore((s) => s.lang);
   const [shape, setShape] = useState<CargoShape>(preset.shape ?? 'box');
   const [name, setName] = useState(preset.name);
   const [length, setLength] = useState(Math.round(toUnit(preset.length, unit) * 100) / 100);
@@ -433,10 +439,10 @@ function EditCargoPresetForm({ preset, onSave, onCancel }: {
   const [error, setError] = useState('');
 
   const handleSave = () => {
-    if (!name) { setError('Укажите название.'); return; }
-    if (!length || !weight) { setError('Длина и вес обязательны.'); return; }
-    if (shape === 'box' && (!width || !height)) { setError('Укажите ширину и высоту.'); return; }
-    if (shape === 'cylinder' && !diameter) { setError('Укажите диаметр.'); return; }
+    if (!name) { setError(tr(lang, 'form.nameRequired')); return; }
+    if (!length || !weight) { setError(tr(lang, 'form.lenWeightRequired')); return; }
+    if (shape === 'box' && (!width || !height)) { setError(tr(lang, 'form.whRequired')); return; }
+    if (shape === 'cylinder' && !diameter) { setError(tr(lang, 'form.diameterRequired')); return; }
     onSave({
       name, shape,
       length: fromUnit(length, unit),

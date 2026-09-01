@@ -3,6 +3,8 @@
 // ============================================================================
 
 import type { Theme } from '../../types';
+import { useAppStore } from '../../store/useAppStore';
+import { tr } from '../../i18n';
 
 interface Props {
   theme: Theme;
@@ -10,12 +12,14 @@ interface Props {
 }
 
 export default function ThemeToggle({ theme, onToggle }: Props) {
+  const lang = useAppStore((s) => s.lang);
+  const title = theme === 'light' ? tr(lang, 'theme.dark') : tr(lang, 'theme.light');
   return (
     <button
       className="theme-toggle"
       onClick={onToggle}
-      title={theme === 'light' ? 'Включить тёмную тему' : 'Включить светлую тему'}
-      aria-label={theme === 'light' ? 'Включить тёмную тему' : 'Включить светлую тему'}
+      title={title}
+      aria-label={title}
     >
       {theme === 'light' ? '🌙' : '☀️'}
     </button>

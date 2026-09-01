@@ -7,6 +7,7 @@ import { getCurrentVehicle, useAllVehicles } from '../../store/useAppStore';
 import { LOADING_METHOD_LABELS, BODY_TYPE_LABELS } from '../../types';
 import { getDefaultMethodsForBodyType } from '../../lib/packer/presets';
 import { UNIT_LABEL, formatDimension, WEIGHT_UNIT_LABEL, formatWeight } from '../../utils/helpers';
+import { tr } from '../../i18n';
 
 export default function VehicleSelector() {
   const selectedVehicleId = useAppStore((s) => s.selectedVehicleId);
@@ -14,6 +15,7 @@ export default function VehicleSelector() {
   const customVehicles = useAppStore((s) => s.customVehicles);
   const unit = useAppStore((s) => s.unit);
   const weightUnit = useAppStore((s) => s.weightUnit);
+  const lang = useAppStore((s) => s.lang);
   const vehicles = useAllVehicles();
 
   const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
@@ -49,7 +51,7 @@ export default function VehicleSelector() {
         >
           {vehicles.map((v) => (
             <option key={v.id} value={v.id}>
-              {v.name} {v.isCustom ? '(свой)' : ''}
+              {v.name} {v.isCustom ? `(${tr(lang, 'veh.custom')})` : ''}
             </option>
           ))}
         </select>

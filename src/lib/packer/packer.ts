@@ -107,6 +107,17 @@ function intersects(a: PlacedBox, b: PlacedBox): boolean {
   );
 }
 
+/** Расширяет бокс на gap по осям X и Z (для создания зазоров между грузами) */
+function padXZ(p: PlacedBox, gap: number): PlacedBox {
+  return { ...p, placedLength: p.placedLength + gap, placedWidth: p.placedWidth + gap };
+}
+
+/** Проверка пересечения с учётом зазора между грузами по осям X/Z (высота — реальная) */
+function intersectsGap(a: PlacedBox, b: PlacedBox, gap: number): boolean {
+  if (gap <= 0) return intersects(a, b);
+  return intersects(padXZ(a, gap), padXZ(b, gap));
+}
+
 /** Возможные ориентации бокса. Цилиндры не могут вращаться вертикально. */
 function getOrientations(box: Box, mode: 'along' | 'across' | 'mixed'): Orientation[] {
   // Цилиндр: горизонтальная ось (длина), ширина = высота = диаметр.
@@ -179,12 +190,14 @@ function packIntoBin(
   boxes: Box[],
   settings: PackSettings,
   sortMode: 'along' | 'across' | 'mixed',
+  gap: number = 0,
 ): PlacedBox[] {
   const placed: PlacedBox[] = [];
   let usedWeight = 0;
 
-  // Список крайних точек
-  const points: { x: number; y: number; z: number }[] = [{ x: 0, y: 0, z: 0 }];
+  // Список крайних точек. Начальная точка отстоит от стен на зазор,
+  // чтобы между грузами и стенками кузова был одинаковый gap.
+  const points: { x: number; y: number; z: number }[] = [{ x: gap, y: 0, z: gap }];
 
   // Сортировка боксов в зависимости от режима
   let sorted: Box[];
@@ -229,6 +242,9 @@ function packIntoBin(
         const placedLength = orientation.dx;
         const placedWidth = orientation.dz;
         const placedHeight = orientation.dy;
+        // "Раздутые" на зазор габариты по X и Z — гарантируют зазор между грузами
+        const inflL = placedLength + gap;
+        const inflW = placedWidth + gap;
 
         // === НЕГАБАРИТНЫЕ ГРУЗЫ ===
         // Всегда на полу (Y=0), центрированы по ширине (Z), прижаты к передней стенке (X=0)
@@ -240,8 +256,8 @@ function packIntoBin(
           effY = 0;
           effZ = Math.max(0, (bin.width - placedWidth) / 2);
         } else {
-          if (point.x + placedLength > bin.length) continue;
-          if (point.z + placedWidth > bin.width) continue;
+          if (point.x + inflL > bin.length) continue;
+          if (point.z + inflW > bin.width) continue;
         }
         if (effY + placedHeight > bin.height) continue;
 
@@ -268,7 +284,7 @@ function packIntoBin(
           rotY: orientation.rotY,
         };
 
-        if (placed.some((p) => intersects(candidate, p))) {
+        if (placed.some((p) => intersectsGap(candidate, p, gap))) {
           continue;
         }
         if (usedWeight + box.weight > maxWeight) continue;
@@ -343,12 +359,12 @@ function packIntoBin(
       usedWeight += box.weight;
 
       // Добавляем новые крайние точки после размещения груза
-      // Точка справа от груза (по оси X)
-      points.push({ x: point.x + placedBox.placedLength, y: point.y, z: point.z });
+      // Точка справа от груза (по оси X), плюс зазор
+      points.push({ x: point.x + placedBox.placedLength + gap, y: point.y, z: point.z });
       // Точка сверху от груза (по оси Y)
       points.push({ x: point.x, y: point.y + placedBox.placedHeight, z: point.z });
-      // Точка сзади от груза (по оси Z)
-      points.push({ x: point.x, y: point.y, z: point.z + placedBox.placedWidth });
+      // Точка сзади от груза (по оси Z), плюс зазор
+      points.push({ x: point.x, y: point.y, z: point.z + placedBox.placedWidth + gap });
       
       // Удаляем дубликаты и точки, попавшие внутрь уже размещённых грузов
       const uniquePoints: { x: number; y: number; z: number }[] = [];
@@ -434,11 +450,13 @@ export function packItems(
 
     const gap = resolvedSettings.gap ?? 0;
 
-    // Зазор уменьшает доступное пространство кузова со всех сторон (отступ от стен).
+    // Бин — полный объём кузова. Зазоры между грузами и от стен
+    // создаются внутри packIntoBin за счёт "раздутых" на gap габаритов,
+    // чтобы зазор был и между грузами, и от стен кузова.
     const bin = {
-      length: Math.max(0, vehicle.length - 2 * gap),
-      width: Math.max(0, vehicle.width - 2 * gap),
-      height: Math.max(0, vehicle.height - 2 * gap),
+      length: vehicle.length,
+      width: vehicle.width,
+      height: vehicle.height,
     };
 
     // Сортируем грузы по порядку точки загрузки (по возрастанию order),
@@ -473,7 +491,7 @@ export function packItems(
     ];
 
     const variants: LayoutVariant[] = modes.map(({ mode, label }) => {
-      const placed = packIntoBin(bin, vehicle.maxWeight, boxes, resolvedSettings, mode);
+      const placed = packIntoBin(bin, vehicle.maxWeight, boxes, resolvedSettings, mode, gap);
 
       let totalWeight = 0;
       let totalVolume = 0;
@@ -485,8 +503,8 @@ export function packItems(
         } else {
           totalVolume += p.placedLength * p.placedWidth * p.placedHeight;
         }
-        // Смещаем позицию на величину зазора (груз отстоит от всех стенок кузова)
-        const op = { ...p, x: p.x + gap, y: p.y + gap, z: p.z + gap };
+        // Позиция уже учитывает зазоры (стены + между грузами) — не смещаем
+        const op = { ...p };
         // Вычисляем индекс слоя
         const layerIndex = Math.round(op.y / Math.max(1, op.placedHeight));
         return toPackedItem(op, layerIndex);

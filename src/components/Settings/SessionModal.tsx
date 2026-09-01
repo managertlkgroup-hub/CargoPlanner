@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import { Save } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
+import { tr } from '../../i18n';
 
 interface Props {
   onClose: () => void;
@@ -15,6 +16,7 @@ export default function SessionModal({ onClose }: Props) {
   const saveSession = useAppStore((s) => s.saveSession);
   const loadSession = useAppStore((s) => s.loadSession);
   const deleteSession = useAppStore((s) => s.deleteSession);
+  const lang = useAppStore((s) => s.lang);
 
   const [name, setName] = useState('');
 
@@ -32,7 +34,7 @@ export default function SessionModal({ onClose }: Props) {
           <input
             type="text"
             value={name}
-            placeholder="Имя сессии"
+            placeholder={tr(lang, 'session.namePlaceholder')}
             className="input-flex"
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}

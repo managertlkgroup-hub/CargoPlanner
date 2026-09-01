@@ -113,10 +113,10 @@ interface AppState {
   rotateCargo: (cargoId: string, angle: number) => void;
   /** Возвращает все позиции варианта к автоматически рассчитанным */
   resetPositions: () => void;
-  /** Поднять груз на слой выше (↑) */
-  moveCargoUp: (cargoId: string) => boolean;
-  /** Опустить груз на слой ниже (↓) */
-  moveCargoDown: (cargoId: string) => boolean;
+  /** Поднять груз на слой выше (↑). Возвращает null при успехе или код причины отказа */
+  moveCargoUp: (cargoId: string) => string | null;
+  /** Опустить груз на слой ниже (↓). Возвращает null при успехе или код причины отказа */
+  moveCargoDown: (cargoId: string) => string | null;
   /** Автоматически найти место на верхнем слое (S) */
   smartStack: (cargoId: string) => boolean;
 
@@ -467,16 +467,16 @@ export const useAppStore = create<AppState>()(
       moveCargoUp: (cargoId) => {
         const result = get().result;
         const activeVariant = get().activeVariant;
-        if (!result || !activeVariant) return false;
+        if (!result || !activeVariant) return 'noresult';
         const variant = result.variants.find((v) => v.id === activeVariant);
-        if (!variant) return false;
+        if (!variant) return 'noresult';
         const item = variant.items.find((it) => it.id === cargoId);
         const vehicle = getCurrentVehicle(get().selectedVehicleId, get().customVehicles);
-        if (!item) return false;
+        if (!item) return 'noresult';
 
         // === Подъём предмета, уже находящегося на слое выше первого ===
         if (item.position.y > 0) {
-          if (!item.stackable && item.position.y > 0) return false;
+          if (!item.stackable && item.position.y > 0) return 'notstackable';
           const iD = rotDims(item);
           const iL = iD.L, iW = iD.W;
           const curTop = item.position.y + item.dimensions.height;
@@ -504,7 +504,7 @@ export const useAppStore = create<AppState>()(
               target = columnTop;
             }
           }
-          if (target === null || target <= item.position.y + 0.01) return false;
+          if (target === null || target <= item.position.y + 0.01) return 'nosupport';
 
           const candidate = { x: item.position.x, y: target, z: item.position.z };
 
@@ -513,17 +513,17 @@ export const useAppStore = create<AppState>()(
             xzOverlap(candidate.x, candidate.z, iL, iW, o) &&
             Math.abs(o.position.y + o.dimensions.height - candidate.y) < 0.01,
           );
-          if (!hasSupport) return false;
+          if (!hasSupport) return 'nosupport';
 
           // Коллизии в 3D
-          if (variant.items.some((o) => xyzCollide(candidate, iL, iW, item.dimensions.height, o))) return false;
+          if (variant.items.some((o) => xyzCollide(candidate, iL, iW, item.dimensions.height, o))) return 'collide';
 
           const newResult = patchActiveVariantItems(result, activeVariant, (it) =>
             it.id === cargoId ? { ...it, position: candidate } : it,
           );
           saveToStorage(KEYS.result, newResult);
           set({ result: newResult });
-          return true;
+          return null;
         }
         
         // Find support: another item at y=0 that overlaps in XZ
@@ -543,11 +543,11 @@ export const useAppStore = create<AppState>()(
             item.position.z + itemW > other.position.z
           );
         });
-        if (!support) return false; // No support below
+        if (!support) return 'nosupport'; // No support below
         
         const newY = support.position.y + support.dimensions.height;
         // Enforce height limit
-        if (newY + item.dimensions.height > vehicle.height) return false;
+        if (newY + item.dimensions.height > vehicle.height) return 'toohigh';
         
         // Center on support's XZ
         const supportL = support.rotationY === 90 || support.rotationY === 270 ? support.dimensions.width : support.dimensions.length;
@@ -570,24 +570,24 @@ export const useAppStore = create<AppState>()(
             candidate.z + itemW > other.position.z
           );
         });
-        if (collides) return false;
+        if (collides) return 'collide';
         
         const newResult = patchActiveVariantItems(result, activeVariant, (it) =>
           it.id === cargoId ? { ...it, position: candidate } : it
         );
         saveToStorage(KEYS.result, newResult);
         set({ result: newResult });
-        return true;
+        return null;
       },
 
       moveCargoDown: (cargoId) => {
         const result = get().result;
         const activeVariant = get().activeVariant;
-        if (!result || !activeVariant) return false;
+        if (!result || !activeVariant) return 'noresult';
         const variant = result.variants.find((v) => v.id === activeVariant);
-        if (!variant) return false;
+        if (!variant) return 'noresult';
         const item = variant.items.find((it) => it.id === cargoId);
-        if (!item || item.position.y === 0) return false; // Already on floor
+        if (!item || item.position.y === 0) return 'onfloor'; // Already on floor
 
         const iD = rotDims(item);
         const iL = iD.L, iW = iD.W;
@@ -606,14 +606,14 @@ export const useAppStore = create<AppState>()(
           other.id !== item.id &&
           xyzCollide({ x: item.position.x, y: newY, z: item.position.z }, iL, iW, item.dimensions.height, other),
         );
-        if (collides) return false;
+        if (collides) return 'collide';
         
         const newResult = patchActiveVariantItems(result, activeVariant, (it) =>
           it.id === cargoId ? { ...it, position: { ...it.position, y: newY } } : it
         );
         saveToStorage(KEYS.result, newResult);
         set({ result: newResult });
-        return true;
+        return null;
       },
 
       smartStack: (cargoId) => {
@@ -628,7 +628,7 @@ export const useAppStore = create<AppState>()(
         // First, try to lift it up from current position
         if (item.position.y === 0) {
           const lifted = get().moveCargoUp(cargoId);
-          if (lifted) return true;
+          if (lifted === null) return true;
         }
         
         // If already on a layer, try to find a better position on a higher layer

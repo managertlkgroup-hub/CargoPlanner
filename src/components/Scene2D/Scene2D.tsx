@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useActiveVariant, useSelectedVehicle, useAppStore } from '../../store/useAppStore';
 import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight } from '../../utils/helpers';
+import { tr } from '../../i18n';
 
 // Scene2D supports keyboard shortcuts:
 // R — rotate hovered/selected item by 90°
-// ↑/↓ — move item up/down layers
-// S — smart stack (auto-find best position on upper layer)
+// W/↑ — move item up a layer
+// S/↓ — move item down a layer
 
 interface Scene2DProps {
   width?: number;
@@ -20,9 +21,10 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
   const rotateCargo = useAppStore((s) => s.rotateCargo);
   const moveCargoUp = useAppStore((s) => s.moveCargoUp);
   const moveCargoDown = useAppStore((s) => s.moveCargoDown);
-  const smartStack = useAppStore((s) => s.smartStack);
   const unit = useAppStore((s) => s.unit);
   const weightUnit = useAppStore((s) => s.weightUnit);
+  const lang = useAppStore((s) => s.lang);
+  const setError = useAppStore((s) => s.setError);
 
   const [dimensions, setDimensions] = useState({ w: 600, h: 400 });
   // Текущий выбранный слой для перетаскивания (null = все)
@@ -375,19 +377,19 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
           const current = item.rotationY ?? item.rotation?.y ?? 0;
           rotateCargo(item.id, current + 90);
         }
-      } else if (e.key === 'ArrowUp') {
+      } else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === 'ц' || e.key === 'Ц') {
         e.preventDefault();
-        moveCargoUp(targetId);
-      } else if (e.key === 'ArrowDown') {
+        const r = moveCargoUp(targetId);
+        if (r) setError(stackReason(lang, r));
+      } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S' || e.key === 'ы' || e.key === 'Ы') {
         e.preventDefault();
-        moveCargoDown(targetId);
-      } else if (e.key === 's' || e.key === 'S' || e.key === 'ы' || e.key === 'Ы') {
-        smartStack(targetId);
+        const r = moveCargoDown(targetId);
+        if (r) setError(stackReason(lang, r));
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [variant, rotateCargo, moveCargoUp, moveCargoDown, smartStack]);
+  }, [variant, rotateCargo, moveCargoUp, moveCargoDown, setError, lang]);
 
   // Track hovered item for R key and tooltip
   const [tooltipData, setTooltipData] = useState<{ x: number; y: number; item: typeof variant extends null ? null : NonNullable<typeof variant>['items'][number] } | null>(null);
@@ -421,7 +423,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
   if (!vehicle || !variant) {
     return (
       <div className="w-full h-48 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
-        <p className="text-gray-500 dark:text-gray-400">No data to display</p>
+        <p className="text-gray-500 dark:text-gray-400">{tr(lang, 's2d.nodata')}</p>
       </div>
     );
   }
@@ -460,8 +462,8 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
         >
           <strong>{tooltipData.item.name}</strong>
           {`\n${Math.round(toUnit(tooltipData.item.dimensions.length, unit))}×${Math.round(toUnit(tooltipData.item.dimensions.width, unit))}×${Math.round(toUnit(tooltipData.item.dimensions.height, unit))} ${UNIT_LABEL[unit]}`}
-          {`\nВес: ${formatWeight(tooltipData.item.weight, weightUnit)} ${WEIGHT_UNIT_LABEL[weightUnit]}`}
-          {tooltipData.item.isOversize ? '\n⚠ Негабаритный' : ''}
+          {`\n${tr(lang, 's2d.weight')}: ${formatWeight(tooltipData.item.weight, weightUnit)} ${WEIGHT_UNIT_LABEL[weightUnit]}`}
+          {tooltipData.item.isOversize ? `\n⚠ ${tr(lang, 's2d.oversize')}` : ''}
         </div>
       )}
 
@@ -553,7 +555,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
                 <div key={layer} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
                   <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: LAYER_COLORS[layer], flexShrink: 0 }} />
                   <span style={{ color: 'var(--text-primary)' }}>
-                    <strong>Слой {layer}:</strong> {items.map(it => `${it.name} ×${it.count}`).join(', ')}
+                    <strong>{tr(lang, 's2d.layer')} {layer}:</strong> {items.map(it => `${it.name} ×${it.count}`).join(', ')}
                   </span>
                 </div>
               ))}
@@ -563,10 +565,24 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
       })()}
 
       <div style={{ fontSize: 10, color: '#9ca3af', textAlign: 'center', padding: 2 }}>
-        Перетаскивайте · R — поворот · ↑↓ — слои · S — автостак
+        {tr(lang, 's2d.footer')}
       </div>
     </div>
   );
 };
+
+const STACK_REASONS: Record<string, string> = {
+  noresult: 'err.calcFirst',
+  nosupport: 's2d.nosupport',
+  toohigh: 's2d.toohigh',
+  collide: 's2d.collide',
+  onfloor: 's2d.onfloor',
+  notstackable: 's2d.notstackable',
+};
+
+function stackReason(lang: 'ru' | 'en', reason: string): string {
+  const key = STACK_REASONS[reason] ?? 's2d.nosupport';
+  return tr(lang, key);
+}
 
 export default Scene2D;

@@ -7,6 +7,7 @@ import { useMemo } from 'react';
 import { useAppStore, useAllVehicles } from '../../store/useAppStore';
 import { matchVehicles, type VehicleMatch } from '../../lib/vehicleMatcher';
 import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight } from '../../utils/helpers';
+import { tr } from '../../i18n';
 
 interface Props {
   onClose: () => void;
@@ -17,6 +18,7 @@ export default function VehicleMatcher({ onClose }: Props) {
   const selectVehicle = useAppStore((s) => s.selectVehicle);
   const unit = useAppStore((s) => s.unit);
   const weightUnit = useAppStore((s) => s.weightUnit);
+  const lang = useAppStore((s) => s.lang);
   const vehicles = useAllVehicles();
 
   const matches = useMemo(() => matchVehicles(cargo, vehicles), [cargo, vehicles]);
@@ -71,7 +73,7 @@ export default function VehicleMatcher({ onClose }: Props) {
                     )}
                   </div>
                   <div style={{ fontSize: 11, color: fits ? 'var(--color-success)' : 'var(--color-warning)' }}>
-                    {fits ? 'Подходит' : 'Мало места'}
+                    {fits ? tr(lang, 'vm.fits') : tr(lang, 'vm.noFit')}
                   </div>
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>

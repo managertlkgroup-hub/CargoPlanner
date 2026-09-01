@@ -117,7 +117,7 @@ const App: React.FC = () => {
 
   const handleCalculate = () => {
     if (cargo.length === 0) {
-      setError('Добавьте хотя бы один груз перед расчётом.');
+      setError(tr(lang, 'err.calculateEmpty'));
       return;
     }
     const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
@@ -144,7 +144,7 @@ const App: React.FC = () => {
       setActiveVariant(preserved);
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка при расчёте раскладки');
+      setError(e instanceof Error ? e.message : tr(lang, 'err.calculate'));
     } finally {
       setCalculating(false);
     }
@@ -177,7 +177,7 @@ const App: React.FC = () => {
               <div className="accordion-content">
                 <VehicleSelector />
                 <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                  <button className="btn btn-sm" onClick={() => setDetailsVehicleId(selectedVehicleId)}><ClipboardList size={14} /> Детали</button>
+                  <button className="btn btn-sm" onClick={() => setDetailsVehicleId(selectedVehicleId)}><ClipboardList size={14} /> {tr(lang, 'btn.details')}</button>
                 </div>
               </div>
             )}
@@ -197,7 +197,7 @@ const App: React.FC = () => {
               <div className="cargo-section">
                 <CargoTable onCargoDetails={setDetailsCargoId} />
                 <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                  <button className="btn btn-sm" onClick={() => setMatcherOpen(true)}><Search size={14} /> Подобрать авто</button>
+                  <button className="btn btn-sm" onClick={() => setMatcherOpen(true)}><Search size={14} /> {tr(lang, 'btn.findVehicle')}</button>
                 </div>
               </div>
             )}
@@ -299,14 +299,14 @@ const App: React.FC = () => {
               className={`view-tab ${activeView === '2d' ? 'active' : ''}`}
               onClick={() => setActiveView('2d')}
             >
-              <Grid3x3 size={14} /> 2D Вид
+              <Grid3x3 size={14} /> {tr(lang, 'view.2d')}
             </button>
             <button
               type="button"
               className={`view-tab ${activeView === '3d' ? 'active' : ''}`}
               onClick={() => setActiveView('3d')}
             >
-              <Box size={14} /> 3D Вид
+              <Box size={14} /> {tr(lang, 'view.3d')}
             </button>
           </div>
           
@@ -330,7 +330,7 @@ const App: React.FC = () => {
             <button
               onClick={() => setError(null)}
               className="error-toast-close"
-              aria-label="Закрыть"
+              aria-label={tr(lang, 'aria.close')}
             >
               <X size={14} />
             </button>
@@ -354,18 +354,19 @@ function SuggestionsPanel({ show, onToggle }: { show: boolean; onToggle: () => v
   const result = useAppStore((s) => s.result);
   const activeVariant = useAppStore((s) => s.activeVariant);
   const unit = useAppStore((s) => s.unit);
+  const lang = useAppStore((s) => s.lang);
 
   const suggestions: PackingSuggestion[] = useMemo(() => {
     if (!result) return [];
-    return generateSuggestions(result, vehicle, activeVariant, unit);
-  }, [result, vehicle, activeVariant, unit]);
+    return generateSuggestions(result, vehicle, activeVariant, unit, lang);
+  }, [result, vehicle, activeVariant, unit, lang]);
 
   if (suggestions.length === 0) return null;
 
   return (
     <div style={{ flexShrink: 0 }}>
       <button className="btn btn-sm w-full" onClick={onToggle} style={{ marginBottom: 4 }}>
-        <Lightbulb size={14} /> Подсказки ({suggestions.length}) {show ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        <Lightbulb size={14} /> {tr(lang, 'suggestions.title')} ({suggestions.length}) {show ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
       </button>
       {show && (
         <div className="suggestions-list">

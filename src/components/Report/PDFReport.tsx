@@ -16,6 +16,7 @@ import {
 import type { Cargo, LayoutVariant, PackedItem, Vehicle, Unit } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight, type WeightUnit } from '../../utils/helpers';
+import { tr, type Lang } from '../../i18n';
 
 // Регистрация шрифтов с поддержкой кириллицы
 import robotoRegular from '../../assets/Roboto-Regular.ttf';
@@ -224,6 +225,7 @@ interface ReportProps {
   vehicle: Vehicle;
   cargo: Cargo[];
   variant: LayoutVariant;
+  lang: Lang;
 }
 
 /** Заголовок */
@@ -237,13 +239,13 @@ function CoverHeader() {
 }
 
 /** Информация об автомобиле */
-function VehicleInfo({ vehicle, unit, weightUnit }: { vehicle: Vehicle; unit: Unit; weightUnit: WeightUnit }) {
+function VehicleInfo({ vehicle, unit, weightUnit, lang }: { vehicle: Vehicle; unit: Unit; weightUnit: WeightUnit; lang: Lang }) {
   const fmt = (mm: number) => Math.round(toUnit(mm, unit) * 100) / 100;
   const BODY_LABELS: Record<string, string> = {
-    tent: 'Тентованный', van: 'Фургон', isothermal: 'Изотерм',
-    refrigerator: 'Рефрижератор', side: 'Бортовой', platform: 'Платформа',
-    flatbed: 'Платформа', low_loader: 'Низкорамный', dump: 'Самосвал',
-    tanker: 'Цистерна', container: 'Контейнеровоз',
+    tent: tr(lang, 'pdf.body.tent'), van: tr(lang, 'pdf.body.van'), isothermal: tr(lang, 'pdf.body.isothermal'),
+    refrigerator: tr(lang, 'pdf.body.refrigerator'), side: tr(lang, 'pdf.body.side'), platform: tr(lang, 'pdf.body.platform'),
+    flatbed: tr(lang, 'pdf.body.platform'), low_loader: tr(lang, 'pdf.body.low_loader'), dump: tr(lang, 'pdf.body.dump'),
+    tanker: tr(lang, 'pdf.body.tanker'), container: tr(lang, 'pdf.body.container'),
   };
   return (
     <View style={{ marginBottom: 12 }}>
@@ -314,6 +316,7 @@ function LayerScheme({
   layerItems,
   maxLayer,
   maxWidth,
+  lang,
 }: {
   vehicle: Vehicle;
   variant: LayoutVariant;
@@ -321,6 +324,7 @@ function LayerScheme({
   layerItems: PackedItem[];
   maxLayer: number;
   maxWidth: number;
+  lang: Lang;
 }) {
   const SCALE = Math.min(maxWidth / vehicle.length, 100 / vehicle.width, 1.2);
   const vw = vehicle.length * SCALE;
@@ -329,7 +333,7 @@ function LayerScheme({
   return (
     <View style={styles.schemeContainer}>
       <Text style={styles.schemeTitle}>
-        Слой {layer}{layer === 0 ? ' (пол)' : ''}
+        {tr(lang, 'pdf.layer')} {layer}{layer === 0 ? ` (${tr(lang, 'pdf.floor')})` : ''}
       </Text>
       <View style={[styles.schemeBox, { width: vw, height: vh }]}>
         {layerItems.map((item) => {
@@ -369,7 +373,7 @@ function LayerScheme({
 }
 
 /** Легенда слоёв */
-function LayerLegend({ maxLayer }: { maxLayer: number }) {
+function LayerLegend({ maxLayer, lang }: { maxLayer: number; lang: Lang }) {
   if (maxLayer <= 0) return null;
   return (
     <View style={styles.legendRow}>
@@ -379,7 +383,7 @@ function LayerLegend({ maxLayer }: { maxLayer: number }) {
         return (
           <View key={i} style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})` }]} />
-            <Text style={styles.legendText}>Слой {i}{i === 0 ? ' (пол)' : ''}</Text>
+            <Text style={styles.legendText}>{tr(lang, 'pdf.layer')} {i}{i === 0 ? ` (${tr(lang, 'pdf.floor')})` : ''}</Text>
           </View>
         );
       })}
@@ -435,7 +439,7 @@ function ItemLegend({ items }: { items: PackedItem[] }) {
 }
 
 /** Таблица грузов */
-function CargoTable({ cargo, items, unit, weightUnit }: { cargo: Cargo[]; items: PackedItem[]; unit: Unit; weightUnit: WeightUnit }) {
+function CargoTable({ cargo, items, unit, weightUnit, lang }: { cargo: Cargo[]; items: PackedItem[]; unit: Unit; weightUnit: WeightUnit; lang: Lang }) {
   const fmt = (mm: number) => Math.round(toUnit(mm, unit) * 100) / 100;
   const maxL = items.length > 0 ? Math.max(...items.map(i => layerOf(i))) : 0;
   const hasLayers = maxL > 0;
@@ -509,7 +513,7 @@ function CargoTable({ cargo, items, unit, weightUnit }: { cargo: Cargo[]; items:
             <Text style={[styles.tableCell, { width: COL_W.num }]}>{rowIdx + 1}</Text>
             <Text style={[styles.tableCell, { width: COL_W.name }]}>{name}</Text>
             <Text style={[styles.tableCell, { width: COL_W.shape }]}>
-              {shape === 'box' ? 'Прямоуг.' : 'Цилиндр'}
+              {shape === 'box' ? tr(lang, 'shape.rectShort') : tr(lang, 'shape.cylinder')}
             </Text>
             <Text style={[styles.tableCell, { width: COL_W.size }]}>{size}</Text>
             <Text style={[styles.tableCell, { width: COL_W.weight }]}>
@@ -531,7 +535,7 @@ function CargoTable({ cargo, items, unit, weightUnit }: { cargo: Cargo[]; items:
 
 // ─── Основной документ ─────────────────────────────────────
 
-function PDFDocument({ vehicle, cargo, variant, unit, weightUnit }: ReportProps & { unit: Unit; weightUnit: WeightUnit }) {
+function PDFDocument({ vehicle, cargo, variant, unit, weightUnit, lang }: ReportProps & { unit: Unit; weightUnit: WeightUnit }) {
   const maxLayer = variant.items.length > 0
     ? Math.max(...variant.items.map(i => layerOf(i)))
     : 0;
@@ -545,7 +549,7 @@ function PDFDocument({ vehicle, cargo, variant, unit, weightUnit }: ReportProps 
         <CoverHeader />
 
         {/* Информация об автомобиле */}
-        <VehicleInfo vehicle={vehicle} unit={unit} weightUnit={weightUnit} />
+        <VehicleInfo vehicle={vehicle} unit={unit} weightUnit={weightUnit} lang={lang} />
 
         {/* Сводка */}
         <Metrics variant={variant} vehicle={vehicle} weightUnit={weightUnit} />
@@ -560,12 +564,13 @@ function PDFDocument({ vehicle, cargo, variant, unit, weightUnit }: ReportProps 
             layerItems={variant.items}
             maxLayer={0}
             maxWidth={SCHEME_MAX_W}
+            lang={lang}
           />
         ) : (
           // Со штабелированием — отдельная схема для каждого слоя
           <View>
             <Text style={styles.sectionTitle}>Вид сверху по слоям</Text>
-            <LayerLegend maxLayer={maxLayer} />
+            <LayerLegend maxLayer={maxLayer} lang={lang} />
             {Array.from({ length: numLayers }, (_, li) => {
               const layerItems = variant.items.filter(i => layerOf(i) === li);
               return (
@@ -577,6 +582,7 @@ function PDFDocument({ vehicle, cargo, variant, unit, weightUnit }: ReportProps 
                   layerItems={layerItems}
                   maxLayer={maxLayer}
                   maxWidth={numLayers >= 3 ? (SCHEME_MAX_W - 16) / 2 : SCHEME_MAX_W}
+                  lang={lang}
                 />
               );
             })}
@@ -587,7 +593,7 @@ function PDFDocument({ vehicle, cargo, variant, unit, weightUnit }: ReportProps 
         <ItemLegend items={variant.items} />
 
         {/* Таблица грузов */}
-        <CargoTable cargo={cargo} items={variant.items} unit={unit} weightUnit={weightUnit} />
+        <CargoTable cargo={cargo} items={variant.items} unit={unit} weightUnit={weightUnit} lang={lang} />
 
         {/* Подвал */}
         <Text style={styles.footer}>CargoPlanner — стр. 1</Text>
@@ -603,10 +609,11 @@ export async function generatePdfWithReactPdf(
   cargo: Cargo[],
   variant: LayoutVariant,
   weightUnit: WeightUnit = 'kg',
+  lang: Lang = 'ru',
 ): Promise<void> {
   const unit = useAppStore.getState().unit;
   const blob = await pdf(
-    <PDFDocument vehicle={vehicle} cargo={cargo} variant={variant} unit={unit} weightUnit={weightUnit} />
+    <PDFDocument vehicle={vehicle} cargo={cargo} variant={variant} unit={unit} weightUnit={weightUnit} lang={lang} />
   ).toBlob();
 
   const url = URL.createObjectURL(blob);

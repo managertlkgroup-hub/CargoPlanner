@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { WEIGHT_UNIT_LABEL } from '../../utils/helpers';
-import { tr } from '../../i18n';
+import { tr, trf } from '../../i18n';
 import CargoRow from './CargoRow';
 import AddCargoForm from './AddCargoForm';
 import { exportCsv } from '../../lib/csv/exportCsv';
@@ -52,7 +52,7 @@ export default function CargoTable({ onCargoDetails }: CargoTableProps) {
 
   const handleClear = () => {
     if (cargo.length === 0) return;
-    if (window.confirm('Удалить все грузы?')) {
+    if (window.confirm(tr(lang, 'cargo.confirmClear'))) {
       clearCargo();
       setSelectedIds(new Set());
     }
@@ -75,7 +75,7 @@ export default function CargoTable({ onCargoDetails }: CargoTableProps) {
         setError(`Некоторые строки CSV не импортированы:\n${errors.join('\n')}`);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка импорта CSV');
+      setError(err instanceof Error ? err.message : tr(lang, 'err.importCsv'));
     } finally {
       e.target.value = '';
     }
@@ -120,22 +120,22 @@ export default function CargoTable({ onCargoDetails }: CargoTableProps) {
           <thead>
             <tr>
               <th className="cargo-th-check">✓</th>
-              <th className="cargo-th-stack" title="Можно ставить сверху">Штаб</th>
-              <th className="cargo-th-name">Название</th>
-              <th className="cargo-th-shape">Форма</th>
-              <th className="cargo-th-num">Длина</th>
-              <th className="cargo-th-num">Ширина</th>
-              <th className="cargo-th-num">Выс.</th>
-              <th className="cargo-th-num">Вес, {WEIGHT_UNIT_LABEL[weightUnit]}</th>
-              <th className="cargo-th-num">Кол-во</th>
-              <th style={{ width: 52, textAlign: 'center' }}>Действия</th>
+              <th className="cargo-th-stack" title={tr(lang, 'cargo.stackTitle')}>{tr(lang, 'th.stack')}</th>
+              <th className="cargo-th-name">{tr(lang, 'th.name')}</th>
+              <th className="cargo-th-shape">{tr(lang, 'th.shape')}</th>
+              <th className="cargo-th-num">{tr(lang, 'th.length')}</th>
+              <th className="cargo-th-num">{tr(lang, 'th.width')}</th>
+              <th className="cargo-th-num">{tr(lang, 'th.height')}</th>
+              <th className="cargo-th-num">{trf(lang, 'th.weight', { u: WEIGHT_UNIT_LABEL[weightUnit] })}</th>
+              <th className="cargo-th-num">{tr(lang, 'th.qty')}</th>
+              <th style={{ width: 52, textAlign: 'center' }}>{tr(lang, 'th.actions')}</th>
             </tr>
           </thead>
           <tbody>
             {cargo.length === 0 ? (
               <tr>
                 <td colSpan={10} className="empty-state text-muted">
-                  Грузов пока нет. Нажмите «+ Добавить» или импортируйте CSV.
+                  {tr(lang, 'cargo.empty')}
                 </td>
               </tr>
             ) : (

@@ -6,6 +6,7 @@ import type { ComponentType } from 'react';
 import { Package, AlertTriangle, Scale, Layers, ArrowUp } from 'lucide-react';
 import type { PackResult, Vehicle, Unit } from '../../types';
 import { UNIT_LABEL, formatDimension } from '../../utils/helpers';
+import { tr, trf, type Lang } from '../../i18n';
 
 export interface PackingSuggestion {
   id: string;
@@ -24,6 +25,7 @@ export function generateSuggestions(
   vehicle: Vehicle,
   activeVariantId?: string | null,
   unit: Unit = 'mm',
+  lang: Lang = 'ru',
 ): PackingSuggestion[] {
   const suggestions: PackingSuggestion[] = [];
   // Используем активный вариант, а не всегда variants[0]
@@ -37,7 +39,7 @@ export function generateSuggestions(
     suggestions.push({
       id: 'low-fill',
       icon: Package,
-      message: `Заполнение ${variant.volumeFill}% — попробуйте добавить больше грузов или увеличить количество.`,
+      message: trf(lang, 'sg.lowFill', { p: `${variant.volumeFill}%` }),
       cargoIds: [],
     });
   }
@@ -48,7 +50,7 @@ export function generateSuggestions(
     suggestions.push({
       id: 'unplaced',
       icon: AlertTriangle,
-      message: 'Некоторые грузы не поместились. Попробуйте другой режим или включите штабелирование.',
+      message: tr(lang, 'sg.unplaced'),
       cargoIds: [],
     });
   }
@@ -58,7 +60,7 @@ export function generateSuggestions(
     suggestions.push({
       id: 'weight-near-limit',
       icon: Scale,
-      message: `Вес загрузки ${variant.weightFill}% — близко к пределу. Распределите вес равномерно.`,
+      message: trf(lang, 'sg.weightLimit', { p: `${variant.weightFill}%` }),
       cargoIds: variant.items.map(it => it.id),
     });
   }
@@ -72,7 +74,7 @@ export function generateSuggestions(
       suggestions.push({
         id: 'enable-stacking',
         icon: Layers,
-        message: `${stackableFloor.length} штабелируемых грузов на полу. Включите штабелирование для экономии места.`,
+        message: trf(lang, 'sg.enableStacking', { n: stackableFloor.length }),
         cargoIds: stackableFloor.map(it => it.id),
       });
     }
@@ -84,7 +86,10 @@ export function generateSuggestions(
     suggestions.push({
       id: 'second-layer',
       icon: ArrowUp,
-      message: `Высота загрузки ${formatDimension(maxY, unit)} ${UNIT_LABEL[unit]} из ${formatDimension(vehicle.height, unit)} ${UNIT_LABEL[unit]}. Добавьте второй слой.`,
+      message: trf(lang, 'sg.secondLayer', {
+        a: `${formatDimension(maxY, unit)} ${UNIT_LABEL[unit]}`,
+        b: `${formatDimension(vehicle.height, unit)} ${UNIT_LABEL[unit]}`,
+      }),
       cargoIds: [],
     });
   }
@@ -106,11 +111,14 @@ export function generateSuggestions(
     const avgX = cogX / totalW;
     const centerX = vehicle.length / 2;
     if (Math.abs(avgX - centerX) > vehicle.length * 0.2) {
-      const side = avgX < centerX ? 'передней' : 'задней';
+      const side = avgX < centerX ? tr(lang, 'sg.front') : tr(lang, 'sg.rear');
       suggestions.push({
         id: 'balance-long',
         icon: Scale,
-        message: `Грузы смещены к ${side} части кузова (${formatDimension(Math.abs(avgX - centerX), unit)} ${UNIT_LABEL[unit]}). Распределите тяжёлые грузы равномернее.`,
+        message: trf(lang, 'sg.balanceLong', {
+          side,
+          d: `${formatDimension(Math.abs(avgX - centerX), unit)} ${UNIT_LABEL[unit]}`,
+        }),
         cargoIds: [],
       });
     }
@@ -120,11 +128,14 @@ export function generateSuggestions(
     const avgZ = cogZ / totalWz;
     const centerZ = vehicle.width / 2;
     if (Math.abs(avgZ - centerZ) > vehicle.width * 0.2) {
-      const sideZ = avgZ < centerZ ? 'левой' : 'правой';
+      const sideZ = avgZ < centerZ ? tr(lang, 'sg.left') : tr(lang, 'sg.right');
       suggestions.push({
         id: 'balance-width',
         icon: Scale,
-        message: `Грузы смещены к ${sideZ} стороне кузова (${formatDimension(Math.abs(avgZ - centerZ), unit)} ${UNIT_LABEL[unit]}). Распределите грузы равномернее по ширине.`,
+        message: trf(lang, 'sg.balanceWidth', {
+          side: sideZ,
+          d: `${formatDimension(Math.abs(avgZ - centerZ), unit)} ${UNIT_LABEL[unit]}`,
+        }),
         cargoIds: [],
       });
     }

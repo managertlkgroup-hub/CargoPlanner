@@ -9,6 +9,7 @@ import { uid, fromUnit, toUnit, UNIT_LABEL } from '../../utils/helpers';
 import { LOADING_METHOD_LABELS, BODY_TYPE_LABELS } from '../../types';
 import type { LoadingMethod, BodyType } from '../../types';
 import { getDefaultMethodsForBodyType } from '../../lib/packer/presets';
+import { tr, trf, type Lang } from '../../i18n';
 
 const ALL_METHODS: LoadingMethod[] = [
   'rear', 'side', 'top', 'side_both', 'full_tent_removal',
@@ -36,30 +37,32 @@ function validateField(
   min: number,
   max: number,
   label: string,
+  lang: Lang,
 ): string | null {
-  if (!value || value <= 0) return `${label} обязательно`;
-  if (value < min) return `${label} должна быть от ${min / 1000} до ${max / 1000} метров`;
-  if (value > max) return `${label} должна быть от ${min / 1000} до ${max / 1000} метров`;
+  if (!value || value <= 0) return trf(lang, 'form.fieldRequired', { label });
+  if (value < min) return trf(lang, 'form.fieldRange', { label, min: min / 1000, max: max / 1000 });
+  if (value > max) return trf(lang, 'form.fieldRange', { label, min: min / 1000, max: max / 1000 });
   return null;
 }
 
-function validateWeight(value: number, min: number, max: number): string | null {
-  if (!value || value <= 0) return 'Грузоподъёмность обязательна';
-  if (value < min) return `Грузоподъёмность должна быть от ${min} кг до ${max / 1000} тонн`;
-  if (value > max) return `Грузоподъёмность должна быть от ${min} кг до ${max / 1000} тонн`;
+function validateWeight(value: number, min: number, max: number, lang: Lang): string | null {
+  if (!value || value <= 0) return tr(lang, 'form.maxWeightRequired');
+  if (value < min) return tr(lang, 'form.maxWeightRequired');
+  if (value > max) return tr(lang, 'form.maxWeightRequired');
   return null;
 }
 
 const FIELDS = {
-  length: { min: 2000, max: 53500, label: 'Длина' },
-  width: { min: 1200, max: 10000, label: 'Ширина' },
-  height: { min: 1000, max: 8500, label: 'Высота' },
-  maxWeight: { min: 50, max: 200000, label: 'Грузоподъёмность' },
+  length: { min: 2000, max: 53500, labelKey: 'form.length' },
+  width: { min: 1200, max: 10000, labelKey: 'form.width' },
+  height: { min: 1000, max: 8500, labelKey: 'form.height' },
+  maxWeight: { min: 50, max: 200000, labelKey: 'form.maxWeight' },
 } as const;
 
 export default function CustomVehicleForm({ onDone }: Props) {
   const addCustomVehicle = useAppStore((s) => s.addCustomVehicle);
   const unit = useAppStore((s) => s.unit);
+  const lang = useAppStore((s) => s.lang);
   const [error, setError] = useState('');
   const [values, setValues] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -83,13 +86,14 @@ export default function CustomVehicleForm({ onDone }: Props) {
     for (const [key, cfg] of Object.entries(FIELDS)) {
       const numRaw = Number(values[key] || 0);
       const num = key === 'maxWeight' ? numRaw : fromUnit(numRaw, unit);
+      const label = tr(lang, cfg.labelKey);
       const err = key === 'maxWeight'
-        ? validateWeight(num, cfg.min, cfg.max)
-        : validateField(num, cfg.min, cfg.max, cfg.label);
+        ? validateWeight(num, cfg.min, cfg.max, lang)
+        : validateField(num, cfg.min, cfg.max, label, lang);
       if (err) e[key] = err;
     }
     return e;
-  }, [values, unit]);
+  }, [values, unit, lang]);
 
   const hasErrors = !values.name?.trim();
   const isInvalid = (key: string) => touched[key] && errors[key];
@@ -111,7 +115,7 @@ export default function CustomVehicleForm({ onDone }: Props) {
     const height = fromUnit(Number(fd.get('height')), unit);
     const maxWeight = Number(fd.get('maxWeight'));
 
-    if (!name) return setError('Укажите название');
+    if (!name) return setError(tr(lang, 'form.nameRequired'));
 
     // Mark all fields as touched to show errors
     setTouched({ name: true, length: true, width: true, height: true, maxWeight: true });
@@ -121,9 +125,10 @@ export default function CustomVehicleForm({ onDone }: Props) {
     for (const [key, cfg] of Object.entries(FIELDS)) {
       const numRaw = Number(fd.get(key));
       const num = key === 'maxWeight' ? numRaw : fromUnit(numRaw, unit);
+      const label = tr(lang, cfg.labelKey);
       const err = key === 'maxWeight'
-        ? validateWeight(num, cfg.min, cfg.max)
-        : validateField(num, cfg.min, cfg.max, cfg.label);
+        ? validateWeight(num, cfg.min, cfg.max, lang)
+        : validateField(num, cfg.min, cfg.max, label, lang);
       if (err) allErrors.push(err);
     }
     if (allErrors.length > 0) {
@@ -159,18 +164,18 @@ export default function CustomVehicleForm({ onDone }: Props) {
         <label>Название</label>
         <input
           name="name"
-          placeholder="Например, Собственный фургон"
+          placeholder={tr(lang, 'form.placeholderOwnVan')}
           value={values.name ?? ''}
           onChange={(e) => handleChange('name', e.target.value)}
           onBlur={() => handleBlur('name')}
           style={touched.name && !values.name?.trim() ? { borderColor: '#ef4444' } : {}}
         />
         {touched.name && !values.name?.trim() && (
-          <div className="text-danger" style={{ fontSize: 11 }}>Укажите название</div>
+          <div className="text-danger" style={{ fontSize: 11 }}>{tr(lang, 'form.nameRequired')}</div>
         )}
       </div>
       <div className="form-group">
-        <label>Длина, {UNIT_LABEL[unit]}</label>
+        <label>{tr(lang, 'form.length')}, {UNIT_LABEL[unit]}</label>
         <input
           name="length"
           type="number"
@@ -187,7 +192,7 @@ export default function CustomVehicleForm({ onDone }: Props) {
         )}
       </div>
       <div className="form-group">
-        <label>Ширина, {UNIT_LABEL[unit]}</label>
+        <label>{tr(lang, 'form.width')}, {UNIT_LABEL[unit]}</label>
         <input
           name="width"
           type="number"
@@ -204,7 +209,7 @@ export default function CustomVehicleForm({ onDone }: Props) {
         )}
       </div>
       <div className="form-group">
-        <label>Высота, {UNIT_LABEL[unit]}</label>
+        <label>{tr(lang, 'form.height')}, {UNIT_LABEL[unit]}</label>
         <input
           name="height"
           type="number"
@@ -221,7 +226,7 @@ export default function CustomVehicleForm({ onDone }: Props) {
         )}
       </div>
       <div className="form-group">
-        <label>Грузоподъёмность, кг</label>
+        <label>{tr(lang, 'form.maxWeight')}, кг</label>
         <input
           name="maxWeight"
           type="number"

@@ -824,6 +824,88 @@ html, body {
   color: #fff;
 }
 
+.settings-menus {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+}
+.settings-menu {
+  position: relative;
+}
+.settings-menu-trigger {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.settings-menu-trigger:hover {
+  border-color: var(--border-focus);
+}
+.settings-menu-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.settings-menu-current {
+  font-weight: 600;
+}
+.settings-menu-globe {
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+.settings-menu-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 100;
+  min-width: 130px;
+  padding: 4px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  box-shadow: var(--shadow-md);
+}
+.settings-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  text-align: left;
+}
+.settings-menu-item:hover {
+  background: var(--bg-input);
+}
+.settings-menu-item.active {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+.settings-menu-check {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
 .app-footer {
   padding: var(--spacing-md) var(--spacing-lg);
   background: var(--bg-footer);

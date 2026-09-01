@@ -7,6 +7,7 @@ import CargoItem3D from './CargoItem3D';
 import Container3D from './Container3D';
 import { SCALE } from './Container3D';
 import type { PackedItem } from '../../types';
+import { tr } from '../../i18n';
 
 /** Компонент-обёртка для плавного перемещения камеры к грузу */
 function CameraFocuser({ items, focusItemId }: { items: PackedItem[]; focusItemId: string | null }) {
@@ -45,6 +46,7 @@ const Scene3D: React.FC = () => {
   const toggleSpreadMode = useAppStore((s) => s.toggleSpreadMode);
   const setFocusItemId = useAppStore((s) => s.setFocusItemId);
   const unit = useAppStore((s) => s.unit);
+  const lang = useAppStore((s) => s.lang);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [topView] = useState(false);
@@ -281,7 +283,7 @@ const Scene3D: React.FC = () => {
           zIndex: 10,
         }}
       >
-        {spreadMode ? 'Склеить' : 'Разнести'}
+        {spreadMode ? tr(lang, 's3d.glue') : tr(lang, 's3d.spread')}
       </button>
     </div>
   );

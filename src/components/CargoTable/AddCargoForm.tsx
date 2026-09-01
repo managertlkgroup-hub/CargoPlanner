@@ -8,6 +8,7 @@ import { useAppStore } from '../../store/useAppStore';
 import type { Cargo, CargoShape } from '../../types';
 import { uid, fromUnit, toUnit, UNIT_LABEL, WEIGHT_UNIT_LABEL, formatWeight, toWeightUnit, fromWeightUnit } from '../../utils/helpers';
 import { getCargoPresets } from '../../lib/packer/presets';
+import { tr, trf, type Lang } from '../../i18n';
 
 /** Валидация числового поля */
 function validateField(
@@ -15,19 +16,20 @@ function validateField(
   min: number,
   max: number,
   label: string,
+  lang: Lang,
 ): string | null {
-  if (!value || value <= 0) return `${label} обязательно`;
-  if (value < min) return `${label} должна быть от ${min} до ${max}`;
-  if (value > max) return `${label} должна быть от ${min} до ${max}`;
+  if (!value || value <= 0) return trf(lang, 'form.fieldRequired', { label });
+  if (value < min) return trf(lang, 'form.fieldRange', { label, min, max });
+  if (value > max) return trf(lang, 'form.fieldRange', { label, min, max });
   return null;
 }
 
 const FIELDS = {
-  length: { min: 50, max: 20000, label: 'Длина' },
-  width: { min: 50, max: 5000, label: 'Ширина' },
-  height: { min: 50, max: 5000, label: 'Высота' },
-  diameter: { min: 50, max: 5000, label: 'Диаметр' },
-  weight: { min: 0.1, max: 50000, label: 'Вес' },
+  length: { min: 50, max: 20000, labelKey: 'form.length' },
+  width: { min: 50, max: 5000, labelKey: 'form.width' },
+  height: { min: 50, max: 5000, labelKey: 'form.height' },
+  diameter: { min: 50, max: 5000, labelKey: 'form.diameter' },
+  weight: { min: 0.1, max: 50000, labelKey: 'form.weight' },
 } as const;
 
 export default function AddCargoForm() {
@@ -35,6 +37,7 @@ export default function AddCargoForm() {
   const customCargoPresets = useAppStore((s) => s.customCargoPresets);
   const unit = useAppStore((s) => s.unit);
   const weightUnit = useAppStore((s) => s.weightUnit);
+  const lang = useAppStore((s) => s.lang);
   const [error, setError] = useState('');
   const builtInPresets = getCargoPresets();
   const cargoPresets = [...builtInPresets, ...customCargoPresets];
@@ -46,11 +49,12 @@ export default function AddCargoForm() {
     const e: Record<string, string> = {};
     for (const [key, cfg] of Object.entries(FIELDS)) {
       const num = Number(values[key] || 0);
-      const err = validateField(num, cfg.min, cfg.max, cfg.label);
+      const label = tr(lang, cfg.labelKey);
+      const err = validateField(num, cfg.min, cfg.max, label, lang);
       if (err) e[key] = err;
     }
     return e;
-  }, [values]);
+  }, [values, lang]);
 
   const hasErrors = !values.name?.trim();
   const isInvalid = (key: string) => touched[key] && errors[key];
@@ -59,24 +63,24 @@ export default function AddCargoForm() {
   const validateOnSubmit = (fd: FormData) => {
     const allErrors: string[] = [];
     const name = String(fd.get('name') || '').trim();
-    if (!name) { allErrors.push('Укажите название'); }
+    if (!name) { allErrors.push(tr(lang, 'form.nameRequired')); }
     const length = fromUnit(Number(fd.get('length')), unit);
     const width = fromUnit(Number(fd.get('width')), unit);
     const height = fromUnit(Number(fd.get('height')), unit);
     const diameter = fromUnit(Number(fd.get('diameter')), unit);
     const weight = fromWeightUnit(Number(fd.get('weight')), weightUnit);
     const shape = fd.get('shape') as CargoShape;
-    const lengthErr = validateField(length, FIELDS.length.min, FIELDS.length.max, 'Длина');
+    const lengthErr = validateField(length, FIELDS.length.min, FIELDS.length.max, tr(lang, FIELDS.length.labelKey), lang);
     if (lengthErr) allErrors.push(lengthErr);
-    const weightErr = validateField(weight, FIELDS.weight.min, FIELDS.weight.max, 'Вес');
+    const weightErr = validateField(weight, FIELDS.weight.min, FIELDS.weight.max, tr(lang, FIELDS.weight.labelKey), lang);
     if (weightErr) allErrors.push(weightErr);
     if (shape === 'box') {
-      const wErr = validateField(width, FIELDS.width.min, FIELDS.width.max, 'Ширина');
+      const wErr = validateField(width, FIELDS.width.min, FIELDS.width.max, tr(lang, FIELDS.width.labelKey), lang);
       if (wErr) allErrors.push(wErr);
-      const hErr = validateField(height, FIELDS.height.min, FIELDS.height.max, 'Высота');
+      const hErr = validateField(height, FIELDS.height.min, FIELDS.height.max, tr(lang, FIELDS.height.labelKey), lang);
       if (hErr) allErrors.push(hErr);
     } else {
-      const dErr = validateField(diameter, FIELDS.diameter.min, FIELDS.diameter.max, 'Диаметр');
+      const dErr = validateField(diameter, FIELDS.diameter.min, FIELDS.diameter.max, tr(lang, FIELDS.diameter.labelKey), lang);
       if (dErr) allErrors.push(dErr);
     }
     return allErrors;
@@ -102,7 +106,7 @@ export default function AddCargoForm() {
     const weight = fromWeightUnit(Number(fd.get('weight')), weightUnit);
     const quantity = Math.max(1, Math.floor(Number(fd.get('quantity')) || 1));
 
-    if (!name) return setError('Укажите название груза.');
+    if (!name) return setError(tr(lang, 'form.nameRequiredCargo'));
 
     // Validate all fields on submit
     const allErrors = validateOnSubmit(fd);
@@ -184,7 +188,7 @@ export default function AddCargoForm() {
         <label>Быстрый выбор груза</label>
         <select onChange={handlePresetChange} defaultValue="">
           <option value="" disabled>-- Выберите пресет --</option>
-          <optgroup label="Стандартные">
+          <optgroup label={tr(lang, 'form.optgroupStandard')}>
             {builtInPresets.map((preset, idx) => (
               <option key={preset.name} value={idx}>
                 {preset.name} ({toUnit(preset.length, unit)}×{toUnit(preset.width, unit)}×{toUnit(preset.height, unit)} {UNIT_LABEL[unit]}, {formatWeight(preset.weight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]})
@@ -192,7 +196,7 @@ export default function AddCargoForm() {
             ))}
           </optgroup>
           {customCargoPresets.length > 0 && (
-            <optgroup label="Мои пресеты">
+            <optgroup label={tr(lang, 'form.optgroupMine')}>
               {customCargoPresets.map((preset, idx) => (
                 <option key={preset.name + idx} value={builtInPresets.length + idx}>
                   {preset.name} ({toUnit(preset.length, unit)}×{toUnit(preset.width, unit)}×{toUnit(preset.height, unit)} {UNIT_LABEL[unit]}, {formatWeight(preset.weight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]})
@@ -206,7 +210,7 @@ export default function AddCargoForm() {
         <label>Название</label>
         <input
           name="name"
-          placeholder="Например, Европаллета"
+          placeholder={tr(lang, 'form.placeholderPallet')}
           maxLength={100}
           value={values.name ?? ''}
           onChange={(e) => handleChange('name', e.target.value)}
@@ -214,7 +218,7 @@ export default function AddCargoForm() {
           style={touched.name && !values.name?.trim() ? { borderColor: '#ef4444' } : {}}
         />
         {touched.name && !values.name?.trim() && (
-          <div className="text-danger" style={{ fontSize: 11 }}>Укажите название груза</div>
+          <div className="text-danger" style={{ fontSize: 11 }}>{tr(lang, 'form.nameRequiredCargo')}</div>
         )}
       </div>
       <div className="form-group">
@@ -238,7 +242,7 @@ export default function AddCargoForm() {
         </div>
       )}
       <div className="form-group">
-        <label>Длина, {UNIT_LABEL[unit]}</label>
+        <label>{tr(lang, 'form.length')}, {UNIT_LABEL[unit]}</label>
         <input
           name="length"
           type="number"
@@ -258,7 +262,7 @@ export default function AddCargoForm() {
       {shape === 'box' ? (
         <>
           <div className="form-group">
-            <label>Ширина, {UNIT_LABEL[unit]}</label>
+            <label>{tr(lang, 'form.width')}, {UNIT_LABEL[unit]}</label>
             <input
               name="width"
               type="number"
@@ -276,7 +280,7 @@ export default function AddCargoForm() {
             )}
           </div>
           <div className="form-group">
-            <label>Высота, {UNIT_LABEL[unit]}</label>
+            <label>{tr(lang, 'form.height')}, {UNIT_LABEL[unit]}</label>
             <input
               name="height"
               type="number"
@@ -296,7 +300,7 @@ export default function AddCargoForm() {
         </>
       ) : (
         <div className="form-group">
-          <label>Диаметр, {UNIT_LABEL[unit]}</label>
+          <label>{tr(lang, 'form.diameter')}, {UNIT_LABEL[unit]}</label>
           <input
             name="diameter"
             type="number"
@@ -315,7 +319,7 @@ export default function AddCargoForm() {
         </div>
       )}
       <div className="form-group">
-        <label>Вес, {WEIGHT_UNIT_LABEL[weightUnit]}</label>
+        <label>{tr(lang, 'form.weight')}, {WEIGHT_UNIT_LABEL[weightUnit]}</label>
         <input
           name="weight"
           type="number"
@@ -333,13 +337,13 @@ export default function AddCargoForm() {
         )}
       </div>
       <div className="form-group">
-        <label>Кол-во, шт</label>
+        <label>{tr(lang, 'form.qty')}</label>
         <input name="quantity" type="number" min={1} defaultValue={1} />
       </div>
       <div className="form-group">
         <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <input type="checkbox" name="isOversize" style={{ width: 14, height: 14 }} />
-          Негабаритный
+          {tr(lang, 'form.oversize')}
         </label>
       </div>
       {error && <div className="form-group full text-muted text-danger">{error}</div>}
@@ -349,7 +353,7 @@ export default function AddCargoForm() {
           className="btn btn-primary w-full"
           disabled={hasErrors}
         >
-          + Добавить груз
+          {tr(lang, 'form.submitAdd')}
         </button>
       </div>
     </form>

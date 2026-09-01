@@ -3,18 +3,20 @@
 // ============================================================================
 
 import { useAppStore } from '../../store/useAppStore';
+import { tr } from '../../i18n';
 
-/** Отображаемые названия вариантов (по id) */
-const LABELS: Record<string, string> = {
-  along: 'Вдоль',
-  across: 'Поперёк',
-  mixed: 'Смешанный',
+/** Ключи i18n для названий вариантов (по id) */
+const LABEL_KEYS: Record<string, string> = {
+  along: 'mode.along',
+  across: 'mode.across',
+  mixed: 'mode.mixed',
 };
 
 export default function VariantTabs() {
   const result = useAppStore((s) => s.result);
   const activeVariant = useAppStore((s) => s.activeVariant);
   const setActiveVariant = useAppStore((s) => s.setActiveVariant);
+  const lang = useAppStore((s) => s.lang);
 
   if (!result || result.variants.length === 0) return null;
 
@@ -29,7 +31,7 @@ export default function VariantTabs() {
           className={`variant-tab ${v.id === activeVariant ? 'active' : ''}`}
           onClick={() => setActiveVariant(v.id)}
         >
-          {LABELS[v.id] ?? v.label} · {v.volumeFill}%
+          {tr(lang, LABEL_KEYS[v.id] ?? 'mode.along')} · {v.volumeFill}%
         </button>
       ))}
     </div>
