@@ -16,7 +16,7 @@ import {
 import type { Cargo, LayoutVariant, PackedItem, Vehicle, Unit } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight, type WeightUnit } from '../../utils/helpers';
-import { tr, type Lang } from '../../i18n';
+import { tr, trf, type Lang } from '../../i18n';
 
 // Регистрация шрифтов с поддержкой кириллицы
 import robotoRegular from '../../assets/Roboto-Regular.ttf';
@@ -229,11 +229,12 @@ interface ReportProps {
 }
 
 /** Заголовок */
-function CoverHeader() {
+function CoverHeader({ lang }: { lang: Lang }) {
+  const locale = lang === 'ru' ? 'ru-RU' : 'en-US';
   return (
     <View style={styles.header}>
-      <Text style={styles.headerTitle}>ОТЧЁТ О ЗАГРУЗКЕ</Text>
-      <Text style={styles.headerSub}>CargoPlanner · {new Date().toLocaleDateString('ru-RU')}</Text>
+      <Text style={styles.headerTitle}>{tr(lang, 'pdf.cover.title')}</Text>
+      <Text style={styles.headerSub}>CargoPlanner · {new Date().toLocaleDateString(locale)}</Text>
     </View>
   );
 }
@@ -249,45 +250,45 @@ function VehicleInfo({ vehicle, unit, weightUnit, lang }: { vehicle: Vehicle; un
   };
   return (
     <View style={{ marginBottom: 12 }}>
-      <Text style={styles.sectionTitle}>Автомобиль</Text>
+      <Text style={styles.sectionTitle}>{tr(lang, 'pdf.section.vehicle')}</Text>
       <Text style={styles.textBold}>{vehicle.name}</Text>
       {vehicle.bodyType && (
-        <Text style={styles.text}>Тип: {BODY_LABELS[vehicle.bodyType] || vehicle.bodyType}</Text>
+        <Text style={styles.text}>{tr(lang, 'pdf.type')}: {BODY_LABELS[vehicle.bodyType] || vehicle.bodyType}</Text>
       )}
-      <Text style={styles.text}>Кузов: {fmt(vehicle.length)} × {fmt(vehicle.width)} × {fmt(vehicle.height)} {UNIT_LABEL[unit]}</Text>
-          <Text style={styles.text}>Грузоподъёмность: {formatWeight(vehicle.maxWeight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}</Text>
+      <Text style={styles.text}>{tr(lang, 'pdf.body')}: {fmt(vehicle.length)} × {fmt(vehicle.width)} × {fmt(vehicle.height)} {UNIT_LABEL[unit]}</Text>
+          <Text style={styles.text}>{tr(lang, 'pdf.maxWeight')}: {formatWeight(vehicle.maxWeight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}</Text>
     </View>
   );
 }
 
 /** Сводка по загрузке */
-function Metrics({ variant, vehicle, weightUnit }: { variant: LayoutVariant; vehicle: Vehicle; weightUnit: WeightUnit }) {
+function Metrics({ variant, vehicle, weightUnit, lang }: { variant: LayoutVariant; vehicle: Vehicle; weightUnit: WeightUnit; lang: Lang }) {
   const maxLayer = variant.items.length > 0
     ? Math.max(...variant.items.map(i => layerOf(i)))
     : 0;
 
   return (
     <View style={{ marginBottom: 12 }}>
-      <Text style={styles.sectionTitle}>Сводка по загрузке</Text>
+      <Text style={styles.sectionTitle}>{tr(lang, 'pdf.section.summary')}</Text>
       <Text style={styles.textBold}>{variant.label}</Text>
       <View style={styles.metricsRow}>
         <View style={styles.metricCell}>
-          <Text style={styles.text}>Заполнение объёма: {variant.volumeFill}%</Text>
-          <Text style={styles.text}>Заполнение по весу: {variant.weightFill}%</Text>
+          <Text style={styles.text}>{tr(lang, 'pdf.fillVolume')}: {variant.volumeFill}%</Text>
+          <Text style={styles.text}>{tr(lang, 'pdf.fillWeight')}: {variant.weightFill}%</Text>
         </View>
         <View style={styles.metricCell}>
-          <Text style={styles.text}>Размещено: {variant.items.length} шт.</Text>
-          <Text style={styles.text}>Вес: {formatWeight(variant.totalWeight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}</Text>
+          <Text style={styles.text}>{tr(lang, 'pdf.placed')}: {variant.items.length} шт.</Text>
+          <Text style={styles.text}>{tr(lang, 'pdf.totalWeight')}: {formatWeight(variant.totalWeight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}</Text>
         </View>
       </View>
       <View style={styles.metricsRow}>
         <View style={styles.metricCell}>
-          <Text style={styles.text}>Свободный объём: {volMm3(variant.freeVolume)}</Text>
-          <Text style={styles.text}>Свободный вес: {formatWeight(Math.max(0, vehicle.maxWeight - variant.totalWeight), weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}</Text>
+          <Text style={styles.text}>{tr(lang, 'pdf.freeVolume')}: {volMm3(variant.freeVolume)}</Text>
+          <Text style={styles.text}>{tr(lang, 'pdf.freeWeight')}: {formatWeight(Math.max(0, vehicle.maxWeight - variant.totalWeight), weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}</Text>
         </View>
         <View style={styles.metricCell}>
-          {maxLayer > 0 && <Text style={styles.text}>Слоёв: {maxLayer + 1}</Text>}
-      <Text style={styles.text}>Грузоподъёмность: {formatWeight(vehicle.maxWeight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}</Text>
+          {maxLayer > 0 && <Text style={styles.text}>{tr(lang, 'pdf.layers')}: {maxLayer + 1}</Text>}
+      <Text style={styles.text}>{tr(lang, 'pdf.maxWeight')}: {formatWeight(vehicle.maxWeight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}</Text>
         </View>
       </View>
 
@@ -300,7 +301,7 @@ function Metrics({ variant, vehicle, weightUnit }: { variant: LayoutVariant; veh
         });
         const dist = Object.entries(counts)
           .sort(([a], [b]) => Number(a) - Number(b))
-          .map(([l, c]) => `Слой ${l}: ${c} шт.`)
+          .map(([l, c]) => trf(lang, 'pdf.layerCount', { l: Number(l), c }))
           .join('  •  ');
         return <Text style={styles.textMuted}>{dist}</Text>;
       })()}
@@ -367,7 +368,7 @@ function LayerScheme({
           );
         })}
       </View>
-      <Text style={styles.rulerText}>═══ 1 м ═══</Text>
+      <Text style={styles.rulerText}>{tr(lang, 'pdf.ruler')}</Text>
     </View>
   );
 }
@@ -392,7 +393,7 @@ function LayerLegend({ maxLayer, lang }: { maxLayer: number; lang: Lang }) {
 }
 
 /** Легенда номеров грузов */
-function ItemLegend({ items }: { items: PackedItem[] }) {
+function ItemLegend({ items, lang }: { items: PackedItem[]; lang: Lang }) {
   if (items.length === 0) return null;
   const maxL = items.length > 0 ? Math.max(...items.map(i => layerOf(i))) : 0;
 
@@ -400,7 +401,7 @@ function ItemLegend({ items }: { items: PackedItem[] }) {
     // Без слоёв — простой список
     return (
       <View style={{ marginBottom: 8 }}>
-        <Text style={styles.textBold}>Номера грузов:</Text>
+        <Text style={styles.textBold}>{tr(lang, 'pdf.itemNumbers')}</Text>
         <View style={styles.legendRow}>
           {items.map((item, idx2) => (
             <Text key={item.id} style={styles.legendText}>
@@ -416,7 +417,7 @@ function ItemLegend({ items }: { items: PackedItem[] }) {
   // Со слоями — группировка
   return (
     <View style={{ marginBottom: 8 }}>
-      <Text style={styles.textBold}>Номера грузов по слоям:</Text>
+      <Text style={styles.textBold}>{tr(lang, 'pdf.itemNumbersByLayer')}</Text>
       {Array.from({ length: maxL + 1 }, (_, layer) => {
         const layerItems = items
           .map((item, idx) => ({ item, idx }))
@@ -427,7 +428,7 @@ function ItemLegend({ items }: { items: PackedItem[] }) {
         return (
           <View key={layer} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
             <View style={[styles.legendDot, { backgroundColor: `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`, marginRight: 4 }]} />
-            <Text style={[styles.text, { fontFamily: 'Roboto', fontWeight: 700 }]}>Слой {layer}:</Text>
+            <Text style={[styles.text, { fontFamily: 'Roboto', fontWeight: 700 }]}>{trf(lang, 'pdf.layerLabel', { layer })}</Text>
             <Text style={[styles.text, { marginLeft: 4 }]}>
               {layerItems.map(({ item, idx }) => `${idx + 1}. ${item.name}`).join('  ·  ')}
             </Text>
@@ -477,17 +478,17 @@ function CargoTable({ cargo, items, unit, weightUnit, lang }: { cargo: Cargo[]; 
 
   return (
     <View>
-      <Text style={styles.sectionTitle}>Список грузов</Text>
+      <Text style={styles.sectionTitle}>{tr(lang, 'pdf.section.cargoList')}</Text>
 
       {/* Шапка таблицы */}
       <View style={styles.tableHeader}>
-        <Text style={[styles.tableHeaderText, { width: COL_W.num }]}>№</Text>
-        <Text style={[styles.tableHeaderText, { width: COL_W.name }]}>Название</Text>
-        <Text style={[styles.tableHeaderText, { width: COL_W.shape }]}>Форма</Text>
-        <Text style={[styles.tableHeaderText, { width: COL_W.size }]}>Размеры, {UNIT_LABEL[unit]}</Text>
-        <Text style={[styles.tableHeaderText, { width: COL_W.weight }]}>Вес</Text>
-        <Text style={[styles.tableHeaderText, { width: COL_W.qty }]}>Кол-во</Text>
-        {hasLayers && <Text style={[styles.tableHeaderText, { width: COL_W.layer }]}>Слой</Text>}
+        <Text style={[styles.tableHeaderText, { width: COL_W.num }]}>{tr(lang, 'pdf.th.num')}</Text>
+        <Text style={[styles.tableHeaderText, { width: COL_W.name }]}>{tr(lang, 'pdf.th.name')}</Text>
+        <Text style={[styles.tableHeaderText, { width: COL_W.shape }]}>{tr(lang, 'pdf.th.shape')}</Text>
+        <Text style={[styles.tableHeaderText, { width: COL_W.size }]}>{trf(lang, 'pdf.th.dimensions', { unit: UNIT_LABEL[unit] })}</Text>
+        <Text style={[styles.tableHeaderText, { width: COL_W.weight }]}>{tr(lang, 'pdf.th.weight')}</Text>
+        <Text style={[styles.tableHeaderText, { width: COL_W.qty }]}>{tr(lang, 'pdf.th.qty')}</Text>
+        {hasLayers && <Text style={[styles.tableHeaderText, { width: COL_W.layer }]}>{tr(lang, 'pdf.th.layer')}</Text>}
       </View>
 
       {/* Строки данных — по одному грузу на каждый слой */}
@@ -546,13 +547,13 @@ function PDFDocument({ vehicle, cargo, variant, unit, weightUnit, lang }: Report
     <Document>
       <Page size="A4" style={styles.page}>
         {/* Шапка */}
-        <CoverHeader />
+        <CoverHeader lang={lang} />
 
         {/* Информация об автомобиле */}
         <VehicleInfo vehicle={vehicle} unit={unit} weightUnit={weightUnit} lang={lang} />
 
         {/* Сводка */}
-        <Metrics variant={variant} vehicle={vehicle} weightUnit={weightUnit} />
+        <Metrics variant={variant} vehicle={vehicle} weightUnit={weightUnit} lang={lang} />
 
         {/* 2D-схемы по слоям */}
         {numLayers <= 1 ? (
@@ -569,7 +570,7 @@ function PDFDocument({ vehicle, cargo, variant, unit, weightUnit, lang }: Report
         ) : (
           // Со штабелированием — отдельная схема для каждого слоя
           <View>
-            <Text style={styles.sectionTitle}>Вид сверху по слоям</Text>
+            <Text style={styles.sectionTitle}>{tr(lang, 'pdf.schemeByLayer')}</Text>
             <LayerLegend maxLayer={maxLayer} lang={lang} />
             {Array.from({ length: numLayers }, (_, li) => {
               const layerItems = variant.items.filter(i => layerOf(i) === li);
@@ -590,13 +591,13 @@ function PDFDocument({ vehicle, cargo, variant, unit, weightUnit, lang }: Report
         )}
 
         {/* Легенда номеров */}
-        <ItemLegend items={variant.items} />
+        <ItemLegend items={variant.items} lang={lang} />
 
         {/* Таблица грузов */}
         <CargoTable cargo={cargo} items={variant.items} unit={unit} weightUnit={weightUnit} lang={lang} />
 
         {/* Подвал */}
-        <Text style={styles.footer}>CargoPlanner — стр. 1</Text>
+        <Text style={styles.footer}>CargoPlanner — {trf(lang, 'pdf.page', { n: 1 })}</Text>
       </Page>
     </Document>
   );

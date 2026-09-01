@@ -6,6 +6,7 @@
 import type { Vehicle, LayoutVariant } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { UNIT_LABEL, toUnit, formatWeight, WEIGHT_UNIT_LABEL, type WeightUnit } from '../../utils/helpers';
+import { tr, trf, type Lang } from '../../i18n';
 
 const LAYER_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
@@ -24,6 +25,7 @@ export async function exportSceneToPng(
   vehicle?: Vehicle,
   variant?: LayoutVariant,
   weightUnit: WeightUnit = 'kg',
+  lang: Lang = 'ru',
 ): Promise<void> {
   // Ищем 2D canvas (не WebGL) — помечен атрибутом data-export-canvas="2d"
   let sourceCanvas: HTMLCanvasElement | null =
@@ -42,7 +44,7 @@ export async function exportSceneToPng(
     }
   }
 
-  if (!sourceCanvas) throw new Error('Не удалось найти 2D-канвас для экспорта');
+  if (!sourceCanvas) throw new Error(tr(lang, 'err.pngNotFound'));
 
   const unit = useAppStore.getState().unit;
   const fmt = (mm: number) => Math.round(toUnit(mm, unit) * 100) / 100;
@@ -80,13 +82,13 @@ export async function exportSceneToPng(
   ctx.font = `bold ${22 * S}px system-ui, sans-serif`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.fillText('CargoPlanner — Схема загрузки', PAD, HEADER_H / 2);
+  ctx.fillText(tr(lang, 'png.title'), PAD, HEADER_H / 2);
 
   // Дата и вариант справа
   ctx.font = `${13 * S}px system-ui, sans-serif`;
   ctx.textAlign = 'right';
   ctx.fillStyle = '#94a3b8';
-  const dateStr = new Date().toLocaleDateString('ru-RU', {
+  const dateStr = new Date().toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US', {
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit',
   });
@@ -95,7 +97,10 @@ export async function exportSceneToPng(
   if (variant) {
     ctx.fillStyle = '#3b82f6';
     ctx.font = `bold ${14 * S}px system-ui, sans-serif`;
-    ctx.fillText(`Вариант: ${variant.label || 'Вдоль'}`, canvas.width - PAD, HEADER_H / 2 + 12 * S);
+    ctx.fillText(
+      `${tr(lang, 'png.variant')}: ${variant.label || tr(lang, 'mode.along')}`,
+      canvas.width - PAD, HEADER_H / 2 + 12 * S,
+    );
   }
 
   // ── 2D Схема ──
@@ -112,7 +117,7 @@ export async function exportSceneToPng(
   ctx.fillStyle = '#1e293b';
   ctx.font = `bold ${14 * S}px system-ui, sans-serif`;
   ctx.textAlign = 'left';
-  ctx.fillText('Распределение по слоям:', PAD, legendY);
+  ctx.fillText(tr(lang, 'png.layerDistribution'), PAD, legendY);
 
   if (variant && variant.items.length > 0) {
     // Группируем по слоям
@@ -135,7 +140,7 @@ export async function exportSceneToPng(
       // Текст
       ctx.fillStyle = '#1e293b';
       ctx.font = `${12 * S}px system-ui, sans-serif`;
-      const text = `Слой ${layer}: ${items.map(it => `${it.name} ×${it.count}`).join(', ')}`;
+      const text = `${trf(lang, 'png.layerLabel', { layer })} ${items.map(it => `${it.name} ×${it.count}`).join(', ')}`;
       ctx.fillText(text, PAD + 18 * S, ly);
       ly += 22 * S;
     });
@@ -154,13 +159,15 @@ export async function exportSceneToPng(
     ctx.font = `${12 * S}px system-ui, sans-serif`;
     ctx.textAlign = 'left';
 
+    const layers = new Set(variant.items.map(i => layerOf(i))).size;
+
     const metrics = [
       `${vehicle.name} (${fmt(vehicle.length)}×${fmt(vehicle.width)}×${fmt(vehicle.height)} ${UNIT_LABEL[unit]})`,
-      `Грузов: ${variant.items.length}`,
-      `Слоёв: ${[...new Set(variant.items.map(i => layerOf(i)))].length}`,
-      `Заполнение: ${variant.volumeFill ?? 0}%`,
-      `Вес: ${formatWeight(variant.totalWeight ?? 0, weightUnit)} ${WEIGHT_UNIT_LABEL[weightUnit]}`,
-      `Заполнение по весу: ${variant.weightFill ?? 0}%`,
+      `${tr(lang, 'png.items')}: ${variant.items.length}`,
+      `${tr(lang, 'png.layers')}: ${layers}`,
+      `${tr(lang, 'png.fillVolume')}: ${variant.volumeFill ?? 0}%`,
+      `${tr(lang, 'png.totalWeight')}: ${formatWeight(variant.totalWeight ?? 0, weightUnit)} ${WEIGHT_UNIT_LABEL[weightUnit]}`,
+      `${tr(lang, 'png.fillWeight')}: ${variant.weightFill ?? 0}%`,
     ];
     metrics.forEach((m, i) => {
       ctx.fillText(m, PAD + 10 * S, metricsY + 18 * S + i * 18 * S);
@@ -172,7 +179,7 @@ export async function exportSceneToPng(
   ctx.fillStyle = '#64748b';
   ctx.font = `${10 * S}px system-ui, sans-serif`;
   ctx.textAlign = 'center';
-  ctx.fillText('Сгенерировано в CargoPlanner — 3D Планировщик загрузки автомобиля', totalW / 2, footerY);
+  ctx.fillText(tr(lang, 'png.footer'), totalW / 2, footerY);
 
   // ── Скачиваем ──
   const link = document.createElement('a');

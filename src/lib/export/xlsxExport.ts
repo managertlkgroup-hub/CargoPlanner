@@ -9,9 +9,10 @@
 
 import * as XLSX from 'xlsx';
 import type { Cargo, LayoutVariant, Vehicle } from '../../types';
-import { getCargoVolume, shapeLabel } from '../../types';
+import { getCargoVolume } from '../../types';
 import { UNIT_LABEL, toUnit, formatWeight, WEIGHT_UNIT_LABEL, type WeightUnit } from '../../utils/helpers';
 import { useAppStore } from '../../store/useAppStore';
+import { tr, trf, type Lang } from '../../i18n';
 
 /** Массив строк (массив массивов) для одного листа */
 type SheetRows = (string | number)[][];
@@ -27,6 +28,7 @@ export function exportToXLSX(
   cargos: Cargo[],
   variants: LayoutVariant[],
   weightUnit: WeightUnit = 'kg',
+  lang: Lang = 'ru',
 ): void {
   const wb = XLSX.utils.book_new();
   const unit = useAppStore.getState().unit;
@@ -36,51 +38,50 @@ export function exportToXLSX(
 
   // --- Лист «Автомобиль» ---
   const vehicleRows: SheetRows = [
-    ['Параметр', 'Значение'],
-    ['Название', vehicle.name],
-    [`Длина, ${U}`, fmt(vehicle.length)],
-    [`Ширина, ${U}`, fmt(vehicle.width)],
-    [`Высота, ${U}`, fmt(vehicle.height)],
-    [`Грузоподъёмность, ${W}`, formatWeight(vehicle.maxWeight, weightUnit)],
-    ['Объём кузова, м³', round2((vehicle.length * vehicle.width * vehicle.height) / 1e9)],
+    [tr(lang, 'xls.parameter'), tr(lang, 'xls.value')],
+    [tr(lang, 'xls.name'), vehicle.name],
+    [trf(lang, 'xls.lengthU', { u: U }), fmt(vehicle.length)],
+    [trf(lang, 'xls.widthU', { u: U }), fmt(vehicle.width)],
+    [trf(lang, 'xls.heightU', { u: U }), fmt(vehicle.height)],
+    [trf(lang, 'xls.maxWeightU', { u: W }), formatWeight(vehicle.maxWeight, weightUnit)],
+    [tr(lang, 'xls.bodyVolume'), round2((vehicle.length * vehicle.width * vehicle.height) / 1e9)],
   ];
   const wsVehicle = XLSX.utils.aoa_to_sheet(vehicleRows);
   wsVehicle['!cols'] = [{ wch: 24 }, { wch: 20 }];
-  XLSX.utils.book_append_sheet(wb, wsVehicle, 'Автомобиль');
+  XLSX.utils.book_append_sheet(wb, wsVehicle, tr(lang, 'xls.sheet.vehicle'));
 
   // --- Лист «Грузы» ---
   const cargoRows: SheetRows = [
-    ['Название', 'Форма', `Длина, ${U}`, `Ширина, ${U}`, `Высота/Диам., ${U}`, `Вес, ${W}`, 'Кол-во', 'Объём, м³', 'Штабелируемый'],
+    [tr(lang, 'xls.name'), tr(lang, 'xls.shape'), trf(lang, 'xls.lengthU', { u: U }), trf(lang, 'xls.widthU', { u: U }), trf(lang, 'xls.diamHeightU', { u: U }), trf(lang, 'xls.weightU', { u: W }), tr(lang, 'xls.qty'), tr(lang, 'xls.volumeM3'), tr(lang, 'xls.stackable')],
   ];
   cargos.forEach((c) => {
     cargoRows.push([
       c.name,
-      shapeLabel(c.shape),
+      c.shape === 'cylinder' ? tr(lang, 'shape.cylinder') : tr(lang, 'shape.rect'),
       fmt(c.length),
       c.shape === 'box' ? (c.width != null ? fmt(c.width) : '') : '',
       c.shape === 'cylinder' ? (c.diameter != null ? fmt(c.diameter) : '') : (c.height != null ? fmt(c.height) : ''),
       formatWeight(c.weight, weightUnit),
       c.quantity,
       round2((getCargoVolume(c) * c.quantity) / 1e9),
-      c.stackable ? 'да' : 'нет',
+      c.stackable ? tr(lang, 'xls.yes') : tr(lang, 'xls.no'),
     ]);
   });
   const wsCargo = XLSX.utils.aoa_to_sheet(cargoRows);
   wsCargo['!cols'] = [{ wch: 24 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 10 }, { wch: 8 }, { wch: 12 }, { wch: 14 }];
-  XLSX.utils.book_append_sheet(wb, wsCargo, 'Грузы');
+  XLSX.utils.book_append_sheet(wb, wsCargo, tr(lang, 'xls.sheet.cargo'));
 
   // --- Листы «Вариант N» ---
-  const sheetNames = ['Вариант 1', 'Вариант 2', 'Вариант 3'];
   variants.forEach((variant, idx) => {
-    const sheetName = sheetNames[idx] ?? `Вариант ${idx + 1}`;
+    const sheetName = trf(lang, 'xls.sheet.variant', { n: idx + 1 });
     const rows: SheetRows = [
-      [`Вариант: ${variant.label}`, '', '', ''],
-      ['Заполнение объёма, %', variant.volumeFill, '', ''],
-      ['Заполнение по весу, %', variant.weightFill, '', ''],
-      [`Суммарный вес, ${W}`, formatWeight(variant.totalWeight, weightUnit), '', ''],
-      ['Свободный объём, м³', round2(variant.freeVolume / 1e9), '', ''],
+      [trf(lang, 'xls.variantLabel', { label: variant.label }), '', '', ''],
+      [tr(lang, 'xls.fillVolume'), variant.volumeFill, '', ''],
+      [tr(lang, 'xls.fillWeight'), variant.weightFill, '', ''],
+      [trf(lang, 'xls.totalWeightU', { u: W }), formatWeight(variant.totalWeight, weightUnit), '', ''],
+      [tr(lang, 'xls.freeVolume'), round2(variant.freeVolume / 1e9), '', ''],
       ['', '', '', ''],
-      ['Название', 'Форма', `Размер (Д×Ш×В), ${U}`, `Вес, ${W}`],
+      [tr(lang, 'xls.name'), tr(lang, 'xls.shape'), trf(lang, 'xls.sizeDWH', { u: U }), trf(lang, 'xls.weightU', { u: W })],
     ];
 
     variant.items.forEach((item) => {
@@ -90,7 +91,7 @@ export function exportToXLSX(
           : `${fmt(item.dimensions.length)}×${fmt(item.dimensions.width)}×${fmt(item.dimensions.height)}`;
       rows.push([
         item.name,
-        shapeLabel(item.shape),
+        item.shape === 'cylinder' ? tr(lang, 'shape.cylinder') : tr(lang, 'shape.rect'),
         sizeText,
         formatWeight(item.weight, weightUnit),
       ]);

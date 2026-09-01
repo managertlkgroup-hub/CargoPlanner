@@ -124,7 +124,7 @@ export default function Header({ onOpenSettings }: HeaderProps) {
 
   const handlePng = async () => {
     try {
-      await exportSceneToPng('scene-3d', `load-scheme-${Date.now()}`, vehicle, activeVariant ?? undefined, weightUnit);
+      await exportSceneToPng('scene-3d', `load-scheme-${Date.now()}`, vehicle, activeVariant ?? undefined, weightUnit, lang);
     } catch (e) {
       setError(e instanceof Error ? e.message : tr(lang, 'err.png'));
     }

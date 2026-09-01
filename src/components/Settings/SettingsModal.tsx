@@ -5,6 +5,7 @@ import { Settings } from 'lucide-react';
 
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
+import { tr } from '../../i18n';
 
 interface Props {
   onClose: () => void;
@@ -13,6 +14,7 @@ interface Props {
 export default function SettingsModal({ onClose }: Props) {
   const settings = useAppStore((s) => s.settings);
   const setSettings = useAppStore((s) => s.setSettings);
+  const lang = useAppStore((s) => s.lang);
 
   const [allowRotation, setAllowRotation] = useState(settings.allowRotation);
 
@@ -24,7 +26,7 @@ export default function SettingsModal({ onClose }: Props) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3><Settings size={18} /> Настройки</h3>
+        <h3><Settings size={18} /> {tr(lang, 'settings.title')}</h3>
         <div className="form-row mb-2">
           <input
             type="checkbox"
@@ -32,11 +34,11 @@ export default function SettingsModal({ onClose }: Props) {
             checked={allowRotation}
             onChange={(e) => setAllowRotation(e.target.checked)}
           />
-          <label htmlFor="allow-rotation" className="checkbox-label">Разрешить вращение грузов при упаковке</label>
+          <label htmlFor="allow-rotation" className="checkbox-label">{tr(lang, 'settings.allowRotation')}</label>
         </div>
         <div className="row row-end mt-2">
-          <button className="btn" onClick={onClose}>Отмена</button>
-          <button className="btn btn-primary" onClick={handleSave}>Сохранить</button>
+          <button className="btn" onClick={onClose}>{tr(lang, 'btn.cancel')}</button>
+          <button className="btn btn-primary" onClick={handleSave}>{tr(lang, 'btn.save')}</button>
         </div>
       </div>
     </div>

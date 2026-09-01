@@ -39,7 +39,7 @@ export default function ReportButton() {
     }
     try {
       const { exportToXLSX } = await import('../../lib/export/xlsxExport');
-      exportToXLSX(vehicle, cargo, result.variants, weightUnit);
+      exportToXLSX(vehicle, cargo, result.variants, weightUnit, lang);
     } catch (e) {
       setError(e instanceof Error ? e.message : tr(lang, 'err.excel'));
     }

@@ -29,7 +29,7 @@ export default function SessionModal({ onClose }: Props) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3><Save size={16} /> Сессии</h3>
+        <h3><Save size={16} /> {tr(lang, 'session.title')}</h3>
         <div className="row mb-2">
           <input
             type="text"
@@ -39,11 +39,11 @@ export default function SessionModal({ onClose }: Props) {
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
           />
-          <button className="btn btn-primary" onClick={handleSave}>Сохранить</button>
+          <button className="btn btn-primary" onClick={handleSave}>{tr(lang, 'session.save')}</button>
         </div>
 
         {sessions.length === 0 ? (
-          <div className="text-muted">Сохранённых сессий нет.</div>
+          <div className="text-muted">{tr(lang, 'session.empty')}</div>
         ) : (
           <div className="sessions-list">
             {sessions.map((s) => (
@@ -51,15 +51,15 @@ export default function SessionModal({ onClose }: Props) {
                 <div>
                   <div className="session-name">{s.name}</div>
                   <div className="text-muted">
-                    {s.vehicle.name} · {new Date(s.createdAt).toLocaleString('ru-RU')}
+                    {s.vehicle.name} · {new Date(s.createdAt).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US')}
                   </div>
                 </div>
                 <div className="row">
                   <button className="btn btn-sm btn-primary" onClick={() => { loadSession(s.id); onClose(); }}>
-                    Загрузить
+                    {tr(lang, 'session.load')}
                   </button>
                   <button className="btn btn-sm btn-danger" onClick={() => deleteSession(s.id)}>
-                    Удалить
+                    {tr(lang, 'session.delete')}
                   </button>
                 </div>
               </div>

@@ -9,7 +9,7 @@ import { getDefaultVehicles, CARGO_PRESETS, type CargoPreset } from '../../lib/p
 import type { CargoShape, Vehicle } from '../../types';
 import { UNIT_LABEL, toUnit, fromUnit } from '../../utils/helpers';
 import CustomVehicleForm from '../VehicleSelector/CustomVehicleForm';
-import { tr } from '../../i18n';
+import { tr, trf } from '../../i18n';
 
 interface Props {
   onClose: () => void;
@@ -19,11 +19,12 @@ type Tab = 'vehicles' | 'cargo';
 
 export default function PresetsModal({ onClose }: Props) {
   const [tab, setTab] = useState<Tab>('vehicles');
+  const lang = useAppStore((s) => s.lang);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 560 }}>
-        <h3><Package size={18} /> Управление пресетами</h3>
+        <h3><Package size={18} /> {tr(lang, 'presets.title')}</h3>
 
         {/* Tabs */}
         <div className="variant-tabs mb-2">
@@ -32,21 +33,21 @@ export default function PresetsModal({ onClose }: Props) {
             className={`variant-tab ${tab === 'vehicles' ? 'active' : ''}`}
             onClick={() => setTab('vehicles')}
           >
-            <Truck size={14} /> Автомобили
+            <Truck size={14} /> {tr(lang, 'presets.vehicles')}
           </button>
           <button
             type="button"
             className={`variant-tab ${tab === 'cargo' ? 'active' : ''}`}
             onClick={() => setTab('cargo')}
           >
-            <Package size={14} /> Грузы
+            <Package size={14} /> {tr(lang, 'presets.cargo')}
           </button>
         </div>
 
         {tab === 'vehicles' ? <VehiclesTab /> : <CargoTab />}
 
         <div className="row row-end mt-2">
-          <button className="btn" onClick={onClose}>Закрыть</button>
+          <button className="btn" onClick={onClose}>{tr(lang, 'presets.close')}</button>
         </div>
       </div>
     </div>
@@ -84,7 +85,7 @@ function VehiclesTab() {
       <div style={{ maxHeight: 320, overflowY: 'auto' }}>
         {/* Standard presets */}
         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>
-          Стандартные
+          {tr(lang, 'presets.standard')}
         </div>
         {builtIn.filter((v) => !hiddenBuiltIn.has(v.id)).map((v) => (
           <div
@@ -94,7 +95,7 @@ function VehiclesTab() {
               padding: '6px 8px', borderRadius: 6, marginBottom: 2, fontSize: 13,
             }}
           >
-            <span>{v.name} — {toUnit(v.length, unit)}×{toUnit(v.width, unit)}×{toUnit(v.height, unit)} {UNIT_LABEL[unit]}, {v.maxWeight} кг</span>
+            <span>{v.name} — {toUnit(v.length, unit)}×{toUnit(v.width, unit)}×{toUnit(v.height, unit)} {UNIT_LABEL[unit]}, {trf(lang, 'form.maxWeightKgFmt', { weight: v.maxWeight })}</span>
             <button
               type="button"
               onClick={() => handleDeleteBuiltIn(v.id)}
@@ -102,7 +103,7 @@ function VehiclesTab() {
                 background: 'none', border: 'none', cursor: 'pointer',
                 color: 'var(--color-danger)', fontWeight: 700, fontSize: 14, padding: '0 4px',
               }}
-              title="Скрыть"
+              title={tr(lang, 'presets.hide')}
               >
                <X size={14} />
              </button>
@@ -113,7 +114,7 @@ function VehiclesTab() {
          {customVehicles.length > 0 && (
            <>
              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginTop: 12, marginBottom: 4 }}>
-               Пользовательские
+               {tr(lang, 'presets.custom')}
              </div>
              {customVehicles.map((v) => (
                <div key={v.id}>
@@ -123,13 +124,13 @@ function VehiclesTab() {
                     padding: '6px 8px', borderRadius: 6, marginBottom: 2, fontSize: 13,
                   }}
                 >
-            <span>{v.name} — {toUnit(v.length, unit)}×{toUnit(v.width, unit)}×{toUnit(v.height, unit)} {UNIT_LABEL[unit]}, {v.maxWeight} кг</span>
+            <span>{v.name} — {toUnit(v.length, unit)}×{toUnit(v.width, unit)}×{toUnit(v.height, unit)} {UNIT_LABEL[unit]}, {trf(lang, 'form.maxWeightKgFmt', { weight: v.maxWeight })}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <button
                       type="button"
                       onClick={() => setEditId(editId === v.id ? null : v.id)}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-accent)', fontSize: 12, padding: '0 4px' }}
-                      title="Изменить"
+                      title={tr(lang, 'presets.edit')}
                     >
                       <Pencil size={13} />
                     </button>
@@ -140,7 +141,7 @@ function VehiclesTab() {
                         background: 'none', border: 'none', cursor: 'pointer',
                         color: 'var(--color-danger)', fontWeight: 700, fontSize: 14, padding: '0 4px',
                       }}
-                      title="Удалить"
+                      title={tr(lang, 'presets.delete')}
                     >
                       <X size={14} />
                     </button>
@@ -199,29 +200,29 @@ function EditVehicleForm({ vehicle, unit, onSave, onCancel }: {
   return (
     <div className="form-grid mt-2" style={{ gap: 8, background: 'var(--bg-input)', padding: 8, borderRadius: 6 }}>
       <div className="form-group full">
-        <label>Название</label>
+        <label>{tr(lang, 'form.name')}</label>
         <input value={name} onChange={(e) => setName(e.target.value)} />
       </div>
       <div className="form-group">
-        <label>Длина, {UNIT_LABEL[unit]}</label>
+        <label>{trf(lang, 'form.dimLength', { unit: UNIT_LABEL[unit] })}</label>
         <input type="number" min={1} value={length || ''} onChange={(e) => setLength(Number(e.target.value))} />
       </div>
       <div className="form-group">
-        <label>Ширина, {UNIT_LABEL[unit]}</label>
+        <label>{trf(lang, 'form.dimWidth', { unit: UNIT_LABEL[unit] })}</label>
         <input type="number" min={1} value={width || ''} onChange={(e) => setWidth(Number(e.target.value))} />
       </div>
       <div className="form-group">
-        <label>Высота, {UNIT_LABEL[unit]}</label>
+        <label>{trf(lang, 'form.dimHeight', { unit: UNIT_LABEL[unit] })}</label>
         <input type="number" min={1} value={height || ''} onChange={(e) => setHeight(Number(e.target.value))} />
       </div>
       <div className="form-group">
-        <label>Грузоподъёмность, кг</label>
+        <label>{tr(lang, 'form.maxWeightKg')}</label>
         <input type="number" min={1} value={weight || ''} onChange={(e) => setWeight(Number(e.target.value))} />
       </div>
       {error && <div className="form-group full text-danger" style={{ fontSize: 12 }}>{error}</div>}
       <div className="form-group full" style={{ display: 'flex', gap: 8 }}>
-        <button type="button" className="btn btn-primary" onClick={handleSave}><Save size={14} /> Сохранить</button>
-        <button type="button" className="btn" onClick={onCancel}>Отмена</button>
+        <button type="button" className="btn btn-primary" onClick={handleSave}><Save size={14} /> {tr(lang, 'btn.save')}</button>
+        <button type="button" className="btn" onClick={onCancel}>{tr(lang, 'btn.cancel')}</button>
       </div>
     </div>
   );
@@ -245,7 +246,7 @@ function CargoTab() {
       <div style={{ maxHeight: 320, overflowY: 'auto' }}>
         {/* Standard presets */}
         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>
-          Стандартные
+          {tr(lang, 'presets.standard')}
         </div>
         {builtInPresets.map((p, idx) => (
           hiddenBuiltIn.has(idx) ? null : (
@@ -256,7 +257,7 @@ function CargoTab() {
                 padding: '6px 8px', borderRadius: 6, marginBottom: 2, fontSize: 13,
               }}
             >
-              <span>{p.name} — {toUnit(p.length, unit)}×{toUnit(p.width, unit)}×{toUnit(p.height, unit)} {UNIT_LABEL[unit]}, {p.weight} кг</span>
+              <span>{p.name} — {toUnit(p.length, unit)}×{toUnit(p.width, unit)}×{toUnit(p.height, unit)} {UNIT_LABEL[unit]}, {trf(lang, 'form.maxWeightKgFmt', { weight: p.weight })}</span>
               <button
                 type="button"
                 onClick={() => {
@@ -268,7 +269,7 @@ function CargoTab() {
                   background: 'none', border: 'none', cursor: 'pointer',
                   color: 'var(--color-danger)', fontWeight: 700, fontSize: 14, padding: '0 4px',
                 }}
-                title="Скрыть"
+                title={tr(lang, 'presets.hide')}
               >
                 <X size={14} />
               </button>
@@ -280,7 +281,7 @@ function CargoTab() {
         {customCargoPresets.length > 0 && (
           <>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginTop: 12, marginBottom: 4 }}>
-              Пользовательские
+              {tr(lang, 'presets.custom')}
             </div>
             {customCargoPresets.map((p, idx) => (
               <div key={p.name + idx}>
@@ -290,13 +291,13 @@ function CargoTab() {
                     padding: '6px 8px', borderRadius: 6, marginBottom: 2, fontSize: 13,
                   }}
                 >
-                  <span>{p.name} — {toUnit(p.length, unit)}×{toUnit(p.width, unit)}×{toUnit(p.height, unit)} {UNIT_LABEL[unit]}, {p.weight} кг</span>
+                  <span>{p.name} — {toUnit(p.length, unit)}×{toUnit(p.width, unit)}×{toUnit(p.height, unit)} {UNIT_LABEL[unit]}, {trf(lang, 'form.maxWeightKgFmt', { weight: p.weight })}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <button
                       type="button"
                       onClick={() => setEditIdx(editIdx === idx ? null : idx)}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-accent)', fontSize: 12, padding: '0 4px' }}
-                      title="Изменить"
+                      title={tr(lang, 'presets.edit')}
                     >
                       <Pencil size={13} />
                     </button>
@@ -307,7 +308,7 @@ function CargoTab() {
                         background: 'none', border: 'none', cursor: 'pointer',
                         color: 'var(--color-danger)', fontWeight: 700, fontSize: 14, padding: '0 4px',
                       }}
-                      title="Удалить"
+                      title={tr(lang, 'presets.delete')}
                     >
                       <X size={14} />
                     </button>
@@ -377,45 +378,45 @@ function AddCargoPresetForm({ onDone }: { onDone: () => void }) {
   return (
     <div className="form-grid mt-2" style={{ gap: 8 }}>
       <div className="form-group full">
-        <label>Название</label>
+        <label>{tr(lang, 'form.name')}</label>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder={tr(lang, 'form.myPreset')} />
       </div>
       <div className="form-group">
-        <label>Форма</label>
+        <label>{tr(lang, 'pd.form')}</label>
         <select value={shape} onChange={(e) => setShape(e.target.value as CargoShape)}>
-          <option value="box">Прямоугольный</option>
-          <option value="cylinder">Цилиндр</option>
+          <option value="box">{tr(lang, 'shape.rect')}</option>
+          <option value="cylinder">{tr(lang, 'shape.cylinder')}</option>
         </select>
       </div>
       <div className="form-group">
-        <label>Длина, {UNIT_LABEL[unit]}</label>
+        <label>{trf(lang, 'form.dimLength', { unit: UNIT_LABEL[unit] })}</label>
         <input type="number" min={1} value={length || ''} onChange={(e) => setLength(Number(e.target.value))} />
       </div>
       {shape === 'box' ? (
         <>
           <div className="form-group">
-            <label>Ширина, {UNIT_LABEL[unit]}</label>
+            <label>{trf(lang, 'form.dimWidth', { unit: UNIT_LABEL[unit] })}</label>
             <input type="number" min={1} value={width || ''} onChange={(e) => setWidth(Number(e.target.value))} />
           </div>
           <div className="form-group">
-            <label>Высота, {UNIT_LABEL[unit]}</label>
+            <label>{trf(lang, 'form.dimHeight', { unit: UNIT_LABEL[unit] })}</label>
             <input type="number" min={1} value={height || ''} onChange={(e) => setHeight(Number(e.target.value))} />
           </div>
         </>
       ) : (
         <div className="form-group">
-          <label>Диаметр, {UNIT_LABEL[unit]}</label>
+          <label>{trf(lang, 'form.dimDiameter', { unit: UNIT_LABEL[unit] })}</label>
           <input type="number" min={1} value={diameter || ''} onChange={(e) => setDiameter(Number(e.target.value))} />
         </div>
       )}
       <div className="form-group">
-        <label>Вес, кг</label>
+        <label>{tr(lang, 'form.weightKg')}</label>
         <input type="number" min={1} value={weight || ''} onChange={(e) => setWeight(Number(e.target.value))} />
       </div>
       {error && <div className="form-group full text-danger" style={{ fontSize: 12 }}>{error}</div>}
       <div className="form-group full">
         <button type="button" className="btn btn-primary w-full" onClick={handleSave}>
-          <Save size={14} /> Сохранить пресет
+          <Save size={14} /> {tr(lang, 'form.savePreset')}
         </button>
       </div>
     </div>
@@ -456,45 +457,45 @@ function EditCargoPresetForm({ preset, onSave, onCancel }: {
   return (
     <div className="form-grid mt-2" style={{ gap: 8, background: 'var(--bg-input)', padding: 8, borderRadius: 6 }}>
       <div className="form-group full">
-        <label>Название</label>
+        <label>{tr(lang, 'form.name')}</label>
         <input value={name} onChange={(e) => setName(e.target.value)} />
       </div>
       <div className="form-group">
-        <label>Форма</label>
+        <label>{tr(lang, 'pd.form')}</label>
         <select value={shape} onChange={(e) => setShape(e.target.value as CargoShape)}>
-          <option value="box">Прямоугольный</option>
-          <option value="cylinder">Цилиндр</option>
+          <option value="box">{tr(lang, 'shape.rect')}</option>
+          <option value="cylinder">{tr(lang, 'shape.cylinder')}</option>
         </select>
       </div>
       <div className="form-group">
-        <label>Длина, {UNIT_LABEL[unit]}</label>
+        <label>{trf(lang, 'form.dimLength', { unit: UNIT_LABEL[unit] })}</label>
         <input type="number" min={1} value={length || ''} onChange={(e) => setLength(Number(e.target.value))} />
       </div>
       {shape === 'box' ? (
         <>
           <div className="form-group">
-            <label>Ширина, {UNIT_LABEL[unit]}</label>
+            <label>{trf(lang, 'form.dimWidth', { unit: UNIT_LABEL[unit] })}</label>
             <input type="number" min={1} value={width || ''} onChange={(e) => setWidth(Number(e.target.value))} />
           </div>
           <div className="form-group">
-            <label>Высота, {UNIT_LABEL[unit]}</label>
+            <label>{trf(lang, 'form.dimHeight', { unit: UNIT_LABEL[unit] })}</label>
             <input type="number" min={1} value={height || ''} onChange={(e) => setHeight(Number(e.target.value))} />
           </div>
         </>
       ) : (
         <div className="form-group">
-          <label>Диаметр, {UNIT_LABEL[unit]}</label>
+          <label>{trf(lang, 'form.dimDiameter', { unit: UNIT_LABEL[unit] })}</label>
           <input type="number" min={1} value={diameter || ''} onChange={(e) => setDiameter(Number(e.target.value))} />
         </div>
       )}
       <div className="form-group">
-        <label>Вес, кг</label>
+        <label>{tr(lang, 'form.weightKg')}</label>
         <input type="number" min={1} value={weight || ''} onChange={(e) => setWeight(Number(e.target.value))} />
       </div>
       {error && <div className="form-group full text-danger" style={{ fontSize: 12 }}>{error}</div>}
       <div className="form-group full" style={{ display: 'flex', gap: 8 }}>
-        <button type="button" className="btn btn-primary" onClick={handleSave}><Save size={14} /> Сохранить</button>
-        <button type="button" className="btn" onClick={onCancel}>Отмена</button>
+        <button type="button" className="btn btn-primary" onClick={handleSave}><Save size={14} /> {tr(lang, 'btn.save')}</button>
+        <button type="button" className="btn" onClick={onCancel}>{tr(lang, 'btn.cancel')}</button>
       </div>
     </div>
   );
