@@ -591,16 +591,10 @@ html, body {
 
 /* Аккордеон */
 .accordion-section {
-  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   border-bottom: 1px solid var(--border);
-}
-
-.accordion-section .accordion-content {
-  max-height: 40vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
 }
 
 .accordion-toggle {
@@ -617,6 +611,7 @@ html, body {
   border: none;
   cursor: pointer;
   text-align: left;
+  flex-shrink: 0;
 }
 
 .accordion-toggle:hover {
@@ -643,15 +638,7 @@ html, body {
   margin-top: auto;
 }
 
-/* Секция «Управление» — прижата к низу, не сжимается */
-.left-panel .accordion-section:last-child {
-  flex-shrink: 0;
-  position: sticky;
-  bottom: 0;
-  background: var(--bg-panel);
-  z-index: 5;
-  border-top: 1px solid var(--border);
-}
+/* Секция «Управление» — обычная секция, участвует в общем скролле левой панели */
 
 /* Форма добавления груза — не выходит за границы */
 .add-cargo-form {

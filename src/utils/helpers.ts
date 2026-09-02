@@ -87,10 +87,14 @@ export function fromUnit(value: number, unit: Unit): number {
   return value;
 }
 
-/** Форматирует размер в мм с учётом единицы (до 2 знаков, без хвостовых нулей) */
+/** Форматирует размер в мм с учётом единицы (метры — до 2 знаков, см — до 1, мм — целое, без хвостовых нулей) */
 export function formatDimension(mm: number, unit: Unit): string {
   const raw = toUnit(mm, unit);
-  return (Math.round(raw * 100) / 100).toString();
+  let rounded: number;
+  if (unit === 'm') rounded = Math.round(raw * 100) / 100;
+  else if (unit === 'cm') rounded = Math.round(raw * 10) / 10;
+  else rounded = Math.round(raw);
+  return rounded.toString();
 }
 
 // --- Весовые единицы (кг/т) ---

@@ -18,11 +18,11 @@ import { VehicleDetailsPanel, CargoDetailsPanel } from './components/PresetDetai
 import { generateSuggestions, type PackingSuggestion } from './lib/packer/suggestions';
 import { formatDimension, toUnit, fromUnit, UNIT_LABEL, nameOf } from './utils/helpers';
 import type { Unit, PackSettings } from './types';
-import { tr } from './i18n';
+import { tr, trf } from './i18n';
 
 const toUnitDisplay = (mm: number, unit: Unit) => formatDimension(mm, unit);
 
-/** Строка настройки одного зазора: чекбокс включения + числовое поле с учётом единиц */
+/** Строка настройки одного зазора: чекбокс включения + числовое поле с учётом единиц (на одной строке) */
 const GapRow: React.FC<{
   id: string;
   lang: ReturnType<typeof useAppStore.getState>['lang'];
@@ -35,18 +35,16 @@ const GapRow: React.FC<{
   const step = unit === 'mm' ? 1 : unit === 'cm' ? 0.5 : 0.05;
   const value = Number(toUnit(valueMm || 50, unit).toFixed(unit === 'm' ? 2 : 1));
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <input
-          type="checkbox"
-          id={id}
-          checked={checked}
-          onChange={(e) => onChange(e.target.checked ? (valueMm || 50) : 0)}
-        />
-        <label htmlFor={id} style={{ fontSize: 13, color: 'var(--text)' }}>{label}</label>
-      </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+      <input
+        type="checkbox"
+        id={id}
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked ? (valueMm || 50) : 0)}
+      />
+      <label htmlFor={id} style={{ fontSize: 13, color: 'var(--text)', flex: 1, minWidth: 0 }}>{label}</label>
       {checked && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 26, marginTop: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <input
             type="number"
             min="0"
@@ -149,6 +147,19 @@ const App: React.FC = () => {
           const cur = useAppStore.getState().activeVariant;
           const keep = cur && result.variants.some(v => v.id === cur) ? cur : result.variants[0].id;
           setActiveVariant(keep);
+
+          // Автопроверка: все ли грузы помещаются с новыми зазорами
+          const totalQty = cargo.reduce((sum, c) => sum + Math.max(1, Math.floor(c.quantity || 1)), 0);
+          const placedQty = (result.variants[0]?.items?.length ?? 0);
+          if (totalQty > 0 && placedQty < totalQty) {
+            const maxVal = Math.max(
+              nextSettings.gapWalls ?? 0,
+              nextSettings.gapWidth ?? 0,
+              nextSettings.gapLength ?? 0,
+            );
+            const maxStr = formatDimension(maxVal, unit);
+            setError(trf(lang, 'gaps.gapTooBig', { max: maxStr, u: UNIT_LABEL[unit] }));
+          }
         }
       } catch (err) { /* пересчёт зазора */ }
       finally { setCalculating(false); }
@@ -256,7 +267,7 @@ const App: React.FC = () => {
           </div>
 
           {/* Секция «Грузы» */}
-          <div className="accordion-section" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div className="accordion-section">
             <button className="accordion-toggle" onClick={() => {
               const next = !cargoSectionOpen;
               setCargoSectionOpen(next);
