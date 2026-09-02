@@ -589,6 +589,7 @@ const STACK_REASONS: Record<string, string> = {
   onfloor: 's2d.onfloor',
   notstackable: 's2d.notstackable',
   stackingoff: 's2d.stackingoff',
+  nofloor: 's2d.nofloor',
 };
 
 function stackReason(lang: 'ru' | 'en', reason: string): string {

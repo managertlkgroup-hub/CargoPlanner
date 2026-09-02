@@ -277,7 +277,7 @@ function Metrics({ variant, vehicle, weightUnit, lang }: { variant: LayoutVarian
           <Text style={styles.text}>{tr(lang, 'pdf.fillWeight')}: {variant.weightFill}%</Text>
         </View>
         <View style={styles.metricCell}>
-          <Text style={styles.text}>{tr(lang, 'pdf.placed')}: {variant.items.length} шт.</Text>
+          <Text style={styles.text}>{tr(lang, 'pdf.placed')}: {variant.items.length}</Text>
           <Text style={styles.text}>{tr(lang, 'pdf.totalWeight')}: {formatWeight(variant.totalWeight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}</Text>
         </View>
       </View>

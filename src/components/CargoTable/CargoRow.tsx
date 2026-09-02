@@ -5,7 +5,6 @@ import { Search, ClipboardList } from 'lucide-react';
 
 import { useState, useRef } from 'react';
 import type { Cargo } from '../../types';
-import { shapeLabel } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { toUnit, fromUnit, toWeightUnit, fromWeightUnit, nameOf } from '../../utils/helpers';
 import { tr } from '../../i18n';
@@ -94,7 +93,7 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
           </div>
         )}
       </td>
-      <td className="cargo-td-shape">{shapeLabel(cargo.shape)}</td>
+      <td className="cargo-td-shape">{tr(lang, cargo.shape === 'cylinder' ? 'shape.cylinder' : 'shape.rect')}</td>
       <td className="cargo-td-num">
         <input
           type="number"

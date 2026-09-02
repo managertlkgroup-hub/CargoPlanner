@@ -68,8 +68,21 @@ export default function MetricsPanel() {
       length: Math.round(maxX),
       width: Math.round(maxZ),
       height: Math.round(maxY),
-      volumeMm3: maxX * maxZ * maxY,
     };
+  }, [variant]);
+
+  // Объём груза = сумма реальных объёмов размещённых предметов (не bounding box)
+  const cargoVolumeMm3 = useMemo(() => {
+    if (!variant) return 0;
+    return variant.items.reduce((sum, item) => {
+      const { length: L, width: W, height: H } = item.dimensions;
+      if (item.shape === 'cylinder') {
+        const d = Math.min(L, W);
+        const axis = item.cylinderOrientation === 'vertical' ? H : L;
+        return sum + Math.PI * (d / 2) ** 2 * axis;
+      }
+      return sum + L * W * H;
+    }, 0);
   }, [variant]);
 
   // COG
@@ -158,7 +171,7 @@ export default function MetricsPanel() {
             <div className="metric-label">{tr(lang, 'metric.dimensions')}, {unitLabel(lang, unit)}</div>
           </div>
           <div className="metric-card">
-            <div className="metric-value">{volumeToM3(cargoDimensions.volumeMm3, lang)}</div>
+            <div className="metric-value">{volumeToM3(cargoVolumeMm3, lang)}</div>
             <div className="metric-label">{tr(lang, 'metric.cargoVolume')}</div>
           </div>
         </>

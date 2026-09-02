@@ -171,22 +171,6 @@ function rotDims(item: { rotationY?: number; rotation?: { y?: number }; dimensio
     : { L: item.dimensions.length, W: item.dimensions.width };
 }
 
-/** Пересечение следов двух предметов в XZ */
-function xzOverlap(ax: number, az: number, aL: number, aW: number, other: {
-  position: Point3D;
-  rotationY?: number;
-  rotation?: { y?: number };
-  dimensions: { length: number; width: number };
-}): boolean {
-  const o = rotDims(other);
-  return (
-    ax < other.position.x + o.L &&
-    ax + aL > other.position.x &&
-    az < other.position.z + o.W &&
-    az + aW > other.position.z
-  );
-}
-
 /** 3D-пересечение AABB (candidate против other) */
 function xyzCollide(
   c: Point3D,
@@ -480,128 +464,21 @@ export const useAppStore = create<AppState>()(
         // Штабелирование должно быть включено для перемещения по слоям
         if ((get().settings.maxStackHeight ?? 0) <= 0) return 'stackingoff';
 
-        // === Подъём предмета, уже находящегося на слое выше первого ===
-        if (item.position.y > 0) {
-          if (!item.stackable && item.position.y > 0) return 'notstackable';
-          const iD = rotDims(item);
-          const iL = iD.L, iW = iD.W;
-          const curTop = item.position.y + item.dimensions.height;
-          const maxY = vehicle.height - item.dimensions.height;
+        // Подъём на один слой вверх (тот же XZ). Опора не требуется —
+        // груз может зависнуть в воздухе, важно лишь свободное место.
+        const newY = item.position.y + item.dimensions.height;
+        if (newY + item.dimensions.height > vehicle.height + 0.01) return 'toohigh';
 
-          // Уровни (верхние грани) предметов в колонне, расположенные не ниже текущего низа
-          const levels = variant.items
-            .filter((o) => xzOverlap(item.position.x, item.position.z, iL, iW, o))
-            .map((o) => o.position.y + o.dimensions.height)
-            .filter((h) => h >= item.position.y - 0.01)
-            .sort((a, b) => a - b);
+        const iD = rotDims(item);
+        const iL = iD.L, iW = iD.W;
+        const candidate = { x: item.position.x, y: newY, z: item.position.z };
 
-          // Ищем первый свободный уровень строго выше текущего верха предмета
-          let target: number | null = null;
-          for (const lvl of levels) {
-            if (lvl >= curTop - 0.01 && lvl + item.dimensions.height <= maxY + 0.01) {
-              target = lvl;
-              break;
-            }
-          }
-          if (target === null || target <= item.position.y + 0.01) {
-            // Крайний случай: ставим на верх самой высокой опоры в колонне
-            const columnTop = levels.length ? Math.max(...levels) : 0;
-            if (columnTop >= curTop - 0.01 && columnTop + item.dimensions.height <= maxY + 0.01) {
-              target = columnTop;
-            }
-          }
-          if (target === null || target <= item.position.y + 0.01) return 'nosupport';
-
-          const candidate = { x: item.position.x, y: target, z: item.position.z };
-
-          // Поддержка снизу (на target должна стоять опора).
-          // Опора должна перекрывать >= 50% площади основания груза.
-          const itemBase = iL * iW;
-          let supportOverlap = 0;
-          if (target > 0.01) {
-            for (const o of variant.items) {
-              if (o.id === item.id) continue;
-              if (Math.abs(o.position.y + o.dimensions.height - candidate.y) >= 0.01) continue;
-              const oD = rotDims(o);
-              const ox = Math.min(candidate.x + iL, o.position.x + oD.L) - Math.max(candidate.x, o.position.x);
-              const oz = Math.min(candidate.z + iW, o.position.z + oD.W) - Math.max(candidate.z, o.position.z);
-              supportOverlap += Math.max(0, ox) * Math.max(0, oz);
-            }
-          } else {
-            supportOverlap = itemBase; // на полу опора — сам пол
-          }
-          if (itemBase <= 0 || supportOverlap / itemBase < 0.5) return 'insupport';
-
-          // Коллизии в 3D
-          if (variant.items.some((o) => xyzCollide(candidate, iL, iW, item.dimensions.height, o))) return 'collide';
-
-          const newResult = patchActiveVariantItems(result, activeVariant, (it) =>
-            it.id === cargoId ? { ...it, position: candidate } : it,
-          );
-          saveToStorage(KEYS.result, newResult);
-          set({ result: newResult });
-          return null;
-        }
-        
-        // Find support: another item at y=0 that overlaps in XZ.
-        // Для надёжной опоры перекрытие должно составлять >= 50% площади основания груза.
-        const itemL = item.rotationY === 90 || item.rotationY === 270 ? item.dimensions.width : item.dimensions.length;
-        const itemW = item.rotationY === 90 || item.rotationY === 270 ? item.dimensions.length : item.dimensions.width;
-        const itemBase = itemL * itemW;
-
-        let bestSupport: { other: typeof variant.items[number]; overlap: number } | null = null;
-        for (const other of variant.items) {
-          if (other.id === item.id) continue;
-          if (other.position.y !== 0) continue;
-          const otherL = other.rotationY === 90 || other.rotationY === 270 ? other.dimensions.width : other.dimensions.length;
-          const otherW = other.rotationY === 90 || other.rotationY === 270 ? other.dimensions.length : other.dimensions.width;
-          if (
-            item.position.x < other.position.x + otherL &&
-            item.position.x + itemL > other.position.x &&
-            item.position.z < other.position.z + otherW &&
-            item.position.z + itemW > other.position.z
-          ) {
-            const ox = Math.min(item.position.x + itemL, other.position.x + otherL) - Math.max(item.position.x, other.position.x);
-            const oz = Math.min(item.position.z + itemW, other.position.z + otherW) - Math.max(item.position.z, other.position.z);
-            const overlap = Math.max(0, ox) * Math.max(0, oz);
-            if (!bestSupport || overlap > bestSupport.overlap) {
-              bestSupport = { other, overlap };
-            }
-          }
-        }
-        if (!bestSupport) return 'nosupport'; // Нет груза для опоры
-        if (itemBase <= 0 || bestSupport.overlap / itemBase < 0.5) return 'insupport'; // Недостаточная опора
-
-        const support = bestSupport.other;
-        const newY = support.position.y + support.dimensions.height;
-        // Enforce height limit
-        if (newY + item.dimensions.height > vehicle.height) return 'toohigh';
-        
-        // Center on support's XZ
-        const supportL = support.rotationY === 90 || support.rotationY === 270 ? support.dimensions.width : support.dimensions.length;
-        const supportW = support.rotationY === 90 || support.rotationY === 270 ? support.dimensions.length : support.dimensions.width;
-        const newX = support.position.x + (supportL - itemL) / 2;
-        const newZ = support.position.z + (supportW - itemW) / 2;
-        
-        // Check collision with other items at the target position
-        const candidate = { x: newX, y: newY, z: newZ };
-        const collides = variant.items.some((other) => {
-          if (other.id === item.id) return false;
-          const otherL = other.rotationY === 90 || other.rotationY === 270 ? other.dimensions.width : other.dimensions.length;
-          const otherW = other.rotationY === 90 || other.rotationY === 270 ? other.dimensions.length : other.dimensions.width;
-          return (
-            candidate.x < other.position.x + otherL &&
-            candidate.x + itemL > other.position.x &&
-            candidate.y < other.position.y + other.dimensions.height &&
-            candidate.y + item.dimensions.height > other.position.y &&
-            candidate.z < other.position.z + otherW &&
-            candidate.z + itemW > other.position.z
-          );
-        });
+        // На новом месте (тот же XZ) не должно быть другого груза
+        const collides = variant.items.some((o) => o.id !== item.id && xyzCollide(candidate, iL, iW, item.dimensions.height, o));
         if (collides) return 'collide';
-        
+
         const newResult = patchActiveVariantItems(result, activeVariant, (it) =>
-          it.id === cargoId ? { ...it, position: candidate } : it
+          it.id === cargoId ? { ...it, position: candidate } : it,
         );
         saveToStorage(KEYS.result, newResult);
         set({ result: newResult });
@@ -624,24 +501,51 @@ export const useAppStore = create<AppState>()(
         const iD = rotDims(item);
         const iL = iD.L, iW = iD.W;
 
-        // Опускаем на следующую (ближайшую) опору ниже текущего низа предмета
-        const belowTops = variant.items
-          .filter((o) =>
-            xzOverlap(item.position.x, item.position.z, iL, iW, o) &&
-            o.position.y + o.dimensions.height <= item.position.y - 0.01,
-          )
-          .map((o) => o.position.y + o.dimensions.height);
-        const newY = belowTops.length ? Math.max(...belowTops) : 0;
+        // Опускаем на один слой вниз (тот же XZ)
+        const newY = Math.max(0, item.position.y - item.dimensions.height);
+        const candidate = { x: item.position.x, y: newY, z: item.position.z };
 
         // Check collision at target position
         const collides = variant.items.some((other) =>
-          other.id !== item.id &&
-          xyzCollide({ x: item.position.x, y: newY, z: item.position.z }, iL, iW, item.dimensions.height, other),
+          other.id !== item.id && xyzCollide(candidate, iL, iW, item.dimensions.height, other),
         );
-        if (collides) return 'collide';
-        
+        if (!collides) {
+          const newResult = patchActiveVariantItems(result, activeVariant, (it) =>
+            it.id === cargoId ? { ...it, position: { ...it.position, y: newY } } : it
+          );
+          saveToStorage(KEYS.result, newResult);
+          set({ result: newResult });
+          return null;
+        }
+
+        // Текущий XZ занят — ищем свободное место на полу в радиусе 2000 мм
+        const vehicle = getCurrentVehicle(get().selectedVehicleId, get().customVehicles);
+        const RANGE = 2000;
+        const STEP = 50;
+        let best: { x: number; z: number; d2: number } | null = null;
+        const canPlace = (x: number, z: number): boolean => {
+          if (!vehicle) return false;
+          if (x < -0.01 || z < -0.01 || x + iL > vehicle.length + 0.01 || z + iW > vehicle.width + 0.01) return false;
+          const c = { x, y: 0, z };
+          return !variant.items.some((other) =>
+            other.id !== item.id && xyzCollide(c, iL, iW, item.dimensions.height, other),
+          );
+        };
+        for (let dx = -RANGE; dx <= RANGE; dx += STEP) {
+          for (let dz = -RANGE; dz <= RANGE; dz += STEP) {
+            const d2 = dx * dx + dz * dz;
+            if (d2 > RANGE * RANGE) continue;
+            const x = item.position.x + dx;
+            const z = item.position.z + dz;
+            if (!canPlace(x, z)) continue;
+            if (!best || d2 < best.d2) best = { x, z, d2 };
+          }
+        }
+        if (!best) return 'nofloor';
+        const spot = best;
+
         const newResult = patchActiveVariantItems(result, activeVariant, (it) =>
-          it.id === cargoId ? { ...it, position: { ...it.position, y: newY } } : it
+          it.id === cargoId ? { ...it, position: { ...it.position, y: 0, x: spot.x, z: spot.z } } : it
         );
         saveToStorage(KEYS.result, newResult);
         set({ result: newResult });
@@ -649,60 +553,9 @@ export const useAppStore = create<AppState>()(
       },
 
       smartStack: (cargoId) => {
-        const result = get().result;
-        const activeVariant = get().activeVariant;
-        if (!result || !activeVariant) return false;
-        const variant = result.variants.find((v) => v.id === activeVariant);
-        if (!variant) return false;
-        const item = variant.items.find((it) => it.id === cargoId);
-        if (!item) return false;
-        
-        // First, try to lift it up from current position
-        if (item.position.y === 0) {
-          const lifted = get().moveCargoUp(cargoId);
-          if (lifted === null) return true;
-        }
-        
-        // If already on a layer, try to find a better position on a higher layer
-        const itemL = item.rotationY === 90 || item.rotationY === 270 ? item.dimensions.width : item.dimensions.length;
-        const itemW = item.rotationY === 90 || item.rotationY === 270 ? item.dimensions.length : item.dimensions.width;
-        
-        // Try all other items as potential supports
-        for (const other of variant.items) {
-          if (other.id === item.id) continue;
-          const otherL = other.rotationY === 90 || other.rotationY === 270 ? other.dimensions.width : other.dimensions.length;
-          const otherW = other.rotationY === 90 || other.rotationY === 270 ? other.dimensions.length : other.dimensions.width;
-          // Support must be wide enough
-          if (otherL < itemL || otherW < itemW) continue;
-          
-          const newY = other.position.y + other.dimensions.height;
-          const newX = other.position.x + (otherL - itemL) / 2;
-          const newZ = other.position.z + (otherW - itemW) / 2;
-          
-          // Check collision
-          const collides = variant.items.some((third) => {
-            if (third.id === item.id || third.id === other.id) return false;
-            const tL = third.rotationY === 90 || third.rotationY === 270 ? third.dimensions.width : third.dimensions.length;
-            const tW = third.rotationY === 90 || third.rotationY === 270 ? third.dimensions.length : third.dimensions.width;
-            return (
-              newX < third.position.x + tL &&
-              newX + itemL > third.position.x &&
-              newY < third.position.y + third.dimensions.height &&
-              newY + item.dimensions.height > third.position.y &&
-              newZ < third.position.z + tW &&
-              newZ + itemW > third.position.z
-            );
-          });
-          if (collides) continue;
-          
-          const newResult = patchActiveVariantItems(result, activeVariant, (it) =>
-            it.id === cargoId ? { ...it, position: { x: newX, y: newY, z: newZ } } : it
-          );
-          saveToStorage(KEYS.result, newResult);
-          set({ result: newResult });
-          return true;
-        }
-        return false; // No suitable position found
+        // Попытка поднять груз на один слой (без требований к опоре)
+        const lifted = get().moveCargoUp(cargoId);
+        return lifted === null;
       },
 
       // --- Сессии ---
