@@ -12,6 +12,34 @@ export default function MetricsPanel() {
   const unit = useAppStore((s) => s.unit);
   const weightUnit = useAppStore((s) => s.weightUnit);
   const lang = useAppStore((s) => s.lang);
+  const cargoList = useAppStore((s) => s.cargo);
+
+  // Количество неразмещённых грузов и остаток объёма/веса
+  const unplaced = useMemo(() => {
+    let totalQty = 0;
+    let totalWeight = 0;
+    let totalVolume = 0;
+    for (const c of cargoList) {
+      const q = Math.max(1, c.quantity || 1);
+      totalQty += q;
+      totalWeight += c.weight * q;
+      if (c.shape === 'cylinder') {
+        const d = c.diameter ?? c.width ?? 0;
+        totalVolume += Math.PI * (d / 2) ** 2 * c.length * q;
+      } else {
+        totalVolume += c.length * (c.width ?? 0) * (c.height ?? 0) * q;
+      }
+    }
+    const placedQty = variant ? variant.items.length : 0;
+    const restQty = Math.max(0, totalQty - placedQty);
+    return {
+      restQty,
+      restWeight: Math.max(0, totalWeight - (variant?.totalWeight ?? 0)),
+      restVolume: Math.max(0, totalVolume - (variant?.totalVolume ?? 0)),
+      placedQty,
+      totalQty,
+    };
+  }, [cargoList, variant]);
 
   const layerCount = useMemo(() => {
     if (!variant || variant.items.length === 0) return 0;
@@ -64,6 +92,32 @@ export default function MetricsPanel() {
   const balUnit = unitLabel(lang, unit);
 
   return (
+    <>
+      {unplaced.restQty > 0 && (
+        <div
+          className="unplaced-banner"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: 'rgba(245, 158, 11, 0.12)',
+            border: '1px solid rgba(245, 158, 11, 0.4)',
+            color: 'var(--color-warning)',
+            borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 13,
+          }}
+        >
+          <AlertTriangle size={16} />
+          <div>
+            <div style={{ fontWeight: 600 }}>
+              {trf(lang, 'metric.unplaced', { placed: unplaced.placedQty, total: unplaced.totalQty, rest: unplaced.restQty })}
+            </div>
+            <div style={{ fontSize: 12 }}>
+              {trf(lang, 'metric.unplacedBody', {
+                w: `${formatWeight(unplaced.restWeight, weightUnit)} ${weightUnitLabel(lang, weightUnit)}`,
+                v: volumeToM3(unplaced.restVolume, lang),
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     <div className="metrics-grid">
       <div className="metric-card">
         <div className="metric-value">{variant.volumeFill}%</div>
@@ -134,5 +188,6 @@ export default function MetricsPanel() {
         </div>
       )}
     </div>
+    </>
   );
 }

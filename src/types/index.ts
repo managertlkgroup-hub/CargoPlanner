@@ -188,6 +188,8 @@ export interface PackedItem {
   shape: CargoShape;
   /** Диаметр для цилиндров (мм) */
   diameter?: number;
+  /** Ориентация цилиндра ('horizontal' | 'vertical'), для цилиндров */
+  cylinderOrientation?: CylinderOrientation;
   /** Фактические габариты с учётом поворота (для цилиндра — bounding box) */
   dimensions: Dimensions;
   weight: number;

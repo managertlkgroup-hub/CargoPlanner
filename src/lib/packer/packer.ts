@@ -414,6 +414,7 @@ function toPackedItem(p: PlacedBox, layerIndex: number): PackedItem {
     nameKey: p.nameKey,
     shape: p.shape,
     diameter: p.diameter,
+    cylinderOrientation: p.cylinderOrientation,
     dimensions: dims,
     weight: p.weight,
     position: { x: p.x, y: p.y, z: p.z },

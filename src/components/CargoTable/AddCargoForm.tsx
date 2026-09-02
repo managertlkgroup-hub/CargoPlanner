@@ -6,21 +6,23 @@ import { useState, useMemo } from 'react';
 import type { FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import type { Cargo, CargoShape } from '../../types';
-import { uid, fromUnit, toUnit, UNIT_LABEL, WEIGHT_UNIT_LABEL, formatWeight, toWeightUnit, fromWeightUnit, nameOf } from '../../utils/helpers';
+import { uid, fromUnit, toUnit, UNIT_LABEL, WEIGHT_UNIT_LABEL, formatWeight, toWeightUnit, fromWeightUnit, nameOf, formatDimension } from '../../utils/helpers';
 import { getCargoPresets } from '../../lib/packer/presets';
 import { tr, trf, type Lang } from '../../i18n';
 
-/** Валидация числового поля */
+/** Валидация числового поля. min/max — в базовых единицах (мм/кг), fmtMin/fmtMax — для показа в текущих единицах. */
 function validateField(
   value: number,
   min: number,
   max: number,
   label: string,
   lang: Lang,
+  fmtMin: string,
+  fmtMax: string,
+  unitName: string,
 ): string | null {
   if (!value || value <= 0) return trf(lang, 'form.fieldRequired', { label });
-  if (value < min) return trf(lang, 'form.fieldRange', { label, min, max });
-  if (value > max) return trf(lang, 'form.fieldRange', { label, min, max });
+  if (value < min || value > max) return trf(lang, 'form.fieldRange', { label, min: fmtMin, max: fmtMax, u: unitName });
   return null;
 }
 
@@ -49,12 +51,20 @@ export default function AddCargoForm() {
     const e: Record<string, string> = {};
     for (const [key, cfg] of Object.entries(FIELDS)) {
       const num = Number(values[key] || 0);
+      const isWeight = key === 'weight';
+      // Приводим введённое значение к базовым единицам (мм/кг) для сравнения
+      const value = isWeight ? fromWeightUnit(num, weightUnit) : fromUnit(num, unit);
       const label = tr(lang, cfg.labelKey);
-      const err = validateField(num, cfg.min, cfg.max, label, lang);
+      const fmt = (mmKg: number) =>
+        isWeight
+          ? (Math.round(toWeightUnit(mmKg, weightUnit) * 10000) / 10000).toString()
+          : formatDimension(mmKg, unit);
+      const u = isWeight ? WEIGHT_UNIT_LABEL[weightUnit] : UNIT_LABEL[unit];
+      const err = validateField(value, cfg.min, cfg.max, label, lang, fmt(cfg.min), fmt(cfg.max), u);
       if (err) e[key] = err;
     }
     return e;
-  }, [values, lang]);
+  }, [values, lang, unit, weightUnit]);
 
   const hasErrors = !values.name?.trim();
   const isInvalid = (key: string) => touched[key] && errors[key];
@@ -70,17 +80,19 @@ export default function AddCargoForm() {
     const diameter = fromUnit(Number(fd.get('diameter')), unit);
     const weight = fromWeightUnit(Number(fd.get('weight')), weightUnit);
     const shape = fd.get('shape') as CargoShape;
-    const lengthErr = validateField(length, FIELDS.length.min, FIELDS.length.max, tr(lang, FIELDS.length.labelKey), lang);
+    const fmtDim = (mm: number) => formatDimension(mm, unit);
+    const fmtW = (kg: number) => (Math.round(toWeightUnit(kg, weightUnit) * 10000) / 10000).toString();
+    const lengthErr = validateField(length, FIELDS.length.min, FIELDS.length.max, tr(lang, FIELDS.length.labelKey), lang, fmtDim(FIELDS.length.min), fmtDim(FIELDS.length.max), UNIT_LABEL[unit]);
     if (lengthErr) allErrors.push(lengthErr);
-    const weightErr = validateField(weight, FIELDS.weight.min, FIELDS.weight.max, tr(lang, FIELDS.weight.labelKey), lang);
+    const weightErr = validateField(weight, FIELDS.weight.min, FIELDS.weight.max, tr(lang, FIELDS.weight.labelKey), lang, fmtW(FIELDS.weight.min), fmtW(FIELDS.weight.max), WEIGHT_UNIT_LABEL[weightUnit]);
     if (weightErr) allErrors.push(weightErr);
     if (shape === 'box') {
-      const wErr = validateField(width, FIELDS.width.min, FIELDS.width.max, tr(lang, FIELDS.width.labelKey), lang);
+      const wErr = validateField(width, FIELDS.width.min, FIELDS.width.max, tr(lang, FIELDS.width.labelKey), lang, fmtDim(FIELDS.width.min), fmtDim(FIELDS.width.max), UNIT_LABEL[unit]);
       if (wErr) allErrors.push(wErr);
-      const hErr = validateField(height, FIELDS.height.min, FIELDS.height.max, tr(lang, FIELDS.height.labelKey), lang);
+      const hErr = validateField(height, FIELDS.height.min, FIELDS.height.max, tr(lang, FIELDS.height.labelKey), lang, fmtDim(FIELDS.height.min), fmtDim(FIELDS.height.max), UNIT_LABEL[unit]);
       if (hErr) allErrors.push(hErr);
     } else {
-      const dErr = validateField(diameter, FIELDS.diameter.min, FIELDS.diameter.max, tr(lang, FIELDS.diameter.labelKey), lang);
+      const dErr = validateField(diameter, FIELDS.diameter.min, FIELDS.diameter.max, tr(lang, FIELDS.diameter.labelKey), lang, fmtDim(FIELDS.diameter.min), fmtDim(FIELDS.diameter.max), UNIT_LABEL[unit]);
       if (dErr) allErrors.push(dErr);
     }
     return allErrors;
@@ -135,7 +147,7 @@ export default function AddCargoForm() {
       diameter: shape === 'cylinder' ? diameter : undefined,
       weight,
       quantity,
-      stackable: true,
+      stackable: shape !== 'cylinder' ? true : fd.get('stackMode') === 'stack',
       isOversize: (fd.get('isOversize') === 'on'),
       cylinderOrientation: shape === 'cylinder' ? ((fd.get('cylinderOrientation') as any) || 'horizontal') : undefined,
     };
@@ -241,13 +253,22 @@ export default function AddCargoForm() {
         </select>
       </div>
       {shape === 'cylinder' && (
-        <div className="form-group">
-          <label>{tr(lang, 'form.orientation')}</label>
-          <select name="cylinderOrientation" defaultValue="horizontal">
-            <option value="horizontal">{tr(lang, 'form.horizontal')}</option>
-            <option value="vertical">{tr(lang, 'form.vertical')}</option>
-          </select>
-        </div>
+        <>
+          <div className="form-group">
+            <label>{tr(lang, 'form.orientation')}</label>
+            <select name="cylinderOrientation" defaultValue="horizontal">
+              <option value="horizontal">{tr(lang, 'form.horizontal')}</option>
+              <option value="vertical">{tr(lang, 'form.vertical')}</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>{tr(lang, 'pd.stackingMethod')}</label>
+            <select name="stackMode" defaultValue="stack">
+              <option value="stack">{tr(lang, 'pd.stacking')}</option>
+              <option value="side">{tr(lang, 'pd.sideBySide')}</option>
+            </select>
+          </div>
+        </>
       )}
       <div className="form-group">
         <label>{tr(lang, 'form.length')}, {UNIT_LABEL[unit]}</label>
@@ -332,8 +353,8 @@ export default function AddCargoForm() {
           name="weight"
           type="number"
           step="any"
-          min={FIELDS.weight.min}
-          max={FIELDS.weight.max}
+          min={toWeightUnit(FIELDS.weight.min, weightUnit)}
+          max={toWeightUnit(FIELDS.weight.max, weightUnit)}
           placeholder="20"
           value={values.weight ?? ''}
           onChange={(e) => handleChange('weight', e.target.value)}

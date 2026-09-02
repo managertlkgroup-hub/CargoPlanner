@@ -1,4 +1,4 @@
-import { Search, RefreshCw, ClipboardList } from 'lucide-react';
+import { Search, ClipboardList } from 'lucide-react';
 // ============================================================================
 // Строка таблицы грузов
 // ============================================================================
@@ -7,8 +7,6 @@ import { useState, useRef } from 'react';
 import type { Cargo } from '../../types';
 import { shapeLabel } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
-import { getCurrentVehicle } from '../../store/useAppStore';
-import { packItems } from '../../lib/packer/packer';
 import { toUnit, fromUnit, toWeightUnit, fromWeightUnit, nameOf } from '../../utils/helpers';
 import { tr } from '../../i18n';
 
@@ -25,12 +23,6 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
   const weightUnit = useAppStore((s) => s.weightUnit);
   const setFocusItemId = useAppStore((s) => s.setFocusItemId);
   const setHighlightItemId = useAppStore((s) => s.setHighlightItemId);
-  const selectedVehicleId = useAppStore((s) => s.selectedVehicleId);
-  const customVehicles = useAppStore((s) => s.customVehicles);
-  const settings = useAppStore((s) => s.settings);
-  const loadingPoints = useAppStore((s) => s.loadingPoints);
-  const setResult = useAppStore((s) => s.setResult);
-  const setActiveVariant = useAppStore((s) => s.setActiveVariant);
   const lang = useAppStore((s) => s.lang);
   const isCylinder = cargo.shape === 'cylinder';
   const [editingName, setEditingName] = useState(false);
@@ -165,35 +157,6 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
           }}
         >
           <Search size={12} />
-        </button>
-        {/* Кнопка «Повернуть на 90°» */}
-        <button
-          className="btn btn-sm"
-          style={{ padding: '1px 4px', fontSize: 10 }}
-          title={tr(lang, 'cargo.rotateTitle')}
-          onClick={() => {
-            if (isCylinder) return; // Цилиндры не вращаем так
-            const newLength = cargo.width ?? cargo.length;
-            const newWidth = cargo.length;
-            updateCargo(cargo.id, { length: newLength, width: newWidth });
-            // Автопересчёт (читаем обновлённый список из store)
-            const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
-            const updatedCargo = useAppStore.getState().cargo;
-            try {
-              const result = packItems(vehicle, updatedCargo, settings, loadingPoints);
-              if (!result.error) {
-                setResult(result);
-                const pristineMap: Record<string, typeof result.variants[number]['items']> = {};
-                result.variants.forEach((v) => { pristineMap[v.id] = v.items; });
-                useAppStore.getState().setPristine(pristineMap);
-                const cur = useAppStore.getState().activeVariant;
-                const keep = cur && result.variants.some(v => v.id === cur) ? cur : result.variants[0].id;
-                setActiveVariant(keep);
-              }
-            } catch (e) { /* recalc error */ }
-          }}
-        >
-          <RefreshCw size={12} />
         </button>
         {/* Кнопка «Детали» */}
         {onDetailsClick && (

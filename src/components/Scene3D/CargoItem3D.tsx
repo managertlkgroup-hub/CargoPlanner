@@ -44,6 +44,7 @@ export default function CargoItem3D({
   const lang = useAppStore((s) => s.lang);
 
   const isCylinder = item.shape === 'cylinder';
+  const isVertCyl = isCylinder && item.cylinderOrientation === 'vertical';
   const diameter = item.diameter ?? 0;
 
   // Размеры в сценных единицах
@@ -54,6 +55,12 @@ export default function CargoItem3D({
       h: item.dimensions.height * SCALE,
     };
   }, [item.dimensions]);
+
+  // Цилиндр: радиус = половина меньшей стороны основания, длина (вдоль оси) = большая сторона.
+  // Для горизонтального цилиндра ось лежит вдоль большей стороны основания;
+  // для вертикального — вдоль высоты (h).
+  const cylRadius = isCylinder ? Math.min(l, w) / 2 : 0;
+  const cylLen = isCylinder ? Math.max(l, w) : 0;
 
   // Позиция центра в сцене
   const rot90 = item.rotationY === 90 || item.rotationY === 270;
@@ -91,10 +98,10 @@ export default function CargoItem3D({
       }}
       onPointerOut={() => setHovered(false)}
     >
-      {/* Цилиндр: поворот на -π/2 вокруг Z, чтобы ось стала горизонтальной вдоль X */}
+      {/* Цилиндр: вертикальный — ось вдоль Y; горизонтальный — ось вдоль X (в системе группы) */}
       {isCylinder ? (
-        <mesh rotation={[0, 0, -Math.PI / 2]}>
-          <cylinderGeometry args={[(diameter * SCALE) / 2, (diameter * SCALE) / 2, l, 32]} />
+        <mesh rotation={isVertCyl ? [0, 0, 0] : [0, 0, -Math.PI / 2]}>
+          <cylinderGeometry args={[cylRadius, cylRadius, isVertCyl ? h : cylLen, 32]} />
           <meshStandardMaterial
             color={item.color}
             transparent
@@ -105,7 +112,7 @@ export default function CargoItem3D({
           {/* Обводка для выбранного груза */}
           {isSelected && (
             <lineSegments>
-              <edgesGeometry args={[new THREE.CylinderGeometry((diameter * SCALE) / 2, (diameter * SCALE) / 2, l, 32)]} />
+              <edgesGeometry args={[new THREE.CylinderGeometry(cylRadius, cylRadius, isVertCyl ? h : cylLen, 32)]} />
               <lineBasicMaterial color="#ffffff" linewidth={2} />
             </lineSegments>
           )}

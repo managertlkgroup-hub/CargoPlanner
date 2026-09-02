@@ -5,7 +5,7 @@
 import { useState, useMemo } from 'react';
 import type { FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import { uid, fromUnit, toUnit, UNIT_LABEL } from '../../utils/helpers';
+import { uid, fromUnit, toUnit, UNIT_LABEL, WEIGHT_UNIT_LABEL, formatDimension } from '../../utils/helpers';
 import type { LoadingMethod, BodyType } from '../../types';
 import { getDefaultMethodsForBodyType } from '../../lib/packer/presets';
 import { tr, trf, type Lang } from '../../i18n';
@@ -30,24 +30,19 @@ interface Props {
   onDone: () => void;
 }
 
-/** Валидация числового поля */
+/** Валидация числового поля. min/max — в мм (для габаритов); fmtMin/fmtMax — для показа в текущих единицах. */
 function validateField(
   value: number,
   min: number,
   max: number,
   label: string,
   lang: Lang,
+  fmtMin: string,
+  fmtMax: string,
+  unitName: string,
 ): string | null {
   if (!value || value <= 0) return trf(lang, 'form.fieldRequired', { label });
-  if (value < min) return trf(lang, 'form.fieldRange', { label, min: min / 1000, max: max / 1000 });
-  if (value > max) return trf(lang, 'form.fieldRange', { label, min: min / 1000, max: max / 1000 });
-  return null;
-}
-
-function validateWeight(value: number, min: number, max: number, lang: Lang): string | null {
-  if (!value || value <= 0) return tr(lang, 'form.maxWeightRequired');
-  if (value < min) return tr(lang, 'form.maxWeightRequired');
-  if (value > max) return tr(lang, 'form.maxWeightRequired');
+  if (value < min || value > max) return trf(lang, 'form.fieldRange', { label, min: fmtMin, max: fmtMax, u: unitName });
   return null;
 }
 
@@ -87,8 +82,8 @@ export default function CustomVehicleForm({ onDone }: Props) {
       const num = key === 'maxWeight' ? numRaw : fromUnit(numRaw, unit);
       const label = tr(lang, cfg.labelKey);
       const err = key === 'maxWeight'
-        ? validateWeight(num, cfg.min, cfg.max, lang)
-        : validateField(num, cfg.min, cfg.max, label, lang);
+        ? validateField(num, cfg.min, cfg.max, label, lang, String(cfg.min), String(cfg.max), WEIGHT_UNIT_LABEL.kg)
+        : validateField(num, cfg.min, cfg.max, label, lang, formatDimension(cfg.min, unit), formatDimension(cfg.max, unit), UNIT_LABEL[unit]);
       if (err) e[key] = err;
     }
     return e;
@@ -126,8 +121,8 @@ export default function CustomVehicleForm({ onDone }: Props) {
       const num = key === 'maxWeight' ? numRaw : fromUnit(numRaw, unit);
       const label = tr(lang, cfg.labelKey);
       const err = key === 'maxWeight'
-        ? validateWeight(num, cfg.min, cfg.max, lang)
-        : validateField(num, cfg.min, cfg.max, label, lang);
+        ? validateField(num, cfg.min, cfg.max, label, lang, String(cfg.min), String(cfg.max), WEIGHT_UNIT_LABEL.kg)
+        : validateField(num, cfg.min, cfg.max, label, lang, formatDimension(cfg.min, unit), formatDimension(cfg.max, unit), UNIT_LABEL[unit]);
       if (err) allErrors.push(err);
     }
     if (allErrors.length > 0) {

@@ -6,7 +6,7 @@ import { Search, Package, X, Check, AlertTriangle, Scale } from 'lucide-react';
 import { useMemo } from 'react';
 import { useAppStore, useAllVehicles } from '../../store/useAppStore';
 import { matchVehicles, type VehicleMatch } from '../../lib/vehicleMatcher';
-import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight, nameOf } from '../../utils/helpers';
+import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight, nameOf, volumeToM3, formatDimension } from '../../utils/helpers';
 import { tr, trf } from '../../i18n';
 
 interface Props {
@@ -16,6 +16,7 @@ interface Props {
 export default function VehicleMatcher({ onClose }: Props) {
   const cargo = useAppStore((s) => s.cargo);
   const selectVehicle = useAppStore((s) => s.selectVehicle);
+  const settings = useAppStore((s) => s.settings);
   const unit = useAppStore((s) => s.unit);
   const weightUnit = useAppStore((s) => s.weightUnit);
   const lang = useAppStore((s) => s.lang);
@@ -24,6 +25,44 @@ export default function VehicleMatcher({ onClose }: Props) {
   const matches = useMemo(() => matchVehicles(cargo, vehicles), [cargo, vehicles]);
 
   const totalWeight = cargo.reduce((sum, c) => sum + c.weight * c.quantity, 0);
+
+  const stats = useMemo(() => {
+    let qty = 0;
+    let totalVolume = 0;
+    let minL = Infinity;
+    let minW = Infinity;
+    let minH = Infinity;
+    for (const c of cargo) {
+      const q = Math.max(1, c.quantity || 1);
+      qty += q;
+      if (c.shape === 'cylinder') {
+        const d = c.diameter ?? c.width ?? 0;
+        totalVolume += Math.PI * (d / 2) ** 2 * c.length * q;
+        minL = Math.min(minL, c.length);
+        minW = Math.min(minW, d);
+        minH = Math.min(minH, c.length);
+      } else {
+        const w = c.width ?? 0;
+        const h = c.height ?? 0;
+        totalVolume += c.length * (w || 1) * (h || 1) * q;
+        minL = Math.min(minL, c.length);
+        minW = Math.min(minW, w);
+        minH = Math.min(minH, h);
+      }
+    }
+    const layers =
+      (settings.maxStackHeight ?? 0) > 0 && minH > 0 && minH !== Infinity
+        ? Math.max(1, Math.floor((settings.maxStackHeight ?? 0) / minH))
+        : 0;
+    return {
+      qty,
+      totalVolume,
+      minL: minL === Infinity ? 0 : minL,
+      minW: minW === Infinity ? 0 : minW,
+      minH: minH === Infinity ? 0 : minH,
+      layers,
+    };
+  }, [cargo, settings.maxStackHeight]);
 
   const handleSelect = (v: VehicleMatch) => {
     selectVehicle(v.vehicle.id);
@@ -40,6 +79,20 @@ export default function VehicleMatcher({ onClose }: Props) {
 
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
           {trf(lang, 'vm.cargoSummary', { n: cargo.length, w: `${formatWeight(totalWeight, weightUnit)} ${WEIGHT_UNIT_LABEL[weightUnit]}` })}
+        </div>
+
+        <div
+          style={{
+            display: 'flex', flexWrap: 'wrap', gap: '4px 14px', fontSize: 12,
+            color: 'var(--text-muted)', background: 'var(--bg-input)',
+            padding: '8px 10px', borderRadius: 8, marginBottom: 12,
+          }}
+        >
+          <span><Package size={12} /> {trf(lang, 'vm.statsItems', { n: cargo.length, q: stats.qty })}</span>
+          <span><Scale size={12} /> {trf(lang, 'vm.statsWeight', { w: `${formatWeight(totalWeight, weightUnit)} ${WEIGHT_UNIT_LABEL[weightUnit]}` })}</span>
+          <span>{trf(lang, 'vm.statsVolume', { v: volumeToM3(stats.totalVolume, lang) })}</span>
+          {stats.minL > 0 && <span>{trf(lang, 'vm.statsMinDim', { l: formatDimension(stats.minL, unit), w: formatDimension(stats.minW, unit), h: formatDimension(stats.minH, unit), u: UNIT_LABEL[unit] })}</span>}
+          {stats.layers > 0 && <span>{trf(lang, 'vm.statsLayers', { n: stats.layers })}</span>}
         </div>
 
         <div style={{ maxHeight: 400, overflowY: 'auto' }}>

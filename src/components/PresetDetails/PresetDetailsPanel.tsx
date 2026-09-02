@@ -167,6 +167,7 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
   const [editStackable, setEditStackable] = useState(item?.stackable ?? true);
   const [editOversize, setEditOversize] = useState(item?.isOversize ?? false);
   const [editDiameter, setEditDiameter] = useState(item ? String(Math.round(toUnit(item.diameter ?? 0, unit) * 100) / 100) : '0');
+  const [editOrientation, setEditOrientation] = useState<'horizontal' | 'vertical'>(item?.cylinderOrientation ?? 'horizontal');
 
   if (!item) return null;
 
@@ -185,6 +186,7 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
       stackable: editStackable,
       isOversize: editOversize,
       diameter: editShape === 'cylinder' ? fromUnit(Number(editDiameter) || 0, unit) : undefined,
+      cylinderOrientation: editShape === 'cylinder' ? editOrientation : undefined,
     };
     if (isCustom) {
       updateCustomCargo(editId, patch);
@@ -217,6 +219,7 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
     setEditStackable(copy.stackable ?? true);
     setEditOversize(copy.isOversize ?? false);
     setEditDiameter(String(Math.round(toUnit(copy.diameter ?? 0, unit) * 100) / 100));
+    setEditOrientation(copy.cylinderOrientation ?? 'horizontal');
     setEditing(true);
   };
 
@@ -249,6 +252,20 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
                 <div className="form-group">
                   <label>{tr(lang, 'form.length')}, {UNIT_LABEL[unit]}</label>
                   <input className="input-compact" type="number" value={editLength} onChange={(e) => setEditLength(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>{tr(lang, 'form.orientation')}</label>
+                  <select className="select-compact" value={editOrientation} onChange={(e) => setEditOrientation(e.target.value as 'horizontal' | 'vertical')}>
+                    <option value="horizontal">{tr(lang, 'form.horizontal')}</option>
+                    <option value="vertical">{tr(lang, 'form.vertical')}</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>{tr(lang, 'pd.stackingMethod')}</label>
+                  <select className="select-compact" value={editStackable ? 'stack' : 'side'} onChange={(e) => setEditStackable(e.target.value === 'stack')}>
+                    <option value="stack">{tr(lang, 'pd.stacking')}</option>
+                    <option value="side">{tr(lang, 'pd.sideBySide')}</option>
+                  </select>
                 </div>
               </>
             ) : (
@@ -298,6 +315,9 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
             {item.shape === 'cylinder' ? (
               <div style={{ fontSize: 12, marginBottom: 4 }}>
               {tr(lang, 'form.diameter')}: <strong>{toUnit(item.diameter ?? 0, unit)} {UNIT_LABEL[unit]}</strong>, {tr(lang, 'form.length')}: <strong>{toUnit(item.length, unit)} {UNIT_LABEL[unit]}</strong>
+              {item.cylinderOrientation && (
+                <>, {tr(lang, 'form.orientation')}: <strong>{item.cylinderOrientation === 'vertical' ? tr(lang, 'form.vertical') : tr(lang, 'form.horizontal')}</strong></>
+              )}
             </div>
             ) : (
               <div style={{ fontSize: 12, marginBottom: 4 }}>

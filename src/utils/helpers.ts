@@ -103,14 +103,14 @@ export const WEIGHT_UNIT_LABEL: Record<WeightUnit, string> = new Proxy<Record<We
   {
     get(target, prop) {
       const wu = prop as WeightUnit;
-      if (currentLang === 'en') return wu;
+      if (currentLang === 'en') return wu === 'ton' ? 'tons' : wu;
       return target[wu];
     },
   },
 );
 /** Языко-зависимая метка весовой единицы */
 export function weightUnitLabel(lang: Lang, wu: WeightUnit): string {
-  if (lang === 'en') return wu;
+  if (lang === 'en') return wu === 'ton' ? 'tons' : wu;
   return WEIGHT_UNIT_LABEL[wu];
 }
 /** Языко-зависимая метка «м³» */
