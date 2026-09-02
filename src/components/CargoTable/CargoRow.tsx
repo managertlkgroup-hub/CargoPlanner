@@ -10,6 +10,15 @@ import { useAppStore } from '../../store/useAppStore';
 import { toUnit, fromUnit, toWeightUnit, fromWeightUnit, nameOf } from '../../utils/helpers';
 import { tr } from '../../i18n';
 
+// Диапазоны в базовых единицах (мм/кг), как в форме добавления груза
+const LIMITS = {
+  length: { min: 50, max: 20000 },
+  width: { min: 50, max: 5000 },
+  height: { min: 50, max: 5000 },
+  diameter: { min: 50, max: 5000 },
+  weight: { min: 0.1, max: 50000 },
+} as const;
+
 interface Props {
   cargo: Cargo;
   selected: boolean;
@@ -89,6 +98,9 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
       <td className="cargo-td-num">
         <input
           type="number"
+          step="any"
+          min={toUnit(LIMITS.length.min, unit)}
+          max={toUnit(LIMITS.length.max, unit)}
           value={Math.round(toUnit(cargo.length, unit) * 100) / 100}
           className="cargo-num-input"
           onChange={(e) => updateCargo(cargo.id, { length: fromUnit(Number(e.target.value), unit) })}
@@ -100,6 +112,9 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
           <td className="cargo-td-num">
             <input
               type="number"
+              step="any"
+              min={toUnit(LIMITS.diameter.min, unit)}
+              max={toUnit(LIMITS.diameter.max, unit)}
               value={Math.round(toUnit(cargo.diameter ?? 0, unit) * 100) / 100}
               className="cargo-num-input"
               onChange={(e) => updateCargo(cargo.id, { diameter: fromUnit(Number(e.target.value), unit) })}
@@ -111,6 +126,9 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
           <td className="cargo-td-num">
             <input
               type="number"
+              step="any"
+              min={toUnit(LIMITS.width.min, unit)}
+              max={toUnit(LIMITS.width.max, unit)}
               value={Math.round(toUnit(cargo.width ?? 0, unit) * 100) / 100}
               className="cargo-num-input"
               onChange={(e) => updateCargo(cargo.id, { width: fromUnit(Number(e.target.value), unit) })}
@@ -119,6 +137,9 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
           <td className="cargo-td-num">
             <input
               type="number"
+              step="any"
+              min={toUnit(LIMITS.height.min, unit)}
+              max={toUnit(LIMITS.height.max, unit)}
               value={Math.round(toUnit(cargo.height ?? 0, unit) * 100) / 100}
               className="cargo-num-input"
               onChange={(e) => updateCargo(cargo.id, { height: fromUnit(Number(e.target.value), unit) })}
@@ -130,6 +151,8 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
         <input
           type="number"
           step="any"
+          min={toWeightUnit(LIMITS.weight.min, weightUnit)}
+          max={toWeightUnit(LIMITS.weight.max, weightUnit)}
           value={weightUnit === 'ton' ? Math.round(toWeightUnit(cargo.weight, weightUnit) * 100) / 100 : cargo.weight}
           className="cargo-num-input"
           onChange={(e) => updateCargo(cargo.id, { weight: fromWeightUnit(Number(e.target.value), weightUnit) })}
