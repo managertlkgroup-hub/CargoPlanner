@@ -13,24 +13,32 @@ interface Props {
   onClose: () => void;
 }
 
-/** Строка одного варианта упаковки: «Без штабелирования: 10 шт. · 57.1% · Вдоль» */
-function OptionLine({ lang, opt, stacking, fitsBadge }: {
+/** Строка одного варианта упаковки: «Без штабелирования: 10 шт. · Объём 57.1% · Вес 43% · 1200×800×1450 мм · Вдоль» */
+function OptionLine({ lang, opt, stacking, fitsBadge, unit }: {
   lang: ReturnType<typeof useAppStore.getState>['lang'];
   opt: StackOption;
   stacking: boolean;
   fitsBadge: boolean;
+  unit: ReturnType<typeof useAppStore.getState>['unit'];
 }) {
   const zero = opt.placed === 0;
   const label = tr(lang, stacking ? 'vm.withStacking' : 'vm.withoutStacking');
   const cnt = trf(lang, 'vm.placedUnits', { n: opt.placed });
   const layout = tr(lang, `mode.${opt.mode}`);
+  const vol = trf(lang, 'vm.vol', { p: opt.volumeFill });
+  const wt = trf(lang, 'vm.wt', { p: opt.weightFill });
+  const dims = zero
+    ? '—'
+    : `${Math.round(toUnit(opt.bBox.l, unit))}×${Math.round(toUnit(opt.bBox.w, unit))}×${Math.round(toUnit(opt.bBox.h, unit))} ${UNIT_LABEL[unit]}`;
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginTop: 3, color: zero ? 'var(--text-muted)' : 'var(--text)' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginTop: 3, flexWrap: 'wrap', color: zero ? 'var(--text-muted)' : 'var(--text)' }}>
       {stacking ? <Layers size={13} /> : <Boxes size={13} />}
       <span>{label}:</span>
       <strong>{cnt}</strong>
       {fitsBadge && <Check size={13} color="var(--color-success)" />}
-      <span>· {opt.volumeFill}% · {layout}</span>
+      <span style={{ color: zero ? 'var(--text-muted)' : 'var(--text-muted)' }}>· {vol} · {wt}</span>
+      <span style={{ color: zero ? 'var(--text-muted)' : 'var(--text)', fontWeight: 500 }}>{trf(lang, 'vm.gabariti', { d: dims })}</span>
+      <span>· {layout}</span>
     </div>
   );
 }
@@ -156,8 +164,8 @@ export default function VehicleMatcher({ onClose }: Props) {
                   {Math.round(toUnit(m.vehicle.length, unit))}×{Math.round(toUnit(m.vehicle.width, unit))}×{Math.round(toUnit(m.vehicle.height, unit))} {UNIT_LABEL[unit]} • {formatWeight(m.vehicle.maxWeight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}
                 </div>
 
-                <OptionLine lang={lang} opt={m.withoutStacking} stacking={false} fitsBadge={m.withoutStacking.fits} />
-                <OptionLine lang={lang} opt={m.withStacking} stacking={true} fitsBadge={m.withStacking.fits} />
+                <OptionLine lang={lang} opt={m.withoutStacking} stacking={false} fitsBadge={m.withoutStacking.fits} unit={unit} />
+                <OptionLine lang={lang} opt={m.withStacking} stacking={true} fitsBadge={m.withStacking.fits} unit={unit} />
 
                 {!fits && (
                   <div style={{ fontSize: 12, color: 'var(--color-warning)', marginTop: 4, fontWeight: 600 }}>

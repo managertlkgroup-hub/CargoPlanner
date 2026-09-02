@@ -6,11 +6,18 @@
 // и наилучший режим раскладки (вдоль/поперёк/смешанный) для каждого из них.
 // ============================================================================
 
-import type { Cargo, LoadingPoint, PackSettings, Vehicle } from '../types';
+import type { Cargo, LoadingPoint, PackedItem, PackResult, PackSettings, Vehicle } from '../types';
 import { getCargoVolume } from '../types';
 import { packItems } from './packer/packer';
 
 export type LayoutMode = 'along' | 'across' | 'mixed';
+
+/** Габариты bounding box размещённых грузов (мм) */
+export interface CargoBounds {
+  l: number;
+  w: number;
+  h: number;
+}
 
 /** Результат упаковки для одного варианта штабелирования */
 export interface StackOption {
@@ -22,6 +29,8 @@ export interface StackOption {
   volumeFill: number;
   /** Заполнение по весу, % */
   weightFill: number;
+  /** Габариты (min bounding box) размещённых грузов, мм */
+  bBox: CargoBounds;
   /** Все ли единицы груза поместились */
   fits: boolean;
 }
@@ -70,20 +79,41 @@ function getTotals(cargo: Cargo[]): { volume: number; weight: number; units: num
   return { volume: totalVolume, weight: totalWeight, units };
 }
 
-/** Выбирает лучший вариант раскладки: максимум размещённых единиц, затем объём. */
-function bestVariant(result: { variants: { id: string; items: unknown[]; volumeFill: number; weightFill: number }[] } | null, totalUnits: number): StackOption {
+/** Минимальный bounding box размещённых грузов (Д×Ш×В в мм, с учётом поворотов) */
+function calcBounds(items: PackedItem[]): CargoBounds {
+  let maxX = 0, maxZ = 0, maxY = 0;
+  for (const item of items) {
+    const rotY = item.rotationY ?? item.rotation?.y ?? 0;
+    const isOdd90 = Math.round((((rotY % 360) + 360) % 360) / 90) % 2 === 1;
+    const effL = isOdd90 ? item.dimensions.width : item.dimensions.length;
+    const effW = isOdd90 ? item.dimensions.length : item.dimensions.width;
+    maxX = Math.max(maxX, item.position.x + effL);
+    maxZ = Math.max(maxZ, item.position.z + effW);
+    maxY = Math.max(maxY, item.position.y + item.dimensions.height);
+  }
+  return { l: Math.round(maxX), w: Math.round(maxZ), h: Math.round(maxY) };
+}
+
+/**
+ * Выбирает лучший вариант раскладки:
+ *   1) максимальное количество размещённых грузов;
+ *   2) при равенстве — более компактный (минимальный объём bounding box).
+ */
+function bestVariant(result: PackResult | null, totalUnits: number): StackOption {
   if (!result || result.variants.length === 0) {
-    return { mode: 'along', placed: 0, volumeFill: 0, weightFill: 0, fits: false };
+    return { mode: 'along', placed: 0, volumeFill: 0, weightFill: 0, bBox: { l: 0, w: 0, h: 0 }, fits: false };
   }
   const best = [...result.variants].sort((a, b) => {
     if (b.items.length !== a.items.length) return b.items.length - a.items.length;
-    return b.volumeFill - a.volumeFill;
+    // Одинаковое количество грузов — выбираем более компактную раскладку
+    return (a.totalVolume || 0) - (b.totalVolume || 0);
   })[0];
   return {
     mode: best.id as LayoutMode,
     placed: best.items.length,
     volumeFill: best.volumeFill,
     weightFill: best.weightFill,
+    bBox: calcBounds(best.items),
     fits: best.items.length === totalUnits,
   };
 }

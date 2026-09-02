@@ -439,6 +439,9 @@ const ru: Dict = {
   'vm.withStacking': 'Со штабелированием',
   'vm.placedUnits': '{n} шт.',
   'vm.leftOut': 'Не помещается: {n} шт. ({p}%)',
+  'vm.vol': 'Объём {p}%',
+  'vm.wt': 'Вес {p}%',
+  'vm.gabariti': 'Габариты {d}',
 };
 
 const en: Dict = {
@@ -854,6 +857,9 @@ const en: Dict = {
   'vm.withStacking': 'With stacking',
   'vm.placedUnits': '{n} pcs',
   'vm.leftOut': 'Not fitting: {n} pcs ({p}%)',
+  'vm.vol': 'Volume {p}%',
+  'vm.wt': 'Weight {p}%',
+  'vm.gabariti': 'Dimensions {d}',
 };
 
 const DICTS: Record<Lang, Dict> = { ru, en };

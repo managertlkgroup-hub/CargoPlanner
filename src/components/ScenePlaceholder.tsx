@@ -17,10 +17,19 @@ interface ScenePlaceholderProps {
 const ScenePlaceholder: React.FC<ScenePlaceholderProps> = ({ lang, icon, title, showCalculate, onCalculate }) => {
   return (
     <div
-      className="w-full h-full flex items-center justify-center"
-      style={{ minHeight: 260, background: 'var(--bg-input)', borderRadius: 8, border: '1px dashed var(--border)' }}
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: 260,
+        background: 'var(--bg-input)',
+        borderRadius: 8,
+        border: '1px dashed var(--border)',
+      }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center', padding: '28px 20px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, textAlign: 'center', padding: '28px 20px' }}>
         <div style={{ color: 'var(--color-accent)' }}>{icon}</div>
         <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--text)', lineHeight: 1.3 }}>{title}</div>
         {showCalculate && (
