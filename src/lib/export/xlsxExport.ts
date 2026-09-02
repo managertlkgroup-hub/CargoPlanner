@@ -10,7 +10,7 @@
 import * as XLSX from 'xlsx';
 import type { Cargo, LayoutVariant, Vehicle } from '../../types';
 import { getCargoVolume } from '../../types';
-import { UNIT_LABEL, toUnit, formatWeight, WEIGHT_UNIT_LABEL, type WeightUnit, nameOf } from '../../utils/helpers';
+import { UNIT_LABEL, unitLabel, toUnit, formatWeight, formatDimension, WEIGHT_UNIT_LABEL, type WeightUnit, nameOf } from '../../utils/helpers';
 import { useAppStore } from '../../store/useAppStore';
 import { tr, trf, type Lang } from '../../i18n';
 
@@ -32,9 +32,18 @@ export function exportToXLSX(
 ): void {
   const wb = XLSX.utils.book_new();
   const unit = useAppStore.getState().unit;
+  const settings = useAppStore.getState().settings;
   const U = UNIT_LABEL[unit];
   const W = WEIGHT_UNIT_LABEL[weightUnit];
   const fmt = (mm: number) => Math.round(toUnit(mm, unit) * 100) / 100;
+  const fmtGap = (mm: number) => `${formatDimension(mm, unit)} ${unitLabel(lang, unit)}`;
+
+  // Включённые зазоры — только те, что > 0
+  const enabledGaps = [
+    { label: tr(lang, 'gaps.wallShort'), value: settings.gapWalls ?? 0 },
+    { label: tr(lang, 'gaps.widthShort'), value: settings.gapWidth ?? 0 },
+    { label: tr(lang, 'gaps.lengthShort'), value: settings.gapLength ?? 0 },
+  ].filter(g => g.value > 0);
 
   // --- Лист «Автомобиль» ---
   const vehicleRows: SheetRows = [
@@ -46,6 +55,13 @@ export function exportToXLSX(
     [trf(lang, 'xls.maxWeightU', { u: W }), formatWeight(vehicle.maxWeight, weightUnit)],
     [tr(lang, 'xls.bodyVolume'), round2((vehicle.length * vehicle.width * vehicle.height) / 1e9)],
   ];
+  // Секция «Зазоры» — только если хотя бы один зазор включён
+  if (enabledGaps.length > 0) {
+    vehicleRows.push(['', '']);
+    vehicleRows.push([tr(lang, 'gaps.title'), '']);
+    vehicleRows.push([tr(lang, 'xls.gapType'), tr(lang, 'xls.gapValue')]);
+    enabledGaps.forEach(g => vehicleRows.push([g.label, fmtGap(g.value)]));
+  }
   const wsVehicle = XLSX.utils.aoa_to_sheet(vehicleRows);
   wsVehicle['!cols'] = [{ wch: 24 }, { wch: 20 }];
   XLSX.utils.book_append_sheet(wb, wsVehicle, tr(lang, 'xls.sheet.vehicle'));

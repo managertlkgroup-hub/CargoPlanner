@@ -13,9 +13,9 @@ import {
   pdf,
   Font,
 } from '@react-pdf/renderer';
-import type { Cargo, LayoutVariant, PackedItem, Vehicle, Unit } from '../../types';
+import type { Cargo, LayoutVariant, PackedItem, PackSettings, Vehicle, Unit } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
-import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight, type WeightUnit, nameOf } from '../../utils/helpers';
+import { UNIT_LABEL, unitLabel, toUnit, WEIGHT_UNIT_LABEL, formatWeight, formatDimension, type WeightUnit, nameOf } from '../../utils/helpers';
 import { tr, trf, type Lang } from '../../i18n';
 
 // Регистрация шрифтов с поддержкой кириллицы
@@ -225,6 +225,9 @@ interface ReportProps {
   vehicle: Vehicle;
   cargo: Cargo[];
   variant: LayoutVariant;
+  settings: PackSettings;
+  unit: Unit;
+  weightUnit: WeightUnit;
   lang: Lang;
 }
 
@@ -305,6 +308,25 @@ function Metrics({ variant, vehicle, weightUnit, lang }: { variant: LayoutVarian
           .join('  •  ');
         return <Text style={styles.textMuted}>{dist}</Text>;
       })()}
+    </View>
+  );
+}
+
+/** Блок «Зазоры» — отображается только если хотя бы один зазор включён */
+function GapsSection({ settings, unit, lang }: { settings: PackSettings; unit: Unit; lang: Lang }) {
+  const gaps = [
+    { label: tr(lang, 'gaps.wallShort'), value: settings.gapWalls ?? 0 },
+    { label: tr(lang, 'gaps.widthShort'), value: settings.gapWidth ?? 0 },
+    { label: tr(lang, 'gaps.lengthShort'), value: settings.gapLength ?? 0 },
+  ].filter(g => g.value > 0);
+  if (gaps.length === 0) return null;
+  const fmt = (mm: number) => `${formatDimension(mm, unit)} ${unitLabel(lang, unit)}`;
+  return (
+    <View style={{ marginBottom: 12 }}>
+      <Text style={styles.sectionTitle}>{tr(lang, 'gaps.title')}</Text>
+      {gaps.map(g => (
+        <Text key={g.label} style={styles.text}>{g.label}: {fmt(g.value)}</Text>
+      ))}
     </View>
   );
 }
@@ -536,7 +558,7 @@ function CargoTable({ cargo, items, unit, weightUnit, lang }: { cargo: Cargo[]; 
 
 // ─── Основной документ ─────────────────────────────────────
 
-function PDFDocument({ vehicle, cargo, variant, unit, weightUnit, lang }: ReportProps & { unit: Unit; weightUnit: WeightUnit }) {
+function PDFDocument({ vehicle, cargo, variant, settings, unit, weightUnit, lang }: ReportProps) {
   const maxLayer = variant.items.length > 0
     ? Math.max(...variant.items.map(i => layerOf(i)))
     : 0;
@@ -554,6 +576,9 @@ function PDFDocument({ vehicle, cargo, variant, unit, weightUnit, lang }: Report
 
         {/* Сводка */}
         <Metrics variant={variant} vehicle={vehicle} weightUnit={weightUnit} lang={lang} />
+
+        {/* Зазоры (если включены) */}
+        <GapsSection settings={settings} unit={unit} lang={lang} />
 
         {/* 2D-схемы по слоям */}
         {numLayers <= 1 ? (
@@ -612,9 +637,11 @@ export async function generatePdfWithReactPdf(
   weightUnit: WeightUnit = 'kg',
   lang: Lang = 'ru',
 ): Promise<void> {
-  const unit = useAppStore.getState().unit;
+  const state = useAppStore.getState();
+  const unit = state.unit;
+  const settings = state.settings;
   const blob = await pdf(
-    <PDFDocument vehicle={vehicle} cargo={cargo} variant={variant} unit={unit} weightUnit={weightUnit} lang={lang} />
+    <PDFDocument vehicle={vehicle} cargo={cargo} variant={variant} settings={settings} unit={unit} weightUnit={weightUnit} lang={lang} />
   ).toBlob();
 
   const url = URL.createObjectURL(blob);

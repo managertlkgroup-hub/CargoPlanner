@@ -5,7 +5,7 @@
 
 import type { Vehicle, LayoutVariant } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
-import { UNIT_LABEL, toUnit, formatWeight, WEIGHT_UNIT_LABEL, type WeightUnit, nameOf } from '../../utils/helpers';
+import { unitLabel, toUnit, formatWeight, WEIGHT_UNIT_LABEL, formatDimension, type WeightUnit, nameOf } from '../../utils/helpers';
 import { tr, trf, type Lang } from '../../i18n';
 
 const LAYER_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -47,14 +47,23 @@ export async function exportSceneToPng(
   if (!sourceCanvas) throw new Error(tr(lang, 'err.pngNotFound'));
 
   const unit = useAppStore.getState().unit;
+  const settings = useAppStore.getState().settings;
   const fmt = (mm: number) => Math.round(toUnit(mm, unit) * 100) / 100;
+
+  // Включённые зазоры — только те, что > 0 (для блока в метриках)
+  const enabledGaps = [
+    { label: tr(lang, 'gaps.wallShort'), value: settings.gapWalls ?? 0 },
+    { label: tr(lang, 'gaps.widthShort'), value: settings.gapWidth ?? 0 },
+    { label: tr(lang, 'gaps.lengthShort'), value: settings.gapLength ?? 0 },
+  ].filter(g => g.value > 0);
+  const fmtGap = (mm: number) => `${formatDimension(mm, unit)} ${unitLabel(lang, unit)}`;
 
   // Параметры макета
   const S = 3; // scale factor для высокого разрешения
   const PAD = 40 * S;
   const HEADER_H = 70 * S;
   const LEGEND_H = variant ? Math.max(60, 28 * (variant.items.length > 0 ? [...new Set(variant.items.map(i => layerOf(i)))].length : 1) + 40) * S : 80 * S;
-  const METRICS_H = 120 * S;
+  const METRICS_H = (120 + enabledGaps.length * 18) * S;
   const FOOTER_H = 40 * S;
 
   const srcW = sourceCanvas.width;
@@ -162,7 +171,7 @@ export async function exportSceneToPng(
     const layers = new Set(variant.items.map(i => layerOf(i))).size;
 
     const metrics = [
-      `${nameOf(vehicle, lang)} (${fmt(vehicle.length)}×${fmt(vehicle.width)}×${fmt(vehicle.height)} ${UNIT_LABEL[unit]})`,
+      `${nameOf(vehicle, lang)} (${fmt(vehicle.length)}×${fmt(vehicle.width)}×${fmt(vehicle.height)} ${unitLabel(lang, unit)})`,
       `${tr(lang, 'png.items')}: ${variant.items.length}`,
       `${tr(lang, 'png.layers')}: ${layers}`,
       `${tr(lang, 'png.fillVolume')}: ${variant.volumeFill ?? 0}%`,
@@ -172,6 +181,19 @@ export async function exportSceneToPng(
     metrics.forEach((m, i) => {
       ctx.fillText(m, PAD + 10 * S, metricsY + 18 * S + i * 18 * S);
     });
+
+    // Блок зазоров (если включены)
+    if (enabledGaps.length > 0) {
+      ctx.font = `bold ${12 * S}px system-ui, sans-serif`;
+      const gapBase = metricsY + 18 * S + metrics.length * 18 * S;
+      ctx.fillStyle = '#475569';
+      ctx.fillText(tr(lang, 'gaps.title'), PAD + 10 * S, gapBase);
+      ctx.font = `${12 * S}px system-ui, sans-serif`;
+      enabledGaps.forEach((g, i) => {
+        ctx.fillStyle = '#334155';
+        ctx.fillText(`${g.label}: ${fmtGap(g.value)}`, PAD + 10 * S, gapBase + (i + 1) * 18 * S);
+      });
+    }
   }
 
   // ── Нижний колонтитул ──
