@@ -239,6 +239,10 @@ const ru: Dict = {
   's3d.position': 'Позиция',
   's3d.rotationY': 'Поворот Y',
   's3d.bodyType.tent': 'Тент',
+
+  // Placeholder 2D/3D до расчёта
+  'ph.addCargo': 'Добавьте грузы для расчёта',
+  'ph.pressCalculate': 'Нажмите «Рассчитать» для отображения раскладки',
   's3d.bodyType.van': 'Фургон',
   's3d.bodyType.isothermal': 'Изотерм',
   's3d.bodyType.refrigerator': 'Рефрижератор',
@@ -431,6 +435,10 @@ const ru: Dict = {
   'vm.empty': 'Нет доступных автомобилей',
   'vm.volumeFill': '{p}% объёма',
   'vm.weightFill': '{p}% веса',
+  'vm.withoutStacking': 'Без штабелирования',
+  'vm.withStacking': 'Со штабелированием',
+  'vm.placedUnits': '{n} шт.',
+  'vm.leftOut': 'Не помещается: {n} шт. ({p}%)',
 };
 
 const en: Dict = {
@@ -649,6 +657,10 @@ const en: Dict = {
   's3d.position': 'Position',
   's3d.rotationY': 'Rotation Y',
   's3d.bodyType.tent': 'Tent',
+
+  // Placeholder 2D/3D before calculation
+  'ph.addCargo': 'Add cargo to start the calculation',
+  'ph.pressCalculate': 'Press "Calculate" to see the layout',
   's3d.bodyType.van': 'Van',
   's3d.bodyType.isothermal': 'Isothermal',
   's3d.bodyType.refrigerator': 'Refrigerated',
@@ -838,6 +850,10 @@ const en: Dict = {
   'vm.empty': 'No available vehicles',
   'vm.volumeFill': '{p}% of volume',
   'vm.weightFill': '{p}% of weight',
+  'vm.withoutStacking': 'Without stacking',
+  'vm.withStacking': 'With stacking',
+  'vm.placedUnits': '{n} pcs',
+  'vm.leftOut': 'Not fitting: {n} pcs ({p}%)',
 };
 
 const DICTS: Record<Lang, Dict> = { ru, en };

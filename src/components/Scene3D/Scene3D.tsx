@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
+import { Truck, Package } from 'lucide-react';
 import { useAppStore, useActiveVariant, useSelectedVehicle } from '../../store/useAppStore';
 import { unitLabel, formatDimension } from '../../utils/helpers';
 import CargoItem3D from './CargoItem3D';
@@ -8,6 +9,7 @@ import Container3D from './Container3D';
 import { SCALE } from './Container3D';
 import type { PackedItem } from '../../types';
 import { tr } from '../../i18n';
+import ScenePlaceholder from '../ScenePlaceholder';
 
 /** Компонент-обёртка для плавного перемещения камеры к грузу */
 function CameraFocuser({ items, focusItemId }: { items: PackedItem[]; focusItemId: string | null }) {
@@ -47,6 +49,7 @@ const Scene3D: React.FC = () => {
   const setFocusItemId = useAppStore((s) => s.setFocusItemId);
   const unit = useAppStore((s) => s.unit);
   const lang = useAppStore((s) => s.lang);
+  const cargoCount = useAppStore((s) => s.cargo.length);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [topView] = useState(false);
@@ -90,19 +93,24 @@ const Scene3D: React.FC = () => {
 
   if (!vehicle || !containerSize) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
-        <p className="text-gray-500 dark:text-gray-400">{tr(lang, 's3d.vehicleEmpty')}</p>
-      </div>
+      <ScenePlaceholder
+        lang={lang}
+        icon={<Truck size={56} strokeWidth={1.5} />}
+        title={tr(lang, 's3d.vehicleEmpty')}
+      />
     );
   }
 
   if (!variant || !variant.items || variant.items.length === 0) {
+    const hasCargo = cargoCount > 0;
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
-        <p className="text-gray-500 dark:text-gray-400">
-          {tr(lang, 's3d.cargoEmpty')}
-        </p>
-      </div>
+      <ScenePlaceholder
+        lang={lang}
+        icon={hasCargo ? <Truck size={56} strokeWidth={1.5} /> : <Package size={56} strokeWidth={1.5} />}
+        title={hasCargo ? tr(lang, 'ph.pressCalculate') : tr(lang, 'ph.addCargo')}
+        showCalculate={hasCargo}
+        onCalculate={() => window.dispatchEvent(new CustomEvent('cp:calculate'))}
+      />
     );
   }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAppStore, getCurrentVehicle } from './store/useAppStore';
 import { packItems } from './lib/packer/packer';
 import Header from './components/Layout/Header';
@@ -165,6 +165,15 @@ const App: React.FC = () => {
       setCalculating(false);
     }
   };
+
+  // Кнопка «Рассчитать» из placeholder сцен 2D/3D (событие cp:calculate)
+  const handleCalculateRef = useRef<() => void>(() => {});
+  handleCalculateRef.current = handleCalculate;
+  useEffect(() => {
+    const handler = () => handleCalculateRef.current();
+    window.addEventListener('cp:calculate', handler);
+    return () => window.removeEventListener('cp:calculate', handler);
+  }, []);
 
   return (
     <div className="app-root">

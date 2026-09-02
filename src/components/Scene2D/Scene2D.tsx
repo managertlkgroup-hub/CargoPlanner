@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Truck, Package } from 'lucide-react';
 import { useActiveVariant, useSelectedVehicle, useAppStore } from '../../store/useAppStore';
 import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight, unitLabel, formatDimension, nameOf } from '../../utils/helpers';
 import { tr, trf } from '../../i18n';
+import ScenePlaceholder from '../ScenePlaceholder';
 
 // Scene2D supports keyboard shortcuts:
 // R — rotate hovered/selected item by 90°
@@ -25,6 +27,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
   const weightUnit = useAppStore((s) => s.weightUnit);
   const lang = useAppStore((s) => s.lang);
   const setError = useAppStore((s) => s.setError);
+  const cargoCount = useAppStore((s) => s.cargo.length);
 
   const [dimensions, setDimensions] = useState({ w: 600, h: 400 });
   // Текущий выбранный слой для перетаскивания (null = все)
@@ -430,10 +433,15 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
   );
 
   if (!vehicle || !variant) {
+    const hasCargo = cargoCount > 0;
     return (
-      <div className="w-full h-48 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
-        <p className="text-gray-500 dark:text-gray-400">{tr(lang, 's2d.nodata')}</p>
-      </div>
+      <ScenePlaceholder
+        lang={lang}
+        icon={hasCargo ? <Truck size={56} strokeWidth={1.5} /> : <Package size={56} strokeWidth={1.5} />}
+        title={hasCargo ? tr(lang, 'ph.pressCalculate') : tr(lang, 'ph.addCargo')}
+        showCalculate={hasCargo}
+        onCalculate={() => window.dispatchEvent(new CustomEvent('cp:calculate'))}
+      />
     );
   }
 

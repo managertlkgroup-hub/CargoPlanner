@@ -1,11 +1,11 @@
-import { Search, Package, X, Check, AlertTriangle, Scale } from 'lucide-react';
+import { Search, Package, X, Check, AlertTriangle, Scale, Layers, Boxes } from 'lucide-react';
 // ============================================================================
 // Модальное окно автоподбора автомобиля под грузы
 // ============================================================================
 
 import { useMemo } from 'react';
 import { useAppStore, useAllVehicles } from '../../store/useAppStore';
-import { matchVehicles, type VehicleMatch } from '../../lib/vehicleMatcher';
+import { matchVehicles, type VehicleMatch, type StackOption } from '../../lib/vehicleMatcher';
 import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight, nameOf, volumeToM3, formatDimension } from '../../utils/helpers';
 import { tr, trf } from '../../i18n';
 
@@ -13,8 +13,31 @@ interface Props {
   onClose: () => void;
 }
 
+/** Строка одного варианта упаковки: «Без штабелирования: 10 шт. · 57.1% · Вдоль» */
+function OptionLine({ lang, opt, stacking, fitsBadge }: {
+  lang: ReturnType<typeof useAppStore.getState>['lang'];
+  opt: StackOption;
+  stacking: boolean;
+  fitsBadge: boolean;
+}) {
+  const zero = opt.placed === 0;
+  const label = tr(lang, stacking ? 'vm.withStacking' : 'vm.withoutStacking');
+  const cnt = trf(lang, 'vm.placedUnits', { n: opt.placed });
+  const layout = tr(lang, `mode.${opt.mode}`);
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginTop: 3, color: zero ? 'var(--text-muted)' : 'var(--text)' }}>
+      {stacking ? <Layers size={13} /> : <Boxes size={13} />}
+      <span>{label}:</span>
+      <strong>{cnt}</strong>
+      {fitsBadge && <Check size={13} color="var(--color-success)" />}
+      <span>· {opt.volumeFill}% · {layout}</span>
+    </div>
+  );
+}
+
 export default function VehicleMatcher({ onClose }: Props) {
   const cargo = useAppStore((s) => s.cargo);
+  const loadingPoints = useAppStore((s) => s.loadingPoints);
   const selectVehicle = useAppStore((s) => s.selectVehicle);
   const settings = useAppStore((s) => s.settings);
   const unit = useAppStore((s) => s.unit);
@@ -22,7 +45,7 @@ export default function VehicleMatcher({ onClose }: Props) {
   const lang = useAppStore((s) => s.lang);
   const vehicles = useAllVehicles();
 
-  const matches = useMemo(() => matchVehicles(cargo, vehicles), [cargo, vehicles]);
+  const matches = useMemo(() => matchVehicles(cargo, vehicles, settings, loadingPoints), [cargo, vehicles, settings, loadingPoints]);
 
   const totalWeight = cargo.reduce((sum, c) => sum + c.weight * c.quantity, 0);
 
@@ -71,7 +94,7 @@ export default function VehicleMatcher({ onClose }: Props) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 560 }}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 620 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h3 style={{ margin: 0 }}><Search size={18} /> {tr(lang, 'vm.title')}</h3>
           <button onClick={onClose} className="btn btn-sm"><X size={14} /></button>
@@ -95,9 +118,9 @@ export default function VehicleMatcher({ onClose }: Props) {
           {stats.layers > 0 && <span>{trf(lang, 'vm.statsLayers', { n: stats.layers })}</span>}
         </div>
 
-        <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+        <div style={{ maxHeight: 420, overflowY: 'auto' }}>
           {matches.map((m, idx) => {
-            const fits = m.effectiveFill <= 100 && m.weightFill <= 100;
+            const fits = m.fits;
             return (
               <div
                 key={m.vehicle.id + idx}
@@ -132,10 +155,15 @@ export default function VehicleMatcher({ onClose }: Props) {
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
                   {Math.round(toUnit(m.vehicle.length, unit))}×{Math.round(toUnit(m.vehicle.width, unit))}×{Math.round(toUnit(m.vehicle.height, unit))} {UNIT_LABEL[unit]} • {formatWeight(m.vehicle.maxWeight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}
                 </div>
-                <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 11 }}>
-                  <span><Package size={12} /> {trf(lang, 'vm.volumeFill', { p: m.volumeFill })}</span>
-                  <span><Scale size={12} /> {trf(lang, 'vm.weightFill', { p: m.weightFill })}</span>
-                </div>
+
+                <OptionLine lang={lang} opt={m.withoutStacking} stacking={false} fitsBadge={m.withoutStacking.fits} />
+                <OptionLine lang={lang} opt={m.withStacking} stacking={true} fitsBadge={m.withStacking.fits} />
+
+                {!fits && (
+                  <div style={{ fontSize: 12, color: 'var(--color-warning)', marginTop: 4, fontWeight: 600 }}>
+                    {trf(lang, 'vm.leftOut', { n: m.overflow, p: m.overflowPct })}
+                  </div>
+                )}
               </div>
             );
           })}
