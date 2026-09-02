@@ -595,6 +595,14 @@ html, body {
   border-bottom: 1px solid var(--border);
 }
 
+.accordion-section .accordion-content {
+  max-height: 40vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
 .accordion-toggle {
   display: flex;
   align-items: center;
@@ -633,6 +641,16 @@ html, body {
 .cargo-section .btn-calculate {
   flex-shrink: 0;
   margin-top: auto;
+}
+
+/* Секция «Управление» — прижата к низу, не сжимается */
+.left-panel .accordion-section:last-child {
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  background: var(--bg-panel);
+  z-index: 5;
+  border-top: 1px solid var(--border);
 }
 
 /* Форма добавления груза — не выходит за границы */

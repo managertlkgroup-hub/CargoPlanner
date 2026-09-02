@@ -315,36 +315,53 @@ const App: React.FC = () => {
                 </div>
                 <div style={{ marginTop: 14 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <Grid3x3 size={14} />
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{tr(lang, 'gap')}</span>
+                    <input
+                      type="checkbox"
+                      id="gaps-master-toggle"
+                      checked={settings.gapsEnabled}
+                      onChange={(e) => {
+                        const next = e.target.checked;
+                        const newSettings: PackSettings = next
+                          ? { ...settings, gapsEnabled: true, gap: 0, gapWalls: settings.gapWalls || 50, gapWidth: settings.gapWidth || 50, gapLength: settings.gapLength || 50 }
+                          : { ...settings, gapsEnabled: false, gap: 0, gapWalls: 0, gapWidth: 0, gapLength: 0 };
+                        recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), newSettings);
+                      }}
+                    />
+                    <label htmlFor="gaps-master-toggle" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--text)', cursor: 'pointer' }}>
+                      <Grid3x3 size={14} /> {tr(lang, 'gap')}
+                    </label>
                   </div>
-                  <GapRow
-                    id="gap-walls-toggle"
-                    lang={lang}
-                    unit={unit}
-                    checked={(settings.gapWalls ?? 0) > 0}
-                    label={tr(lang, 'gaps.walls')}
-                    valueMm={settings.gapWalls ?? 0}
-                    onChange={(v) => recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), { ...settings, gap: 0, gapWalls: v })}
-                  />
-                  <GapRow
-                    id="gap-width-toggle"
-                    lang={lang}
-                    unit={unit}
-                    checked={(settings.gapWidth ?? 0) > 0}
-                    label={tr(lang, 'gaps.width')}
-                    valueMm={settings.gapWidth ?? 0}
-                    onChange={(v) => recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), { ...settings, gap: 0, gapWidth: v })}
-                  />
-                  <GapRow
-                    id="gap-length-toggle"
-                    lang={lang}
-                    unit={unit}
-                    checked={(settings.gapLength ?? 0) > 0}
-                    label={tr(lang, 'gaps.length')}
-                    valueMm={settings.gapLength ?? 0}
-                    onChange={(v) => recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), { ...settings, gap: 0, gapLength: v })}
-                  />
+                  {settings.gapsEnabled && (
+                    <>
+                      <GapRow
+                        id="gap-walls-toggle"
+                        lang={lang}
+                        unit={unit}
+                        checked={(settings.gapWalls ?? 0) > 0}
+                        label={tr(lang, 'gaps.walls')}
+                        valueMm={settings.gapWalls ?? 0}
+                        onChange={(v) => recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), { ...settings, gap: 0, gapWalls: v })}
+                      />
+                      <GapRow
+                        id="gap-width-toggle"
+                        lang={lang}
+                        unit={unit}
+                        checked={(settings.gapWidth ?? 0) > 0}
+                        label={tr(lang, 'gaps.width')}
+                        valueMm={settings.gapWidth ?? 0}
+                        onChange={(v) => recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), { ...settings, gap: 0, gapWidth: v })}
+                      />
+                      <GapRow
+                        id="gap-length-toggle"
+                        lang={lang}
+                        unit={unit}
+                        checked={(settings.gapLength ?? 0) > 0}
+                        label={tr(lang, 'gaps.length')}
+                        valueMm={settings.gapLength ?? 0}
+                        onChange={(v) => recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), { ...settings, gap: 0, gapLength: v })}
+                      />
+                    </>
+                  )}
                 </div>
                 <VehicleVisibilityControls vehicleId={selectedVehicleId} />
               </div>

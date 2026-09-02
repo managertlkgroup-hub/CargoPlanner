@@ -136,6 +136,7 @@ export function matchVehicles(
   const base: PackSettings = {
     maxStackHeight: 0,
     allowRotation: settings?.allowRotation ?? true,
+    gapsEnabled: settings?.gapsEnabled ?? false,
     gap: settings?.gap ?? 0,
     gapWalls: settings?.gapWalls ?? 0,
     gapWidth: settings?.gapWidth ?? 0,

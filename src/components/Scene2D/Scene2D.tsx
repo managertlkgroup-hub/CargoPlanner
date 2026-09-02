@@ -28,6 +28,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
   const lang = useAppStore((s) => s.lang);
   const setError = useAppStore((s) => s.setError);
   const cargoCount = useAppStore((s) => s.cargo.length);
+  const settings = useAppStore((s) => s.settings);
 
   const [dimensions, setDimensions] = useState({ w: 600, h: 400 });
   // Текущий выбранный слой для перетаскивания (null = все)
@@ -324,12 +325,18 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
         if (Math.abs(rotY % 180) === 90) {
           [itemL, itemW] = [itemW, itemL];
         }
+
+        const gapsOn = settings.gapsEnabled;
+        const gapWalls = gapsOn ? (settings.gapWalls ?? 0) : 0;
+        const gapLen = gapsOn ? (settings.gapLength ?? 0) : 0;
+        const gapWid = gapsOn ? (settings.gapWidth ?? 0) : 0;
+
         const rawPackX = (mx - drag.offsetX - offsetX) / scale;
         const rawPackZ = (my - drag.offsetZ - offsetY) / scale;
-        const clampedX = Math.max(0, Math.min(vehicle.length - itemL, rawPackX));
-        const clampedZ = Math.max(0, Math.min(vehicle.width - itemW, rawPackZ));
+        const clampedX = Math.max(gapWalls, Math.min(vehicle.length - itemL - gapWalls, rawPackX));
+        const clampedZ = Math.max(gapWalls, Math.min(vehicle.width - itemW - gapWalls, rawPackZ));
         
-        // Проверка коллизий AABB в 2D
+        // Проверка коллизий AABB в 2D с учётом зазоров
         const checkCollision2D = (cx: number, cz: number) => {
           return variant.items.some((other) => {
             if (other.id === item.id) return false;
@@ -337,11 +344,15 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
             let oW = other.dimensions.width;
             const oRot = other.rotationY ?? other.rotation?.y ?? 0;
             if (Math.abs(oRot % 180) === 90) { [oL, oW] = [oW, oL]; }
+            const effIL = itemL + gapLen;
+            const effIW = itemW + gapWid;
+            const effOL = oL + gapLen;
+            const effOW = oW + gapWid;
             return (
-              cx < other.position.x + oL &&
-              cx + itemL > other.position.x &&
-              cz < other.position.z + oW &&
-              cz + itemW > other.position.z
+              cx < other.position.x + effOL &&
+              cx + effIL > other.position.x &&
+              cz < other.position.z + effOW &&
+              cz + effIW > other.position.z
             );
           });
         };
@@ -366,7 +377,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
         updateHoveredId(mx, my);
       }
     },
-    [hitTest, vehicle, variant, updateCargoPosition],
+    [hitTest, vehicle, variant, updateCargoPosition, settings],
   );
 
   const handleMouseUp = useCallback(() => {

@@ -43,6 +43,7 @@ const KEYS = {
 const DEFAULT_SETTINGS: PackSettings = {
   maxStackHeight: 0,
   allowRotation: true,
+  gapsEnabled: false,
   gap: 0,
   gapWalls: 0,
   gapWidth: 0,
@@ -54,9 +55,11 @@ function loadSettings(): PackSettings {
   // Миграция старого единого зазора в три независимых
   const legacy = stored.gap ?? 0;
   const hasNew = stored.gapWalls !== undefined || stored.gapWidth !== undefined || stored.gapLength !== undefined;
+  const anyGap = (stored.gapWalls ?? 0) > 0 || (stored.gapWidth ?? 0) > 0 || (stored.gapLength ?? 0) > 0;
   return {
     ...DEFAULT_SETTINGS,
     ...stored,
+    gapsEnabled: stored.gapsEnabled ?? (hasNew && anyGap),
     gap: 0,
     gapWalls: hasNew ? (stored.gapWalls ?? 0) : legacy,
     gapWidth: hasNew ? (stored.gapWidth ?? 0) : legacy,

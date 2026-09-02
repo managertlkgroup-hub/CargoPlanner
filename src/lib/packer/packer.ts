@@ -450,6 +450,7 @@ export function packItems(
     const resolvedSettings: PackSettings = settings ?? {
       maxStackHeight: 0,
       allowRotation: true,
+      gapsEnabled: false,
       gap: 0,
       gapWalls: 0,
       gapWidth: 0,
@@ -458,9 +459,9 @@ export function packItems(
 
     // Три независимых зазора (стойкое поведение при старых сохранённых настройках)
     const gaps: Gaps = {
-      walls: resolvedSettings.gapWalls ?? 0,
-      width: resolvedSettings.gapWidth ?? 0,
-      length: resolvedSettings.gapLength ?? 0,
+      walls: resolvedSettings.gapsEnabled ? (resolvedSettings.gapWalls ?? 0) : 0,
+      width: resolvedSettings.gapsEnabled ? (resolvedSettings.gapWidth ?? 0) : 0,
+      length: resolvedSettings.gapsEnabled ? (resolvedSettings.gapLength ?? 0) : 0,
     };
 
     // Бин — полный объём кузова. Зазоры между грузами и от стен

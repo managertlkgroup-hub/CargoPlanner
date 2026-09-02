@@ -242,6 +242,8 @@ export interface PackSettings {
   maxStackHeight: number;
   /** Разрешить вращение грузов (повороты) */
   allowRotation: boolean;
+  /** Общий включатель зазоров — если false, все зазоры игнорируются */
+  gapsEnabled: boolean;
   /** Зазор между грузами и стенками кузова (мм). 0 — без зазора */
   gap: number;
   /** Зазор от стенок кузова по периметру (мм). 0 — без зазора */
