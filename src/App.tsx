@@ -22,6 +22,49 @@ import { tr } from './i18n';
 
 const toUnitDisplay = (mm: number, unit: Unit) => formatDimension(mm, unit);
 
+/** Строка настройки одного зазора: чекбокс включения + числовое поле с учётом единиц */
+const GapRow: React.FC<{
+  id: string;
+  lang: ReturnType<typeof useAppStore.getState>['lang'];
+  unit: Unit;
+  checked: boolean;
+  label: string;
+  valueMm: number;
+  onChange: (mm: number) => void;
+}> = ({ id, unit, checked, label, valueMm, onChange }) => {
+  const step = unit === 'mm' ? 1 : unit === 'cm' ? 0.5 : 0.05;
+  const value = Number(toUnit(valueMm || 50, unit).toFixed(unit === 'm' ? 2 : 1));
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <input
+          type="checkbox"
+          id={id}
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked ? (valueMm || 50) : 0)}
+        />
+        <label htmlFor={id} style={{ fontSize: 13, color: 'var(--text)' }}>{label}</label>
+      </div>
+      {checked && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 26, marginTop: 4 }}>
+          <input
+            type="number"
+            min="0"
+            step={step}
+            value={value}
+            onChange={(e) => {
+              const v = parseFloat(e.target.value);
+              if (Number.isFinite(v) && v >= 0) onChange(fromUnit(v, unit));
+            }}
+            style={{ width: 70, padding: '3px 6px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13 }}
+          />
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{UNIT_LABEL[unit]}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const App: React.FC = () => {
   const cargo = useAppStore((s) => s.cargo);
   const loadingPoints = useAppStore((s) => s.loadingPoints);
@@ -64,12 +107,16 @@ const App: React.FC = () => {
     setStacking(settings.maxStackHeight > 0);
   }, [settings.maxStackHeight]);
 
-  const [gapEnabled, setGapEnabled] = useState((settings.gap ?? 0) > 0);
-
-  // Синхронизация чекбокса зазора с настройками
+  // Одноразовая миграция старого единого зазора (gap) в три независимых
+  const migratedGaps = useRef(false);
   useEffect(() => {
-    setGapEnabled((settings.gap ?? 0) > 0);
-  }, [settings.gap]);
+    if (migratedGaps.current) return;
+    migratedGaps.current = true;
+    const s = useAppStore.getState().settings;
+    if ((s.gap ?? 0) > 0 && s.gapWalls === undefined && s.gapWidth === undefined && s.gapLength === undefined) {
+      setSettings({ ...s, gap: 0, gapWalls: s.gap, gapWidth: s.gap, gapLength: s.gap });
+    }
+  }, [setSettings]);
 
   // Авто-скрытие всплывающей ошибки через 3 сек с плавным затуханием
   const [toastLeaving, setToastLeaving] = useState(false);
@@ -266,45 +313,38 @@ const App: React.FC = () => {
                     {tr(lang, 'stacking.hint')}
                   </span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                  <input
-                    type="checkbox"
-                    id="gap-toggle"
-                    checked={gapEnabled}
-                    onChange={(e) => {
-                      const checked = e.target.checked;
-                      setGapEnabled(checked);
-                      const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
-                      // По умолчанию при включении зазор = 5 см (50 мм) — толстый палец/отступ
-                      const newGap = checked ? 50 : 0;
-                      recalcWithSettings(vehicle, { ...settings, gap: newGap });
-                    }}
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <Grid3x3 size={14} />
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{tr(lang, 'gap')}</span>
+                  </div>
+                  <GapRow
+                    id="gap-walls-toggle"
+                    lang={lang}
+                    unit={unit}
+                    checked={(settings.gapWalls ?? 0) > 0}
+                    label={tr(lang, 'gaps.walls')}
+                    valueMm={settings.gapWalls ?? 0}
+                    onChange={(v) => recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), { ...settings, gap: 0, gapWalls: v })}
                   />
-                  <label htmlFor="gap-toggle" style={{ fontSize: 13, color: 'var(--text)' }}>
-                    <Grid3x3 size={14} /> {tr(lang, 'gap')}
-                  </label>
-                  {gapEnabled && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 4 }}>
-                      <input
-                        type="number"
-                        min="0"
-                        step={unit === 'mm' ? 1 : unit === 'cm' ? 0.5 : 0.05}
-                        value={Number(toUnit((settings.gap ?? 0) || 50, unit).toFixed(unit === 'm' ? 2 : 1))}
-                        onChange={(e) => {
-                          const v = parseFloat(e.target.value);
-                          if (Number.isFinite(v) && v >= 0) {
-                            const newGap = fromUnit(v, unit);
-                            recalcWithSettings(
-                              getCurrentVehicle(selectedVehicleId, customVehicles),
-                              { ...settings, gap: newGap }
-                            );
-                          }
-                        }}
-                        style={{ width: 70, padding: '3px 6px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13 }}
-                      />
-                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{UNIT_LABEL[unit]}</span>
-                    </div>
-                  )}
+                  <GapRow
+                    id="gap-width-toggle"
+                    lang={lang}
+                    unit={unit}
+                    checked={(settings.gapWidth ?? 0) > 0}
+                    label={tr(lang, 'gaps.width')}
+                    valueMm={settings.gapWidth ?? 0}
+                    onChange={(v) => recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), { ...settings, gap: 0, gapWidth: v })}
+                  />
+                  <GapRow
+                    id="gap-length-toggle"
+                    lang={lang}
+                    unit={unit}
+                    checked={(settings.gapLength ?? 0) > 0}
+                    label={tr(lang, 'gaps.length')}
+                    valueMm={settings.gapLength ?? 0}
+                    onChange={(v) => recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), { ...settings, gap: 0, gapLength: v })}
+                  />
                 </div>
                 <VehicleVisibilityControls vehicleId={selectedVehicleId} />
               </div>

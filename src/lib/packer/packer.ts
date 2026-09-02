@@ -108,15 +108,27 @@ function intersects(a: PlacedBox, b: PlacedBox): boolean {
   );
 }
 
-/** Расширяет бокс на gap по осям X и Z (для создания зазоров между грузами) */
-function padXZ(p: PlacedBox, gap: number): PlacedBox {
-  return { ...p, placedLength: p.placedLength + gap, placedWidth: p.placedWidth + gap };
+/** Раздельные зазоры: от стен, между рядами по ширине (Z), между рядами по длине (X) */
+export interface Gaps {
+  walls: number;
+  width: number;
+  length: number;
 }
 
-/** Проверка пересечения с учётом зазора между грузами по осям X/Z (высота — реальная) */
-function intersectsGap(a: PlacedBox, b: PlacedBox, gap: number): boolean {
-  if (gap <= 0) return intersects(a, b);
-  return intersects(padXZ(a, gap), padXZ(b, gap));
+/** Расширяет бокс на зазоры по осям X (length) и Z (width) — только для проверки коллизий */
+function inflate(g: Gaps, p: PlacedBox): PlacedBox {
+  return { ...p, placedLength: p.placedLength + g.length, placedWidth: p.placedWidth + g.width };
+}
+
+/**
+ * Проверка пересечения с учётом направленных зазоров:
+ *  - по оси X (длина кузова) — зазор между рядами по длине (gapLength);
+ *  - по оси Z (ширина кузова) — зазор между рядами по ширине (gapWidth);
+ *  - по оси Y (высота) — реальные размеры (зазор от потолка см. gapWalls).
+ */
+function intersectsGap(a: PlacedBox, b: PlacedBox, g: Gaps): boolean {
+  if (g.length <= 0 && g.width <= 0) return intersects(a, b);
+  return intersects(inflate(g, a), inflate(g, b));
 }
 
 /** Возможные ориентации бокса. Цилиндры не могут вращаться вертикально. */
@@ -191,14 +203,17 @@ function packIntoBin(
   boxes: Box[],
   settings: PackSettings,
   sortMode: 'along' | 'across' | 'mixed',
-  gap: number = 0,
+  gaps: Gaps,
 ): PlacedBox[] {
   const placed: PlacedBox[] = [];
   let usedWeight = 0;
 
-  // Список крайних точек. Начальная точка отстоит от стен на зазор,
-  // чтобы между грузами и стенками кузова был одинаковый gap.
-  const points: { x: number; y: number; z: number }[] = [{ x: gap, y: 0, z: gap }];
+  // Ограничения рабочей области с учётом зазора от стен (периметр).
+  // Первая точка отступает от обеих стен на gapWalls, чтобы грузы не касались боковых стенок.
+  const innerLen = bin.length - gaps.walls * 2;
+  const innerWid = bin.width - gaps.walls * 2;
+  const innerHgt = bin.height - gaps.walls;
+  const points: { x: number; y: number; z: number }[] = [{ x: gaps.walls, y: 0, z: gaps.walls }];
 
   // Сортировка боксов в зависимости от режима
   let sorted: Box[];
@@ -238,9 +253,6 @@ function packIntoBin(
         const placedLength = orientation.dx;
         const placedWidth = orientation.dz;
         const placedHeight = orientation.dy;
-        // "Раздутые" на зазор габариты по X и Z — гарантируют зазор между грузами
-        const inflL = placedLength + gap;
-        const inflW = placedWidth + gap;
 
         // === НЕГАБАРИТНЫЕ ГРУЗЫ ===
         // Всегда на полу (Y=0), центрированы по ширине (Z), прижаты к передней стенке (X=0)
@@ -252,10 +264,11 @@ function packIntoBin(
           effY = 0;
           effZ = Math.max(0, (bin.width - placedWidth) / 2);
         } else {
-          if (point.x + inflL > bin.length) continue;
-          if (point.z + inflW > bin.width) continue;
+          // Груз должен умещаться внутри рабочей области (с отступом от стен gapWalls)
+          if (effX + placedLength > innerLen) continue;
+          if (effZ + placedWidth > innerWid) continue;
         }
-        if (effY + placedHeight > bin.height) continue;
+        if (effY + placedHeight > innerHgt) continue;
 
         if (settings.maxStackHeight > 0 && effY + placedHeight > settings.maxStackHeight) continue;
         if (settings.maxStackHeight === 0 && effY > 0) continue;
@@ -280,7 +293,7 @@ function packIntoBin(
           rotY: orientation.rotY,
         };
 
-        if (placed.some((p) => intersectsGap(candidate, p, gap))) {
+        if (placed.some((p) => intersectsGap(candidate, p, gaps))) {
           continue;
         }
         if (usedWeight + box.weight > maxWeight) continue;
@@ -349,12 +362,12 @@ function packIntoBin(
       usedWeight += box.weight;
 
       // Добавляем новые крайние точки после размещения груза
-      // Точка справа от груза (по оси X), плюс зазор
-      points.push({ x: point.x + placedBox.placedLength + gap, y: point.y, z: point.z });
+      // Точка справа от груза (по оси X), плюс зазор по длине
+      points.push({ x: point.x + placedBox.placedLength + gaps.length, y: point.y, z: point.z });
       // Точка сверху от груза (по оси Y)
       points.push({ x: point.x, y: point.y + placedBox.placedHeight, z: point.z });
-      // Точка сзади от груза (по оси Z), плюс зазор
-      points.push({ x: point.x, y: point.y, z: point.z + placedBox.placedWidth + gap });
+      // Точка сзади от груза (по оси Z), плюс зазор по ширине
+      points.push({ x: point.x, y: point.y, z: point.z + placedBox.placedWidth + gaps.width });
       
       // Удаляем дубликаты и точки, попавшие внутрь уже размещённых грузов
       const uniquePoints: { x: number; y: number; z: number }[] = [];
@@ -438,13 +451,21 @@ export function packItems(
       maxStackHeight: 0,
       allowRotation: true,
       gap: 0,
+      gapWalls: 0,
+      gapWidth: 0,
+      gapLength: 0,
     };
 
-    const gap = resolvedSettings.gap ?? 0;
+    // Три независимых зазора (стойкое поведение при старых сохранённых настройках)
+    const gaps: Gaps = {
+      walls: resolvedSettings.gapWalls ?? 0,
+      width: resolvedSettings.gapWidth ?? 0,
+      length: resolvedSettings.gapLength ?? 0,
+    };
 
     // Бин — полный объём кузова. Зазоры между грузами и от стен
-    // создаются внутри packIntoBin за счёт "раздутых" на gap габаритов,
-    // чтобы зазор был и между грузами, и от стен кузова.
+    // создаются внутри packIntoBin: от периметра — gapWalls, между
+    // соседними рядами по X — gapLength, по Z — gapWidth.
     const bin = {
       length: vehicle.length,
       width: vehicle.width,
@@ -483,7 +504,7 @@ export function packItems(
     ];
 
     const variants: LayoutVariant[] = modes.map(({ mode, label }) => {
-      const placed = packIntoBin(bin, vehicle.maxWeight, boxes, resolvedSettings, mode, gap);
+      const placed = packIntoBin(bin, vehicle.maxWeight, boxes, resolvedSettings, mode, gaps);
 
       let totalWeight = 0;
       let totalVolume = 0;

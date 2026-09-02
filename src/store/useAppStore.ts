@@ -39,6 +39,31 @@ const KEYS = {
   lang: 'mlp:lang',
 };
 
+/** Настройки по умолчанию (все зазоры выключены) */
+const DEFAULT_SETTINGS: PackSettings = {
+  maxStackHeight: 0,
+  allowRotation: true,
+  gap: 0,
+  gapWalls: 0,
+  gapWidth: 0,
+  gapLength: 0,
+};
+
+function loadSettings(): PackSettings {
+  const stored = loadFromStorage<Partial<PackSettings>>(KEYS.settings, {});
+  // Миграция старого единого зазора в три независимых
+  const legacy = stored.gap ?? 0;
+  const hasNew = stored.gapWalls !== undefined || stored.gapWidth !== undefined || stored.gapLength !== undefined;
+  return {
+    ...DEFAULT_SETTINGS,
+    ...stored,
+    gap: 0,
+    gapWalls: hasNew ? (stored.gapWalls ?? 0) : legacy,
+    gapWidth: hasNew ? (stored.gapWidth ?? 0) : legacy,
+    gapLength: hasNew ? (stored.gapLength ?? 0) : legacy,
+  };
+}
+
 /**
  * Карта "эталонных" (автоматически рассчитанных) грузов по вариантам.
  * Используется для кнопки «Сбросить позиции».
@@ -345,11 +370,7 @@ export const useAppStore = create<AppState>()(
       },
 
       // --- Настройки ---
-      settings: loadFromStorage<PackSettings>(KEYS.settings, {
-        maxStackHeight: 0,
-        allowRotation: true,
-        gap: 0,
-      }),
+      settings: loadSettings(),
       setSettings: (s) => {
         saveToStorage(KEYS.settings, s);
         set({ settings: s });

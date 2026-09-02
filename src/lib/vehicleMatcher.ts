@@ -137,6 +137,9 @@ export function matchVehicles(
     maxStackHeight: 0,
     allowRotation: settings?.allowRotation ?? true,
     gap: settings?.gap ?? 0,
+    gapWalls: settings?.gapWalls ?? 0,
+    gapWidth: settings?.gapWidth ?? 0,
+    gapLength: settings?.gapLength ?? 0,
   };
 
   const matches: VehicleMatch[] = [];
