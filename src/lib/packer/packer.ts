@@ -209,9 +209,11 @@ function packIntoBin(
   let usedWeight = 0;
 
   // Ограничения рабочей области с учётом зазора от стен (периметр).
-  // Первая точка отступает от обеих стен на gapWalls, чтобы грузы не касались боковых стенок.
-  const innerLen = bin.length - gaps.walls * 2;
-  const innerWid = bin.width - gaps.walls * 2;
+  // Первая точка отступает от передней и левой стенок на gapWalls, а правая
+  // и задняя границы ограничены так, чтобы отступ от задней и правой стенок
+  // был таким же (gapWalls). Так зазор от стен получается симметричным.
+  const innerLen = bin.length - gaps.walls;
+  const innerWid = bin.width - gaps.walls;
   const innerHgt = bin.height - gaps.walls;
   const points: { x: number; y: number; z: number }[] = [{ x: gaps.walls, y: 0, z: gaps.walls }];
 

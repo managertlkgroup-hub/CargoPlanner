@@ -9,7 +9,8 @@ import type { Cargo } from '../../types';
 /** Результат импорта CSV */
 export interface CsvImportResult {
   cargo: Cargo[];
-  errors: string[];
+  /** Ошибки по строкам с кодом ошибки (для локализации на стороне UI) */
+  errors: { row: number; code: string }[];
 }
 
 /**
@@ -25,7 +26,7 @@ export async function importCsv(file: File): Promise<CsvImportResult> {
     transformHeader: (h) => h.trim().toLowerCase(),
   });
 
-  const errors: string[] = [];
+  const errors: { row: number; code: string }[] = [];
   const cargo: Cargo[] = [];
 
   parsed.data.forEach((row, idx) => {
@@ -43,11 +44,11 @@ export async function importCsv(file: File): Promise<CsvImportResult> {
       const quantity = parseFloat(row['количество'] ?? row['quantity'] ?? '1');
       const stackable = (row['stackable'] ?? '').toLowerCase() === 'true' || row['stackable'] === '1';
 
-      if (!name) throw new Error('нет названия');
-      if (isNaN(length) || isNaN(weight)) throw new Error('неверные числовые значения');
+      if (!name) throw new Error('err.csvNoName');
+      if (isNaN(length) || isNaN(weight)) throw new Error('err.csvBadNumber');
 
       if (shape === 'cylinder') {
-        if (isNaN(diameter) || diameter <= 0) throw new Error('для цилиндра нужен диаметр');
+        if (isNaN(diameter) || diameter <= 0) throw new Error('err.csvCylinderDiameter');
         cargo.push({
           id: `csv-${Date.now()}-${idx}`,
           name,
@@ -61,7 +62,7 @@ export async function importCsv(file: File): Promise<CsvImportResult> {
           height: undefined,
         });
       } else {
-        if (isNaN(width) || isNaN(height)) throw new Error('неверные ширина/высота');
+        if (isNaN(width) || isNaN(height)) throw new Error('err.csvBadWH');
         cargo.push({
           id: `csv-${Date.now()}-${idx}`,
           name,
@@ -76,7 +77,8 @@ export async function importCsv(file: File): Promise<CsvImportResult> {
         });
       }
     } catch (e) {
-      errors.push(`Строка ${rowNum}: ${e instanceof Error ? e.message : 'ошибка разбора'}`);
+      const code = e instanceof Error ? e.message : 'err.csvParse';
+      errors.push({ row: rowNum, code });
     }
   });
 

@@ -46,8 +46,9 @@ function layerOf(item: { position: { y: number }; dimensions: { height: number }
   return Math.round(item.position.y / Math.max(1, item.dimensions.height));
 }
 
-function volMm3(mm3: number): string {
-  return `${(mm3 / 1e9).toFixed(2)} м³`;
+function volMm3(mm3: number, lang: Lang): string {
+  const u = lang === 'en' ? 'm³' : 'м³';
+  return `${(mm3 / 1e9).toFixed(2)} ${u}`;
 }
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
@@ -286,7 +287,7 @@ function Metrics({ variant, vehicle, weightUnit, lang }: { variant: LayoutVarian
       </View>
       <View style={styles.metricsRow}>
         <View style={styles.metricCell}>
-          <Text style={styles.text}>{tr(lang, 'pdf.freeVolume')}: {volMm3(variant.freeVolume)}</Text>
+          <Text style={styles.text}>{tr(lang, 'pdf.freeVolume')}: {volMm3(variant.freeVolume, lang)}</Text>
           <Text style={styles.text}>{tr(lang, 'pdf.freeWeight')}: {formatWeight(Math.max(0, vehicle.maxWeight - variant.totalWeight), weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}</Text>
         </View>
         <View style={styles.metricCell}>

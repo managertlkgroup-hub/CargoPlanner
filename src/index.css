@@ -560,8 +560,7 @@ html, body {
 .left-panel {
   flex: 0 0 320px !important;
   height: 100% !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
+  overflow: hidden !important;
   display: flex;
   flex-direction: column;
   padding: 12px !important;
@@ -572,8 +571,6 @@ html, body {
   word-wrap: break-word;
   overflow-wrap: break-word;
   font-size: 13px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
 }
 
 .left-panel::-webkit-scrollbar {
@@ -589,8 +586,9 @@ html, body {
   border-radius: 3px;
 }
 
-/* Аккордеон */
+/* Аккордеон — каждая секция самостоятельный блок, не сжимается */
 .accordion-section {
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -618,11 +616,21 @@ html, body {
   background: var(--bg-body);
 }
 
+/* Содержимое секций «Автомобиль» и «Управление» — внутренний скролл, не вылезает за секцию */
 .accordion-content {
   padding: 0 0 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 34vh;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
 /* Секция «Грузы» — скроллится, занимает оставшееся место */
+.accordion-section:has(.cargo-section) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
 .cargo-section {
   flex: 1;
   min-height: 0;
@@ -631,6 +639,8 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
 .cargo-section .btn-calculate {
@@ -638,7 +648,7 @@ html, body {
   margin-top: auto;
 }
 
-/* Секция «Управление» — обычная секция, участвует в общем скролле левой панели */
+/* Секция «Управление» — независимый блок со внутренним скроллом */
 
 /* Форма добавления груза — не выходит за границы */
 .add-cargo-form {

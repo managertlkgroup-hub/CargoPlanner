@@ -97,6 +97,11 @@ const App: React.FC = () => {
   });
   const [detailsCargoId, setDetailsCargoId] = useState<string | null>(null);
 
+  // Последнее «рабочее» состояние (все грузы помещаются) — нужно, чтобы
+  // заблокировать увеличение зазора сверх допустимого (откат + тост).
+  const prevGoodSettingsRef = useRef<PackSettings | null>(null);
+  const prevGoodResultRef = useRef<ReturnType<typeof packItems> | null>(null);
+
   const [activeView, setActiveView] = useState<'3d' | '2d'>('2d');
   const [stacking, setStacking] = useState(settings.maxStackHeight > 0);
 
@@ -140,6 +145,32 @@ const App: React.FC = () => {
       try {
         const result = packItems(veh, cargo, nextSettings, loadingPoints);
         if (!result.error) {
+          const totalQty = cargo.reduce((sum, c) => sum + Math.max(1, Math.floor(c.quantity || 1)), 0);
+          const placedQty = (result.variants[0]?.items?.length ?? 0);
+
+          // Если с новыми зазорами грузы перестали помещаться — блокируем увеличение:
+          // откатываем к последнему рабочему состоянию (все грузы помещаются) и показываем тост.
+          if (totalQty > 0 && placedQty < totalQty && prevGoodResultRef.current && prevGoodSettingsRef.current) {
+            const goodSettings = prevGoodSettingsRef.current;
+            const goodResult = prevGoodResultRef.current;
+            setResult(goodResult);
+            const pristineMap: Record<string, typeof goodResult.variants[number]['items']> = {};
+            goodResult.variants.forEach((v) => { pristineMap[v.id] = v.items; });
+            setPristine(pristineMap);
+            setActiveVariant(useAppStore.getState().activeVariant && goodResult.variants.some(v => v.id === useAppStore.getState().activeVariant)
+              ? useAppStore.getState().activeVariant : goodResult.variants[0].id);
+            // Через setSettings откатываем именно то значение, которое превысило допустимое
+            setSettings(goodSettings);
+            const maxVal = Math.max(
+              goodSettings.gapWalls ?? 0,
+              goodSettings.gapWidth ?? 0,
+              goodSettings.gapLength ?? 0,
+            );
+            const maxStr = formatDimension(maxVal, unit);
+            setError(trf(lang, 'gaps.gapTooBig', { max: maxStr, u: UNIT_LABEL[unit] }));
+            return;
+          }
+
           setResult(result);
           const pristineMap: Record<string, typeof result.variants[number]['items']> = {};
           result.variants.forEach((v) => { pristineMap[v.id] = v.items; });
@@ -148,17 +179,10 @@ const App: React.FC = () => {
           const keep = cur && result.variants.some(v => v.id === cur) ? cur : result.variants[0].id;
           setActiveVariant(keep);
 
-          // Автопроверка: все ли грузы помещаются с новыми зазорами
-          const totalQty = cargo.reduce((sum, c) => sum + Math.max(1, Math.floor(c.quantity || 1)), 0);
-          const placedQty = (result.variants[0]?.items?.length ?? 0);
-          if (totalQty > 0 && placedQty < totalQty) {
-            const maxVal = Math.max(
-              nextSettings.gapWalls ?? 0,
-              nextSettings.gapWidth ?? 0,
-              nextSettings.gapLength ?? 0,
-            );
-            const maxStr = formatDimension(maxVal, unit);
-            setError(trf(lang, 'gaps.gapTooBig', { max: maxStr, u: UNIT_LABEL[unit] }));
+          // Если все грузы помещаются — запоминаем как рабочее состояние
+          if (totalQty === 0 || placedQty >= totalQty) {
+            prevGoodSettingsRef.current = nextSettings;
+            prevGoodResultRef.current = result;
           }
         }
       } catch (err) { /* пересчёт зазора */ }
@@ -209,6 +233,8 @@ const App: React.FC = () => {
       result.variants.forEach((v) => {
         pristineMap[v.id] = v.items;
       });
+      prevGoodSettingsRef.current = settings;
+      prevGoodResultRef.current = result;
       setPristine(pristineMap);
       // Preserve active variant if it still exists in new results
       const currentActive = useAppStore.getState().activeVariant;

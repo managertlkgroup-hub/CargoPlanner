@@ -72,7 +72,10 @@ export default function CargoTable({ onCargoDetails }: CargoTableProps) {
         setCargo([...cargo, ...imported]);
       }
       if (errors.length > 0) {
-        setError(`Некоторые строки CSV не импортированы:\n${errors.join('\n')}`);
+        const details = errors
+          .map((e) => `${tr(lang, 'csv.row')} ${e.row}: ${tr(lang, e.code)}`)
+          .join('\n');
+        setError(`${tr(lang, 'csv.partialImport')}\n${details}`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : tr(lang, 'err.importCsv'));

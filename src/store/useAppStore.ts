@@ -18,7 +18,7 @@ import type {
 } from '../types';
 import { getDefaultVehicles, type CargoPreset } from '../lib/packer/presets';
 import { loadFromStorage, saveToStorage, uid, setCurrentLang, type WeightUnit } from '../utils/helpers';
-import type { Lang } from '../i18n';
+import { tr, type Lang } from '../i18n';
 
 /** Ключи localStorage */
 const KEYS = {
@@ -328,7 +328,7 @@ export const useAppStore = create<AppState>()(
       updateCustomCargo: (id, patch) => {
         const item = get().cargo.find((c) => c.id === id);
         if (!item || !item.isCustom) {
-          get().setError('Можно редактировать только пользовательский груз.');
+          get().setError(tr(get().lang, 'err.editCustomOnly'));
           return;
         }
         const cargo = get().cargo.map((c) => (c.id === id ? { ...c, ...patch } : c));

@@ -7,7 +7,7 @@ import { useState } from 'react';
 import type { Cargo, Vehicle } from '../../types';
 import { getDefaultMethodsForBodyType } from '../../lib/packer/presets';
 import { useAppStore, getCurrentVehicle } from '../../store/useAppStore';
-import { uid, UNIT_LABEL, toUnit, fromUnit, formatWeight, WEIGHT_UNIT_LABEL, fromWeightUnit, toWeightUnit, nameOf } from '../../utils/helpers';
+import { uid, UNIT_LABEL, toUnit, fromUnit, formatWeight, formatDimension, WEIGHT_UNIT_LABEL, fromWeightUnit, toWeightUnit, nameOf } from '../../utils/helpers';
 import { tr, trf } from '../../i18n';
 
 interface VehiclePanelProps {
@@ -90,7 +90,7 @@ export function VehicleDetailsPanel({ vehicleId, onClose }: VehiclePanelProps) {
           </div>
         )}
         <div style={{ fontSize: 12, marginBottom: 4 }}>
-          {tr(lang, 'pd.dimensions')}: <strong>{toUnit(vehicle.length, unit)}×{toUnit(vehicle.width, unit)}×{toUnit(vehicle.height, unit)} {UNIT_LABEL[unit]}</strong>
+          {tr(lang, 'pd.dimensions')}: <strong>{formatDimension(vehicle.length, unit)}×{formatDimension(vehicle.width, unit)}×{formatDimension(vehicle.height, unit)} {UNIT_LABEL[unit]}</strong>
         </div>
         {editing ? (
           <div style={{ marginBottom: 8 }}>
@@ -314,14 +314,14 @@ export function CargoDetailsPanel({ cargoId, onClose }: CargoPanelProps) {
             </div>
             {item.shape === 'cylinder' ? (
               <div style={{ fontSize: 12, marginBottom: 4 }}>
-              {tr(lang, 'form.diameter')}: <strong>{toUnit(item.diameter ?? 0, unit)} {UNIT_LABEL[unit]}</strong>, {tr(lang, 'form.length')}: <strong>{toUnit(item.length, unit)} {UNIT_LABEL[unit]}</strong>
+              {tr(lang, 'form.diameter')}: <strong>{formatDimension(item.diameter ?? 0, unit)} {UNIT_LABEL[unit]}</strong>, {tr(lang, 'form.length')}: <strong>{formatDimension(item.length, unit)} {UNIT_LABEL[unit]}</strong>
               {item.cylinderOrientation && (
                 <>, {tr(lang, 'form.orientation')}: <strong>{item.cylinderOrientation === 'vertical' ? tr(lang, 'form.vertical') : tr(lang, 'form.horizontal')}</strong></>
               )}
             </div>
             ) : (
               <div style={{ fontSize: 12, marginBottom: 4 }}>
-                {tr(lang, 'pd.dimensions')}: <strong>{toUnit(item.length, unit)}×{toUnit(item.width ?? 0, unit)}×{toUnit(item.height ?? 0, unit)} {UNIT_LABEL[unit]}</strong>
+                {tr(lang, 'pd.dimensions')}: <strong>{formatDimension(item.length, unit)}×{formatDimension(item.width ?? 0, unit)}×{formatDimension(item.height ?? 0, unit)} {UNIT_LABEL[unit]}</strong>
               </div>
             )}
             <div style={{ fontSize: 12, marginBottom: 4 }}>

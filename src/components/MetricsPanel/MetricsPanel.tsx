@@ -164,7 +164,7 @@ export default function MetricsPanel() {
       )}
       {cargoDimensions && (
         <>
-          <div className="metric-card">
+          <div className="metric-card" title={tr(lang, 'metric.dimensionsHint')}>
             <div className="metric-value" style={{ fontSize: '14px' }}>
               {formatDimension(cargoDimensions.length, unit)}×{formatDimension(cargoDimensions.width, unit)}×{formatDimension(cargoDimensions.height, unit)}
             </div>
