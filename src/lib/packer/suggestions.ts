@@ -68,15 +68,32 @@ export function generateSuggestions(
   // 4. Анализ свободного пространства — грузы на полу, но есть место сверху
   const floorItems = variant.items.filter(it => it.position.y === 0);
   const stackedItems = variant.items.filter(it => it.position.y > 0);
+  // Физическая проверка: поместится ли второй слой (2 × высота груза ≤ высота кузова)
+  const maxFloorHeight = floorItems.length
+    ? Math.max(...floorItems.map(it => it.dimensions.height))
+    : 0;
+  const canStackTwo = maxFloorHeight > 0 && maxFloorHeight * 2 <= vehicle.height;
   if (floorItems.length > 3 && stackedItems.length === 0) {
     const stackableFloor = floorItems.filter(it => it.stackable);
     if (stackableFloor.length >= 2) {
-      suggestions.push({
-        id: 'enable-stacking',
-        icon: Layers,
-        message: trf(lang, 'sg.enableStacking', { n: stackableFloor.length }),
-        cargoIds: stackableFloor.map(it => it.id),
-      });
+      if (canStackTwo) {
+        suggestions.push({
+          id: 'enable-stacking',
+          icon: Layers,
+          message: trf(lang, 'sg.enableStacking', { n: stackableFloor.length }),
+          cargoIds: stackableFloor.map(it => it.id),
+        });
+      } else {
+        suggestions.push({
+          id: 'stacking-impossible',
+          icon: Layers,
+          message: trf(lang, 'sg.stackingImpossible', {
+            h: `${formatDimension(maxFloorHeight, unit)} ${UNIT_LABEL[unit]}`,
+            v: `${formatDimension(vehicle.height, unit)} ${UNIT_LABEL[unit]}`,
+          }),
+          cargoIds: stackableFloor.map(it => it.id),
+        });
+      }
     }
   }
 

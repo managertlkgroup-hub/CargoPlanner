@@ -15,15 +15,21 @@ function layerOf(item: { position: { y: number }; dimensions: { height: number }
   return Math.round(item.position.y / Math.max(1, item.dimensions.height));
 }
 
-/** Выбирает «красивое» круглое значение для шкалы масштаба */
+/** Выбирает «красивое» значение для шкалы масштаба: кратное 1/2/5 × 10^k,
+ *  ближайшее к ~40% длины кузова, но не больше ~60% длины кузова.
+ *  Например, для кузова 13.6 м вернёт 5 м (не 10 м), для 20 м — 10 м, для 3 м — 1 м. */
 function niceScale(mm: number): number {
   if (mm <= 0) return 1000;
-  const pow = Math.pow(10, Math.floor(Math.log10(mm)));
-  const norm = mm / pow;
-  if (norm < 1.5) return pow;
-  if (norm < 3.5) return 2 * pow;
-  if (norm < 7.5) return 5 * pow;
-  return 10 * pow;
+  const target = mm * 0.4;
+  const pow = Math.pow(10, Math.floor(Math.log10(target)));
+  const norm = target / pow;
+  const mul = norm < 1.5 ? 1 : norm < 3.5 ? 2 : norm < 7.5 ? 5 : 10;
+  let nice = mul * pow;
+  const cap = mm * 0.6;
+  while (nice > cap) {
+    nice /= 10;
+  }
+  return Math.max(1, Math.round(nice));
 }
 
 /**

@@ -589,6 +589,12 @@ function CargoTable({ cargo, items, unit, weightUnit, lang }: { cargo: Cargo[]; 
     return { item, c, idx: idx + 1 };
   });
 
+  // Показываем «лишние» столбцы только если в них есть реальные данные
+  const methodsUsed = new Set(rows.map(({ item }) => methodOf(item)));
+  const showMethod = methodsUsed.size > 1;
+  const showMaxLoad = rows.some(({ item }) => item.maxLoad != null);
+  const showCompat = rows.some(({ item, c }) => item.compatibilityGroup || c?.compatibilityGroup);
+
   const COL_W = {
     num: 18,
     name: 56,
@@ -615,11 +621,11 @@ function CargoTable({ cargo, items, unit, weightUnit, lang }: { cargo: Cargo[]; 
         <Text style={[styles.tableHeaderText, { width: COL_W.size }]}>{trf(lang, 'pdf.th.dimensions', { unit: UNIT_LABEL[unit] })}</Text>
         <Text style={[styles.tableHeaderText, { width: COL_W.layer }]}>{tr(lang, 'pdf.th.layer')}</Text>
         <Text style={[styles.tableHeaderText, { width: COL_W.rot }]}>{tr(lang, 'pdf.th.rotation')}</Text>
-        <Text style={[styles.tableHeaderText, { width: COL_W.method }]}>{tr(lang, 'th.method')}</Text>
+        {showMethod && <Text style={[styles.tableHeaderText, { width: COL_W.method }]}>{tr(lang, 'th.method')}</Text>}
         <Text style={[styles.tableHeaderText, { width: COL_W.weight }]}>{tr(lang, 'pdf.th.weight')}</Text>
         <Text style={[styles.tableHeaderText, { width: COL_W.stop }]}>{tr(lang, 'pdf.th.stop')}</Text>
-        <Text style={[styles.tableHeaderText, { width: COL_W.maxLoad }]}>{tr(lang, 'pdf.th.maxLoad')}</Text>
-        <Text style={[styles.tableHeaderText, { width: COL_W.compat }]}>{tr(lang, 'pdf.th.compatGroup')}</Text>
+        {showMaxLoad && <Text style={[styles.tableHeaderText, { width: COL_W.maxLoad }]}>{tr(lang, 'pdf.th.maxLoad')}</Text>}
+        {showCompat && <Text style={[styles.tableHeaderText, { width: COL_W.compat }]}>{tr(lang, 'pdf.th.compatGroup')}</Text>}
       </View>
 
       {/* Строки данных — по одному грузу на каждую позицию */}
@@ -656,13 +662,13 @@ function CargoTable({ cargo, items, unit, weightUnit, lang }: { cargo: Cargo[]; 
               <Text>{layer}</Text>
             </View>
             <Text style={[styles.tableCell, { width: COL_W.rot }]}>{rot}</Text>
-            <Text style={[styles.tableCell, { width: COL_W.method }]}>{method}</Text>
+            {showMethod && <Text style={[styles.tableCell, { width: COL_W.method }]}>{method}</Text>}
             <Text style={[styles.tableCell, { width: COL_W.weight }]}>
               {formatWeight(item.weight, weightUnit)}
             </Text>
             <Text style={[styles.tableCell, { width: COL_W.stop }]}>{stop}</Text>
-            <Text style={[styles.tableCell, { width: COL_W.maxLoad }]}>{maxLoad}</Text>
-            <Text style={[styles.tableCell, { width: COL_W.compat }]}>{compat}</Text>
+            {showMaxLoad && <Text style={[styles.tableCell, { width: COL_W.maxLoad }]}>{maxLoad}</Text>}
+            {showCompat && <Text style={[styles.tableCell, { width: COL_W.compat }]}>{compat}</Text>}
           </View>
         );
       })}

@@ -60,6 +60,7 @@ function VehiclesTab() {
   const customVehicles = useAppStore((s) => s.customVehicles);
   const removeCustomVehicle = useAppStore((s) => s.removeCustomVehicle);
   const updateCustomVehicle = useAppStore((s) => s.updateCustomVehicle);
+  const addCustomVehicle = useAppStore((s) => s.addCustomVehicle);
   const unit = useAppStore((s) => s.unit);
   const lang = useAppStore((s) => s.lang);
   const [showAdd, setShowAdd] = useState(false);
@@ -80,6 +81,13 @@ function VehiclesTab() {
     }
   };
 
+  const handleCopyBuiltIn = (v: Vehicle) => {
+    const newId = `custom-${Date.now()}`;
+    const copy: Vehicle = { ...v, id: newId, name: `${v.name} (${tr(lang, 'presets.copy')})` };
+    addCustomVehicle(copy);
+    setEditId(newId);
+  };
+
   return (
     <div>
       <div style={{ maxHeight: 320, overflowY: 'auto' }}>
@@ -96,17 +104,27 @@ function VehiclesTab() {
             }}
           >
             <span>{nameOf(v, lang)} — {formatDimension(v.length, unit)}×{formatDimension(v.width, unit)}×{formatDimension(v.height, unit)} {UNIT_LABEL[unit]}, {trf(lang, 'form.maxWeightKgFmt', { weight: v.maxWeight })}</span>
-            <button
-              type="button"
-              onClick={() => handleDeleteBuiltIn(v.id)}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                color: 'var(--color-danger)', fontWeight: 700, fontSize: 14, padding: '0 4px',
-              }}
-              title={tr(lang, 'presets.hide')}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <button
+                type="button"
+                onClick={() => handleCopyBuiltIn(v)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-accent)', fontSize: 12, padding: '0 4px' }}
+                title={tr(lang, 'presets.copy')}
               >
-               <X size={14} />
-             </button>
+                <Pencil size={13} />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteBuiltIn(v.id)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--color-danger)', fontWeight: 700, fontSize: 14, padding: '0 4px',
+                }}
+                title={tr(lang, 'presets.hide')}
+              >
+                <X size={14} />
+              </button>
+            </div>
            </div>
          ))}
 
@@ -232,6 +250,7 @@ function EditVehicleForm({ vehicle, unit, onSave, onCancel }: {
 
 function CargoTab() {
   const customCargoPresets = useAppStore((s) => s.customCargoPresets);
+  const addCustomCargoPreset = useAppStore((s) => s.addCustomCargoPreset);
   const removeCustomCargoPreset = useAppStore((s) => s.removeCustomCargoPreset);
   const updateCustomCargoPreset = useAppStore((s) => s.updateCustomCargoPreset);
   const unit = useAppStore((s) => s.unit);
@@ -258,21 +277,34 @@ function CargoTab() {
               }}
             >
               <span>{nameOf(p, lang)} — {formatDimension(p.length, unit)}×{formatDimension(p.width, unit)}×{formatDimension(p.height, unit)} {UNIT_LABEL[unit]}, {trf(lang, 'form.maxWeightKgFmt', { weight: p.weight })}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.confirm(tr(lang, 'form.confirmHideVehicle'))) {
-                    setHiddenBuiltIn((prev) => new Set(prev).add(idx));
-                  }
-                }}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'var(--color-danger)', fontWeight: 700, fontSize: 14, padding: '0 4px',
-                }}
-                title={tr(lang, 'presets.hide')}
-              >
-                <X size={14} />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const copy = { ...p, name: `${p.name} (${tr(lang, 'presets.copy')})` };
+                    addCustomCargoPreset(copy);
+                  }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-accent)', fontSize: 12, padding: '0 4px' }}
+                  title={tr(lang, 'presets.copy')}
+                >
+                  <Pencil size={13} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm(tr(lang, 'form.confirmHideVehicle'))) {
+                      setHiddenBuiltIn((prev) => new Set(prev).add(idx));
+                    }
+                  }}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--color-danger)', fontWeight: 700, fontSize: 14, padding: '0 4px',
+                  }}
+                  title={tr(lang, 'presets.hide')}
+                >
+                  <X size={14} />
+                </button>
+              </div>
             </div>
           )
         ))}

@@ -95,11 +95,15 @@ export default function CargoRow({ cargo, selected, onToggleSelect, onDetailsCli
       </td>
       <td className="cargo-td-shape">{tr(lang, cargo.shape === 'cylinder' ? 'shape.cylinder' : 'shape.rect')}</td>
       <td className="cargo-td-method">
-        {tr(lang, cargo.stackable ? 'pd.stackingShort' : 'pd.sideBySideShort')}
-        {isCylinder && (
-          <span style={{ color: 'var(--text-muted, #64748b)' }}>
-            {' · '}{tr(lang, cargo.cylinderOrientation === 'vertical' ? 'form.vertical' : 'form.horizontal')}
-          </span>
+        {isCylinder ? (
+          <>
+            {tr(lang, cargo.stackable ? 'pd.stackingShort' : 'pd.sideBySideShort')}
+            <span style={{ color: 'var(--text-muted, #64748b)' }}>
+              {' · '}{tr(lang, cargo.cylinderOrientation === 'vertical' ? 'form.vertical' : 'form.horizontal')}
+            </span>
+          </>
+        ) : (
+          <span style={{ color: 'var(--text-muted, #94a3b8)' }}>—</span>
         )}
       </td>
       <td className="cargo-td-num">

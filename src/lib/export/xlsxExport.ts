@@ -36,7 +36,15 @@ export function exportToXLSX(
   const W = weightUnitLabel(lang, weightUnit);
   const fmt = (mm: number) => fmtDimension(mm, unit);
 
-  const best = variants[0];
+  // «Лучший вариант» — по максимальному заполнению объёма кузова,
+  // при равенстве — по заполнению веса, затем по количеству грузов.
+  const best = [...variants].sort((a, b) => {
+    const dv = (b.volumeFill ?? 0) - (a.volumeFill ?? 0);
+    if (dv !== 0) return dv;
+    const dw = (b.weightFill ?? 0) - (a.weightFill ?? 0);
+    if (dw !== 0) return dw;
+    return (b.items?.length ?? 0) - (a.items?.length ?? 0);
+  })[0];
   if (!best) return;
 
   buildSummarySheet(wb, vehicle, variants, best, settings, fmt, fmtWeight, U, W, weightUnit, lang);
