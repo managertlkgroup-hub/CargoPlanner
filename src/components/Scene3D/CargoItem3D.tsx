@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { Html, Outlines } from '@react-three/drei';
 import type { PackedItem, Vehicle } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
-import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight, nameOf } from '../../utils/helpers';
+import   { UNIT_LABEL, WEIGHT_UNIT_LABEL, formatWeight, nameOf, formatDimension } from '../../utils/helpers';
 import { SCALE } from './Container3D';
 import { tr } from '../../i18n';
 
@@ -151,11 +151,11 @@ export default function CargoItem3D({
           <div className="tooltip-box">
             <strong>{nameOf(item, lang)}</strong>
             {`\n${isCylinder
-              ? `${tr(lang, 'shape.cylinder')} Ø${Math.round(toUnit(diameter, unit))}×${Math.round(toUnit(item.dimensions.length, unit))} ${UNIT_LABEL[unit]}`
-              : `${Math.round(toUnit(item.dimensions.length, unit))}×${Math.round(toUnit(item.dimensions.width, unit))}×${Math.round(toUnit(item.dimensions.height, unit))} ${UNIT_LABEL[unit]}`}`}
+              ? `${tr(lang, 'shape.cylinder')} Ø${formatDimension(diameter, unit)}×${formatDimension(item.dimensions.length, unit)} ${UNIT_LABEL[unit]}`
+              : `${formatDimension(item.dimensions.length, unit)}×${formatDimension(item.dimensions.width, unit)}×${formatDimension(item.dimensions.height, unit)} ${UNIT_LABEL[unit]}`}`}
             {`\n${tr(lang, 's2d.weight')}: ${formatWeight(item.weight, weightUnit)} ${WEIGHT_UNIT_LABEL[weightUnit]}`}
             {isOversize ? `\n⚠ ${tr(lang, 's2d.oversize')}` : ''}
-            {`\n${tr(lang, 's3d.position')}: x=${Math.round(toUnit(item.position.x, unit))} y=${Math.round(toUnit(item.position.y, unit))} z=${Math.round(toUnit(item.position.z, unit))} ${UNIT_LABEL[unit]}`}
+            {`\n${tr(lang, 's3d.position')}: x=${formatDimension(item.position.x, unit)} y=${formatDimension(item.position.y, unit)} z=${formatDimension(item.position.z, unit)} ${UNIT_LABEL[unit]}`}
             {`\n${tr(lang, 's3d.rotationY')}: ${Math.round(item.rotationY ?? 0)}°`}
           </div>
         </Html>

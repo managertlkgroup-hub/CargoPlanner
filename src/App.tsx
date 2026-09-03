@@ -138,7 +138,7 @@ const App: React.FC = () => {
   }, [error]);
 
   // Общий пересчёт с заданными настройками (используется для штабелирования и зазора)
-  const recalcWithSettings = (veh: ReturnType<typeof getCurrentVehicle>, nextSettings: PackSettings) => {
+  const recalcWithSettings = (veh: ReturnType<typeof getCurrentVehicle>, nextSettings: PackSettings, isGapEdit = false) => {
     setSettings(nextSettings);
     if (cargo.length > 0 && veh) {
       setCalculating(true);
@@ -148,9 +148,10 @@ const App: React.FC = () => {
           const totalQty = cargo.reduce((sum, c) => sum + Math.max(1, Math.floor(c.quantity || 1)), 0);
           const placedQty = (result.variants[0]?.items?.length ?? 0);
 
-          // Если с новыми зазорами грузы перестали помещаться — блокируем увеличение:
-          // откатываем к последнему рабочему состоянию (все грузы помещаются) и показываем тост.
-          if (totalQty > 0 && placedQty < totalQty && prevGoodResultRef.current && prevGoodSettingsRef.current) {
+          // Блокировка превышения применима ТОЛЬКО когда пользователь меняет значения зазора.
+          // Если грузы не поместились по другой причине (напр. выключено штабелирование) —
+          // откатывать настройку и показывать тост про зазор нельзя.
+          if (isGapEdit && totalQty > 0 && placedQty < totalQty && prevGoodResultRef.current && prevGoodSettingsRef.current) {
             const goodSettings = prevGoodSettingsRef.current;
             const goodResult = prevGoodResultRef.current;
             setResult(goodResult);
@@ -361,7 +362,7 @@ const App: React.FC = () => {
                         const newSettings: PackSettings = next
                           ? { ...settings, gapsEnabled: true, gap: 0, gapWalls: settings.gapWalls || 50, gapWidth: settings.gapWidth || 50, gapLength: settings.gapLength || 50 }
                           : { ...settings, gapsEnabled: false, gap: 0, gapWalls: 0, gapWidth: 0, gapLength: 0 };
-                        recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), newSettings);
+                        recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), newSettings, true);
                       }}
                     />
                     <label htmlFor="gaps-master-toggle" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--text)', cursor: 'pointer' }}>
@@ -377,7 +378,7 @@ const App: React.FC = () => {
                         checked={(settings.gapWalls ?? 0) > 0}
                         label={tr(lang, 'gaps.walls')}
                         valueMm={settings.gapWalls ?? 0}
-                        onChange={(v) => recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), { ...settings, gap: 0, gapWalls: v })}
+                        onChange={(v) => recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), { ...settings, gap: 0, gapWalls: v }, true)}
                       />
                       <GapRow
                         id="gap-width-toggle"
@@ -386,7 +387,7 @@ const App: React.FC = () => {
                         checked={(settings.gapWidth ?? 0) > 0}
                         label={tr(lang, 'gaps.width')}
                         valueMm={settings.gapWidth ?? 0}
-                        onChange={(v) => recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), { ...settings, gap: 0, gapWidth: v })}
+                        onChange={(v) => recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), { ...settings, gap: 0, gapWidth: v }, true)}
                       />
                       <GapRow
                         id="gap-length-toggle"
@@ -395,7 +396,7 @@ const App: React.FC = () => {
                         checked={(settings.gapLength ?? 0) > 0}
                         label={tr(lang, 'gaps.length')}
                         valueMm={settings.gapLength ?? 0}
-                        onChange={(v) => recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), { ...settings, gap: 0, gapLength: v })}
+                        onChange={(v) => recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), { ...settings, gap: 0, gapLength: v }, true)}
                       />
                     </>
                   )}

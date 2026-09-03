@@ -211,7 +211,7 @@ export default function AddCargoForm() {
           <optgroup label={tr(lang, 'form.optgroupStandard')}>
             {builtInPresets.map((preset, idx) => (
               <option key={preset.nameKey} value={idx}>
-                {nameOf(preset, lang)} ({toUnit(preset.length, unit)}×{toUnit(preset.width, unit)}×{toUnit(preset.height, unit)} {UNIT_LABEL[unit]}, {formatWeight(preset.weight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]})
+                {nameOf(preset, lang)} ({formatDimension(preset.length, unit)}×{formatDimension(preset.width, unit)}×{formatDimension(preset.height, unit)} {UNIT_LABEL[unit]}, {formatWeight(preset.weight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]})
               </option>
             ))}
           </optgroup>
@@ -219,7 +219,7 @@ export default function AddCargoForm() {
             <optgroup label={tr(lang, 'form.optgroupMine')}>
               {customCargoPresets.map((preset, idx) => (
                 <option key={preset.name + idx} value={builtInPresets.length + idx}>
-                  {preset.name} ({toUnit(preset.length, unit)}×{toUnit(preset.width, unit)}×{toUnit(preset.height, unit)} {UNIT_LABEL[unit]}, {formatWeight(preset.weight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]})
+                  {preset.name} ({formatDimension(preset.length, unit)}×{formatDimension(preset.width, unit)}×{formatDimension(preset.height, unit)} {UNIT_LABEL[unit]}, {formatWeight(preset.weight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]})
                 </option>
               ))}
             </optgroup>

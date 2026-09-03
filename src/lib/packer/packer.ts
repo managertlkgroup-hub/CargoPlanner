@@ -55,6 +55,24 @@ function isVerticalCylinder(p: PlacedBox): boolean {
   return p.shape === 'cylinder' && p.cylinderOrientation === 'vertical';
 }
 
+/**
+ * Правило совместимости при штабелировании:
+ * груз можно ставить на груз только если они "одного типа" —
+ *  - прямоугольный/паллета только на прямоугольный (не на цилиндр);
+ *  - цилиндр только на цилиндр той же ориентации (не на паллету).
+ * Цилиндр на цилиндр допускается, если ориентации совпадают (обе гор. или обе верт.),
+ * иначе пересечение по основанию нестабильно физически.
+ */
+function canStackOn(upper: Box, below: PlacedBox): boolean {
+  const upCylinder = upper.shape === 'cylinder';
+  const lowCylinder = below.shape === 'cylinder';
+  if (upCylinder !== lowCylinder) return false;             // паллета не на трубу и наоборот
+  if (upCylinder && lowCylinder) {
+    return upper.cylinderOrientation === below.cylinderOrientation;
+  }
+  return true; // оба прямоугольные
+}
+
 /** Проверка пересечения двух размещённых боксов (с учётом круглых цилиндров) */
 function intersects(a: PlacedBox, b: PlacedBox): boolean {
   // По высоте — всегда AABB
@@ -276,14 +294,14 @@ function packIntoBin(
         if (settings.maxStackHeight === 0 && effY > 0) continue;
         if (settings.maxStackHeight > 0 && !box.stackable && effY !== 0) continue;
 
-        // Проверка опоры: груз на слое > 0 должен стоять на грузе снизу
+        // Проверка опоры: груз на слое > 0 должен стоять на совместимом грузе снизу
         if (effY > 0) {
           const hasSupport = placed.some((p) => {
             const isBelow = Math.abs(p.y + p.placedHeight - effY) < 0.01;
             if (!isBelow) return false;
             const overlapX = effX < p.x + p.placedLength && effX + placedLength > p.x;
             const overlapZ = effZ < p.z + p.placedWidth && effZ + placedWidth > p.z;
-            return overlapX && overlapZ;
+            return overlapX && overlapZ && canStackOn(box, p);
           });
           if (!hasSupport) continue;
         }

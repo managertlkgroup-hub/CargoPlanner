@@ -88,8 +88,9 @@ export function fromUnit(value: number, unit: Unit): number {
 }
 
 /** Форматирует размер в мм с учётом единицы (метры — до 2 знаков, см — до 1, мм — целое, без хвостовых нулей) */
-export function formatDimension(mm: number, unit: Unit): string {
-  const raw = toUnit(mm, unit);
+export function formatDimension(mm: number | null | undefined, unit: Unit): string {
+  const v = typeof mm === 'number' && Number.isFinite(mm) ? mm : 0;
+  const raw = toUnit(v, unit);
   let rounded: number;
   if (unit === 'm') rounded = Math.round(raw * 100) / 100;
   else if (unit === 'cm') rounded = Math.round(raw * 10) / 10;

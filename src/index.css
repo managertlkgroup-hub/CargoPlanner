@@ -372,6 +372,7 @@ html, body {
 .cargo-th-stack { width: 36px; text-align: center; }
 .cargo-th-name, .cargo-td-name { min-width: 130px; }
 .cargo-th-shape, .cargo-td-shape { width: 52px; text-align: center; }
+.cargo-th-method, .cargo-td-method { min-width: 84px; text-align: center; font-size: 12px; white-space: nowrap; }
 .cargo-th-num, .cargo-td-num { width: 62px; min-width: 62px; text-align: right; padding: 3px 4px; }
 
 /* Выделение строки */

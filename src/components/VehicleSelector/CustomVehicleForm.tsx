@@ -175,7 +175,7 @@ export default function CustomVehicleForm({ onDone }: Props) {
           type="number"
           min={toUnit(FIELDS.length.min, unit)}
           max={toUnit(FIELDS.length.max, unit)}
-          placeholder={String(Math.round(toUnit(5000, unit)))}
+          placeholder={formatDimension(5000, unit)}
           value={values.length ?? ''}
           onChange={(e) => handleChange('length', e.target.value)}
           onBlur={() => handleBlur('length')}
@@ -192,7 +192,7 @@ export default function CustomVehicleForm({ onDone }: Props) {
           type="number"
           min={toUnit(FIELDS.width.min, unit)}
           max={toUnit(FIELDS.width.max, unit)}
-          placeholder={String(Math.round(toUnit(2400, unit)))}
+          placeholder={formatDimension(2400, unit)}
           value={values.width ?? ''}
           onChange={(e) => handleChange('width', e.target.value)}
           onBlur={() => handleBlur('width')}
@@ -209,7 +209,7 @@ export default function CustomVehicleForm({ onDone }: Props) {
           type="number"
           min={toUnit(FIELDS.height.min, unit)}
           max={toUnit(FIELDS.height.max, unit)}
-          placeholder={String(Math.round(toUnit(2600, unit)))}
+          placeholder={formatDimension(2600, unit)}
           value={values.height ?? ''}
           onChange={(e) => handleChange('height', e.target.value)}
           onBlur={() => handleBlur('height')}

@@ -1,8 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { useActiveVariant, useSelectedVehicle } from '../../store/useAppStore';
 import { useAppStore } from '../../store/useAppStore';
-import { volumeToM3, unitLabel, formatDimension, formatWeight, weightUnitLabel } from '../../utils/helpers';
+import { volumeToM3, unitLabel, formatDimension, formatWeight, weightUnitLabel, nameOf } from '../../utils/helpers';
 import { calculateCOG } from '../../lib/physics/cog';
 import { tr, trf } from '../../i18n';
 
@@ -13,6 +13,8 @@ export default function MetricsPanel() {
   const weightUnit = useAppStore((s) => s.weightUnit);
   const lang = useAppStore((s) => s.lang);
   const cargoList = useAppStore((s) => s.cargo);
+  const settings = useAppStore((s) => s.settings);
+  const [showMissing, setShowMissing] = useState(false);
 
   // Количество неразмещённых грузов и остаток объёма/веса
   const unplaced = useMemo(() => {
@@ -32,12 +34,36 @@ export default function MetricsPanel() {
     }
     const placedQty = variant ? variant.items.length : 0;
     const restQty = Math.max(0, totalQty - placedQty);
+    const placedById: Record<string, number> = {};
+    variant?.items.forEach((it) => { placedById[it.id] = (placedById[it.id] ?? 0) + 1; });
+    const missing: {
+      id: string; name: string; qty: number; weight: number; volume: number;
+    }[] = [];
+    for (const c of cargoList) {
+      const q = Math.max(1, c.quantity || 1);
+      const placed = placedById[c.id] ?? 0;
+      const missingQty = Math.max(0, q - placed);
+      if (missingQty > 0) {
+        let vol = 0;
+        if (c.shape === 'cylinder') {
+          const d = c.diameter ?? c.width ?? 0;
+          vol = Math.PI * (d / 2) ** 2 * c.length * missingQty;
+        } else {
+          vol = c.length * (c.width ?? 0) * (c.height ?? 0) * missingQty;
+        }
+        missing.push({
+          id: c.id, name: nameOf(c, lang), qty: missingQty,
+          weight: c.weight * missingQty, volume: vol,
+        });
+      }
+    }
     return {
       restQty,
       restWeight: Math.max(0, totalWeight - (variant?.totalWeight ?? 0)),
       restVolume: Math.max(0, totalVolume - (variant?.totalVolume ?? 0)),
       placedQty,
       totalQty,
+      missing,
     };
   }, [cargoList, variant]);
 
@@ -110,25 +136,46 @@ export default function MetricsPanel() {
         <div
           className="unplaced-banner"
           style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            background: 'rgba(245, 158, 11, 0.12)',
-            border: '1px solid rgba(245, 158, 11, 0.4)',
+            background: 'rgba(245, 158, 11, 0.10)',
+            border: '1px solid rgba(245, 158, 11, 0.45)',
             color: 'var(--color-warning)',
             borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 13,
           }}
         >
-          <AlertTriangle size={16} />
-          <div>
-            <div style={{ fontWeight: 600 }}>
-              {trf(lang, 'metric.unplaced', { placed: unplaced.placedQty, total: unplaced.totalQty, rest: unplaced.restQty })}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <AlertTriangle size={16} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600 }}>
+                {trf(lang, 'metric.unplaced', { placed: unplaced.placedQty, total: unplaced.totalQty, rest: unplaced.restQty })}
+              </div>
+              <div style={{ fontSize: 12 }}>
+                {trf(lang, 'metric.unplacedBody', {
+                  w: `${formatWeight(unplaced.restWeight, weightUnit)} ${weightUnitLabel(lang, weightUnit)}`,
+                  v: volumeToM3(unplaced.restVolume, lang),
+                })}
+              </div>
             </div>
-            <div style={{ fontSize: 12 }}>
-              {trf(lang, 'metric.unplacedBody', {
-                w: `${formatWeight(unplaced.restWeight, weightUnit)} ${weightUnitLabel(lang, weightUnit)}`,
-                v: volumeToM3(unplaced.restVolume, lang),
-              })}
-            </div>
+            <button
+              className="btn btn-sm"
+              style={{ whiteSpace: 'nowrap' }}
+              onClick={() => setShowMissing((v) => !v)}
+            >
+              {showMissing ? tr(lang, 'metric.unplacedHide') : tr(lang, 'metric.unplacedShow')}
+            </button>
           </div>
+          {showMissing && unplaced.missing.length > 0 && (
+            <div style={{ marginTop: 8, fontSize: 12, borderTop: '1px solid rgba(245,158,11,0.25)', paddingTop: 6 }}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>{tr(lang, 'metric.unplacedList')}</div>
+              {unplaced.missing.map((m) => (
+                <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '2px 0' }}>
+                  <span style={{ flex: 1, color: 'var(--color-ink, #1e293b)' }}>{m.name}</span>
+                  <span>{trf(lang, 'metric.unplacedQty', { n: m.qty })}</span>
+                  <span>{formatWeight(m.weight, weightUnit)} {weightUnitLabel(lang, weightUnit)}</span>
+                  <span>{volumeToM3(m.volume, lang)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     <div className="metrics-grid">
@@ -169,6 +216,12 @@ export default function MetricsPanel() {
               {formatDimension(cargoDimensions.length, unit)}×{formatDimension(cargoDimensions.width, unit)}×{formatDimension(cargoDimensions.height, unit)}
             </div>
             <div className="metric-label">{tr(lang, 'metric.dimensions')}, {unitLabel(lang, unit)}</div>
+          </div>
+          <div className="metric-card" title={tr(lang, 'metric.dimWithGapsHint')}>
+            <div className="metric-value" style={{ fontSize: '14px' }}>
+              {formatDimension(cargoDimensions.length + (settings.gapWidth ?? 0), unit)}×{formatDimension(cargoDimensions.width + (settings.gapLength ?? 0), unit)}×{formatDimension(cargoDimensions.height, unit)}
+            </div>
+            <div className="metric-label">{tr(lang, 'metric.dimWithGaps')}, {unitLabel(lang, unit)}</div>
           </div>
           <div className="metric-card">
             <div className="metric-value">{volumeToM3(cargoVolumeMm3, lang)}</div>

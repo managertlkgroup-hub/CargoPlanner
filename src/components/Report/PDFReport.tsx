@@ -15,7 +15,7 @@ import {
 } from '@react-pdf/renderer';
 import type { Cargo, LayoutVariant, PackedItem, PackSettings, Vehicle, Unit } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
-import { UNIT_LABEL, unitLabel, toUnit, WEIGHT_UNIT_LABEL, formatWeight, formatDimension, type WeightUnit, nameOf } from '../../utils/helpers';
+import   { UNIT_LABEL, unitLabel, WEIGHT_UNIT_LABEL, formatWeight, formatDimension, type WeightUnit, nameOf } from '../../utils/helpers';
 import { tr, trf, type Lang } from '../../i18n';
 
 // Регистрация шрифтов с поддержкой кириллицы
@@ -151,12 +151,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     position: 'absolute',
   },
-  rulerText: {
-    fontSize: 7,
-    color: '#64748b',
-    textAlign: 'center',
-    marginTop: 2,
-  },
   // Легенда
   legendRow: {
     flexDirection: 'row',
@@ -245,7 +239,7 @@ function CoverHeader({ lang }: { lang: Lang }) {
 
 /** Информация об автомобиле */
 function VehicleInfo({ vehicle, unit, weightUnit, lang }: { vehicle: Vehicle; unit: Unit; weightUnit: WeightUnit; lang: Lang }) {
-  const fmt = (mm: number) => Math.round(toUnit(mm, unit) * 100) / 100;
+  const fmt = (mm: number) => formatDimension(mm, unit);
   const BODY_LABELS: Record<string, string> = {
     tent: tr(lang, 'pdf.body.tent'), van: tr(lang, 'pdf.body.van'), isothermal: tr(lang, 'pdf.body.isothermal'),
     refrigerator: tr(lang, 'pdf.body.refrigerator'), side: tr(lang, 'pdf.body.side'), platform: tr(lang, 'pdf.body.platform'),
@@ -391,7 +385,6 @@ function LayerScheme({
           );
         })}
       </View>
-      <Text style={styles.rulerText}>{tr(lang, 'pdf.ruler')}</Text>
     </View>
   );
 }
@@ -464,7 +457,7 @@ function ItemLegend({ items, lang }: { items: PackedItem[]; lang: Lang }) {
 
 /** Таблица грузов */
 function CargoTable({ cargo, items, unit, weightUnit, lang }: { cargo: Cargo[]; items: PackedItem[]; unit: Unit; weightUnit: WeightUnit; lang: Lang }) {
-  const fmt = (mm: number) => Math.round(toUnit(mm, unit) * 100) / 100;
+  const fmt = (mm: number) => formatDimension(mm, unit);
   const maxL = items.length > 0 ? Math.max(...items.map(i => layerOf(i))) : 0;
   const hasLayers = maxL > 0;
 

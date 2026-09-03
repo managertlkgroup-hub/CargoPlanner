@@ -5,7 +5,7 @@
 
 import type { Vehicle, LayoutVariant } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
-import { unitLabel, toUnit, formatWeight, WEIGHT_UNIT_LABEL, formatDimension, type WeightUnit, nameOf } from '../../utils/helpers';
+import   { unitLabel, formatWeight, WEIGHT_UNIT_LABEL, formatDimension, type WeightUnit, nameOf } from '../../utils/helpers';
 import { tr, trf, type Lang } from '../../i18n';
 
 const LAYER_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -48,7 +48,7 @@ export async function exportSceneToPng(
 
   const unit = useAppStore.getState().unit;
   const settings = useAppStore.getState().settings;
-  const fmt = (mm: number) => Math.round(toUnit(mm, unit) * 100) / 100;
+  const fmt = (mm: number) => formatDimension(mm, unit);
 
   // Включённые зазоры — только те, что > 0 (для блока в метриках)
   const enabledGaps = [

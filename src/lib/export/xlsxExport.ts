@@ -10,7 +10,7 @@
 import * as XLSX from 'xlsx';
 import type { Cargo, LayoutVariant, Vehicle } from '../../types';
 import { getCargoVolume } from '../../types';
-import { UNIT_LABEL, unitLabel, toUnit, formatWeight, formatDimension, WEIGHT_UNIT_LABEL, type WeightUnit, nameOf } from '../../utils/helpers';
+import   { UNIT_LABEL, unitLabel, formatWeight, formatDimension, WEIGHT_UNIT_LABEL, type WeightUnit, nameOf } from '../../utils/helpers';
 import { useAppStore } from '../../store/useAppStore';
 import { tr, trf, type Lang } from '../../i18n';
 
@@ -35,7 +35,7 @@ export function exportToXLSX(
   const settings = useAppStore.getState().settings;
   const U = UNIT_LABEL[unit];
   const W = WEIGHT_UNIT_LABEL[weightUnit];
-  const fmt = (mm: number) => Math.round(toUnit(mm, unit) * 100) / 100;
+  const fmt = (mm: number) => formatDimension(mm, unit);
   const fmtGap = (mm: number) => `${formatDimension(mm, unit)} ${unitLabel(lang, unit)}`;
 
   // Включённые зазоры — только те, что > 0

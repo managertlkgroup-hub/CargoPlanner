@@ -126,6 +126,7 @@ export default function CargoTable({ onCargoDetails }: CargoTableProps) {
               <th className="cargo-th-stack" title={tr(lang, 'cargo.stackTitle')}>{tr(lang, 'th.stack')}</th>
               <th className="cargo-th-name">{tr(lang, 'th.name')}</th>
               <th className="cargo-th-shape">{tr(lang, 'th.shape')}</th>
+              <th className="cargo-th-method">{tr(lang, 'th.method')}</th>
               <th className="cargo-th-num">{tr(lang, 'th.length')}</th>
               <th className="cargo-th-num">{tr(lang, 'th.width')}</th>
               <th className="cargo-th-num">{tr(lang, 'th.height')}</th>
@@ -137,7 +138,7 @@ export default function CargoTable({ onCargoDetails }: CargoTableProps) {
           <tbody>
             {cargo.length === 0 ? (
               <tr>
-                <td colSpan={10} className="empty-state text-muted">
+                <td colSpan={11} className="empty-state text-muted">
                   {tr(lang, 'cargo.empty')}
                 </td>
               </tr>

@@ -6,7 +6,7 @@ import { Search, Package, X, Check, AlertTriangle, Scale, Layers, Boxes } from '
 import { useMemo } from 'react';
 import { useAppStore, useAllVehicles } from '../../store/useAppStore';
 import { matchVehicles, type VehicleMatch, type StackOption } from '../../lib/vehicleMatcher';
-import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight, nameOf, volumeToM3, formatDimension } from '../../utils/helpers';
+import   { UNIT_LABEL, WEIGHT_UNIT_LABEL, formatWeight, nameOf, volumeToM3, formatDimension } from '../../utils/helpers';
 import { tr, trf } from '../../i18n';
 
 interface Props {
@@ -29,7 +29,7 @@ function OptionLine({ lang, opt, stacking, fitsBadge, unit }: {
   const wt = trf(lang, 'vm.wt', { p: opt.weightFill });
   const dims = zero
     ? '—'
-    : `${Math.round(toUnit(opt.bBox.l, unit))}×${Math.round(toUnit(opt.bBox.w, unit))}×${Math.round(toUnit(opt.bBox.h, unit))} ${UNIT_LABEL[unit]}`;
+    : `${formatDimension(opt.bBox.l, unit)}×${formatDimension(opt.bBox.w, unit)}×${formatDimension(opt.bBox.h, unit)} ${UNIT_LABEL[unit]}`;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginTop: 3, flexWrap: 'wrap', color: zero ? 'var(--text-muted)' : 'var(--text)' }}>
       {stacking ? <Layers size={13} /> : <Boxes size={13} />}
@@ -161,7 +161,7 @@ export default function VehicleMatcher({ onClose }: Props) {
                   </div>
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                  {Math.round(toUnit(m.vehicle.length, unit))}×{Math.round(toUnit(m.vehicle.width, unit))}×{Math.round(toUnit(m.vehicle.height, unit))} {UNIT_LABEL[unit]} • {formatWeight(m.vehicle.maxWeight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}
+                  {formatDimension(m.vehicle.length, unit)}×{formatDimension(m.vehicle.width, unit)}×{formatDimension(m.vehicle.height, unit)} {UNIT_LABEL[unit]} • {formatWeight(m.vehicle.maxWeight, weightUnit)} {WEIGHT_UNIT_LABEL[weightUnit]}
                 </div>
 
                 <OptionLine lang={lang} opt={m.withoutStacking} stacking={false} fitsBadge={m.withoutStacking.fits} unit={unit} />

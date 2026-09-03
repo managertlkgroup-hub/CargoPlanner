@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Truck, Package } from 'lucide-react';
 import { useActiveVariant, useSelectedVehicle, useAppStore } from '../../store/useAppStore';
-import { UNIT_LABEL, toUnit, WEIGHT_UNIT_LABEL, formatWeight, unitLabel, formatDimension, nameOf } from '../../utils/helpers';
+import   { UNIT_LABEL, WEIGHT_UNIT_LABEL, formatWeight, unitLabel, formatDimension, nameOf } from '../../utils/helpers';
 import { tr, trf } from '../../i18n';
 import ScenePlaceholder from '../ScenePlaceholder';
 
@@ -105,6 +105,28 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
     ctx.strokeStyle = '#3b82f6';
     ctx.lineWidth = 2;
     ctx.strokeRect(offsetX, offsetY, containerPxL, containerPxW);
+
+    // Визуализация отступов (зазоров) от стен — пунктирная граница рабочей зоны
+    if (settings.gapsEnabled) {
+      const gapWalls = settings.gapWalls ?? 0;
+      const inset = gapWalls * scale;
+      if (inset > 0) {
+        ctx.save();
+        ctx.setLineDash([6, 5]);
+        ctx.strokeStyle = 'rgba(139, 92, 246, 0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(offsetX + inset, offsetY + inset, containerPxL - 2 * inset, containerPxW - 2 * inset);
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(139, 92, 246, 0.85)';
+        ctx.font = '9px system-ui';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${formatDimension(gapWalls, unit)} ${unitLabel(lang, unit)}`, offsetX + inset + 3, offsetY + inset - 4);
+        ctx.textAlign = 'right';
+        ctx.fillText(`${formatDimension(gapWalls, unit)} ${unitLabel(lang, unit)}`, offsetX + containerPxL - inset - 3, offsetY + inset - 4);
+        ctx.restore();
+      }
+    }
+
     ctx.fillStyle = '#3b82f6';
     ctx.font = 'bold 11px system-ui';
     ctx.textAlign = 'left';
@@ -489,7 +511,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
           }}
         >
           <strong>{nameOf(tooltipData.item, lang)}</strong>
-          {`\n${Math.round(toUnit(tooltipData.item.dimensions.length, unit))}×${Math.round(toUnit(tooltipData.item.dimensions.width, unit))}×${Math.round(toUnit(tooltipData.item.dimensions.height, unit))} ${UNIT_LABEL[unit]}`}
+          {`\n${formatDimension(tooltipData.item.dimensions.length, unit)}×${formatDimension(tooltipData.item.dimensions.width, unit)}×${formatDimension(tooltipData.item.dimensions.height, unit)} ${UNIT_LABEL[unit]}`}
           {`\n${tr(lang, 's2d.weight')}: ${formatWeight(tooltipData.item.weight, weightUnit)} ${WEIGHT_UNIT_LABEL[weightUnit]}`}
           {tooltipData.item.isOversize ? `\n⚠ ${tr(lang, 's2d.oversize')}` : ''}
         </div>
@@ -524,7 +546,7 @@ const Scene2D: React.FC<Scene2DProps> = ({ width, height }) => {
               whiteSpace: 'nowrap',
             }}
           >
-            X: {Math.round(toUnit(dragged.position.x, unit))} · Z: {Math.round(toUnit(dragged.position.z, unit))} {UNIT_LABEL[unit]}
+            X: {formatDimension(dragged.position.x, unit)} · Z: {formatDimension(dragged.position.z, unit)} {UNIT_LABEL[unit]}
           </div>
         );
       })()}
