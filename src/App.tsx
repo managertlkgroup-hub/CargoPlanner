@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAppStore, getCurrentVehicle } from './store/useAppStore';
-import { packItems } from './lib/packer/packer';
+import { packItems, canStackAll } from './lib/packer/packer';
 import Header from './components/Layout/Header';
 import Footer from './components/Layout/Footer';
 import VehicleSelector from './components/VehicleSelector/VehicleSelector';
@@ -335,8 +335,21 @@ const App: React.FC = () => {
                     checked={stacking}
                     onChange={(e) => {
                       const checked = e.target.checked;
-                      setStacking(checked);
                       const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
+                      // Умная проверка: можно ли штабелировать текущие грузы
+                      if (checked && cargo.length > 0) {
+                        const check = canStackAll(vehicle, cargo, {
+                          walls: settings.gapsEnabled ? (settings.gapWalls ?? 0) : 0,
+                          width: settings.gapsEnabled ? (settings.gapWidth ?? 0) : 0,
+                          length: settings.gapsEnabled ? (settings.gapLength ?? 0) : 0,
+                        }, settings);
+                        if (!check.ok) {
+                          setStacking(false);
+                          setError(check.reason);
+                          return;
+                        }
+                      }
+                      setStacking(checked);
                       // maxStackHeight = полная высота кузова — физический потолок,
                       // чтобы груз любой высоты (напр. 1200мм) мог штабелироваться
                       // до тех пор, пока суммарная высота не превышает высоту кузова.

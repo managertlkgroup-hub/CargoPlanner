@@ -4,6 +4,7 @@ import { useActiveVariant, useSelectedVehicle } from '../../store/useAppStore';
 import { useAppStore } from '../../store/useAppStore';
 import { volumeToM3, unitLabel, formatDimension, formatWeight, weightUnitLabel, nameOf } from '../../utils/helpers';
 import { calculateCOG } from '../../lib/physics/cog';
+import { canFitAll } from '../../lib/packer/packer';
 import { tr, trf } from '../../i18n';
 
 export default function MetricsPanel() {
@@ -118,6 +119,17 @@ export default function MetricsPanel() {
     return calculateCOG(variant.items, vehicle);
   }, [variant, vehicle]);
 
+  // Подсказка canFitAll: можно ли вообще разместить весь груз в этом кузове
+  const fitHint = useMemo(() => {
+    if (!vehicle || unplaced.restQty === 0) return null;
+    return canFitAll(vehicle, cargoList, {
+      walls: settings.gapsEnabled ? (settings.gapWalls ?? 0) : 0,
+      width: settings.gapsEnabled ? (settings.gapWidth ?? 0) : 0,
+      length: settings.gapsEnabled ? (settings.gapLength ?? 0) : 0,
+    }, true);
+  }, [vehicle, cargoList, settings, unplaced.restQty]);
+
+
   // Количество негабаритных
   const oversizeCount = useMemo(() => {
     if (!variant) return 0;
@@ -154,6 +166,14 @@ export default function MetricsPanel() {
                   v: volumeToM3(unplaced.restVolume, lang),
                 })}
               </div>
+              {fitHint && !fitHint.ok && (
+                <div style={{ fontSize: 12, fontWeight: 500, marginTop: 4 }}>
+                  {fitHint.reason}
+                  <div style={{ fontWeight: 400, opacity: 0.85 }}>
+                    {tr(lang, 'metric.fitHint')}
+                  </div>
+                </div>
+              )}
             </div>
             <button
               className="btn btn-sm"

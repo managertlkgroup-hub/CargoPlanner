@@ -8,7 +8,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { exportSceneToPng } from '../../lib/export/pngExport';
 import { getCurrentVehicle } from '../../store/useAppStore';
 import { useActiveVariant } from '../../store/useAppStore';
-import { Package, Save, Image, FileText, Settings, ChevronDown, Globe } from 'lucide-react';
+import { Package, Save, Image, FileText, Settings, ChevronDown, Globe, Check } from 'lucide-react';
 import ThemeToggle from '../Settings/ThemeToggle';
 import SessionModal from '../Settings/SessionModal';
 import PresetsModal from '../Settings/PresetsModal';
@@ -18,7 +18,7 @@ import { LANGS, tr, type Lang } from '../../i18n';
 
 const UNITS: Unit[] = ['mm', 'cm', 'm'];
 const WEIGHT_UNITS: WeightUnit[] = ['kg', 'ton'];
-const FLAGS: Record<Lang, string> = { ru: '🇷🇺', en: '🇺🇸' };
+const FLAGS: Record<Lang, string> = { ru: 'RU', en: 'EN' };
 const LANG_FULL: Record<Lang, string> = { ru: 'Русский', en: 'English' };
 
 interface MenuOption<T extends string> {
@@ -75,7 +75,7 @@ function Menu<T extends string>({ title, current, options, onSelect }: MenuProps
               onClick={() => { onSelect(o.value); setOpen(false); }}
             >
               <span>{o.label}</span>
-              {o.value === current && <span className="settings-menu-check">✓</span>}
+              {o.value === current && <span className="settings-menu-check"><Check size={12} /></span>}
             </button>
           ))}
         </div>

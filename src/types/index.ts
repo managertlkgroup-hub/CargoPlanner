@@ -150,6 +150,12 @@ export interface Cargo {
   weight: number;
   quantity: number;
   stackable: boolean;
+  /** Макс. нагрузка сверху, кг (0 = нельзя ставить ничего сверху) */
+  maxLoad?: number;
+  /** Порядок выгрузки: 1 — первая точка выгрузки (размещать глубже всего) */
+  stopOrder?: number;
+  /** Группа совместимости штабелирования: штабелировать можно только грузы одной группы */
+  compatibilityGroup?: string;
   /** Негабаритный груз (может выступать за пределы кузова) */
   isOversize?: boolean;
   /** Ориентация цилиндра (по умолчанию 'horizontal') */
@@ -200,6 +206,12 @@ export interface PackedItem {
   rotation?: Rotation;
   color: string;
   stackable: boolean;
+  /** Макс. нагрузка сверху, кг */
+  maxLoad?: number;
+  /** Порядок выгрузки (1 — первая точка) */
+  stopOrder?: number;
+  /** Группа совместимости штабелирования */
+  compatibilityGroup?: string;
   /** Негабаритный груз */
   isOversize?: boolean;
   /** Индекс слоя (0-based) */

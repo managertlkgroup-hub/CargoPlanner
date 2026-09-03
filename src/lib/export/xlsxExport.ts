@@ -1,128 +1,213 @@
 // ============================================================================
-// Экспорт отчёта в XLSX (Excel) — вместо CSV
-//
-// Формирует книгу с листами:
-//   «Автомобиль» — параметры выбранного транспортного средства
-//   «Грузы»      — исходный список грузов с размерами
-//   «Вариант 1/2/3» — координаты каждого размещённого груза по вариантам
+// Экспорт отчёта в XLSX — 4 листа: Сводка, Грузы, Зазоры, Инструкция
 // ============================================================================
 
 import * as XLSX from 'xlsx';
 import type { Cargo, LayoutVariant, Vehicle } from '../../types';
-import { getCargoVolume } from '../../types';
-import   { UNIT_LABEL, unitLabel, formatWeight, formatDimension, WEIGHT_UNIT_LABEL, type WeightUnit, nameOf } from '../../utils/helpers';
+import { formatWeight, formatDimension, UNIT_LABEL, nameOf, type Unit, weightUnitLabel, volumeToM3 } from '../../utils/helpers';
+import type { WeightUnit } from '../../utils/helpers';
 import { useAppStore } from '../../store/useAppStore';
-import { tr, trf, type Lang } from '../../i18n';
+import { tr, type Lang } from '../../i18n';
 
-/** Массив строк (массив массивов) для одного листа */
 type SheetRows = (string | number)[][];
 
-/**
- * Формирует и скачивает Excel-книгу с детализацией раскладки.
- * @param vehicle выбранный автомобиль
- * @param cargos исходный список грузов
- * @param variants все варианты раскладки (обычно 3)
- */
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+function fmtDimension(mm: number, unit: Unit): string {
+  return formatDimension(mm, unit);
+}
+
+function fmtWeight(kg: number, wu: WeightUnit): string {
+  return formatWeight(kg, wu);
+}
+
 export function exportToXLSX(
   vehicle: Vehicle,
-  cargos: Cargo[],
+  _cargos: Cargo[],
   variants: LayoutVariant[],
   weightUnit: WeightUnit = 'kg',
   lang: Lang = 'ru',
 ): void {
   const wb = XLSX.utils.book_new();
-  const unit = useAppStore.getState().unit;
-  const settings = useAppStore.getState().settings;
+  const { unit, settings } = useAppStore.getState();
   const U = UNIT_LABEL[unit];
-  const W = WEIGHT_UNIT_LABEL[weightUnit];
-  const fmt = (mm: number) => formatDimension(mm, unit);
-  const fmtGap = (mm: number) => `${formatDimension(mm, unit)} ${unitLabel(lang, unit)}`;
+  const W = weightUnitLabel(lang, weightUnit);
+  const fmt = (mm: number) => fmtDimension(mm, unit);
 
-  // Включённые зазоры — только те, что > 0
-  const enabledGaps = [
-    { label: tr(lang, 'gaps.wallShort'), value: settings.gapWalls ?? 0 },
-    { label: tr(lang, 'gaps.widthShort'), value: settings.gapWidth ?? 0 },
-    { label: tr(lang, 'gaps.lengthShort'), value: settings.gapLength ?? 0 },
-  ].filter(g => g.value > 0);
+  const best = variants[0];
+  if (!best) return;
 
-  // --- Лист «Автомобиль» ---
-  const vehicleRows: SheetRows = [
-    [tr(lang, 'xls.parameter'), tr(lang, 'xls.value')],
-    [tr(lang, 'xls.name'), nameOf(vehicle, lang)],
-    [trf(lang, 'xls.lengthU', { u: U }), fmt(vehicle.length)],
-    [trf(lang, 'xls.widthU', { u: U }), fmt(vehicle.width)],
-    [trf(lang, 'xls.heightU', { u: U }), fmt(vehicle.height)],
-    [trf(lang, 'xls.maxWeightU', { u: W }), formatWeight(vehicle.maxWeight, weightUnit)],
-    [tr(lang, 'xls.bodyVolume'), round2((vehicle.length * vehicle.width * vehicle.height) / 1e9)],
-  ];
-  // Секция «Зазоры» — только если хотя бы один зазор включён
-  if (enabledGaps.length > 0) {
-    vehicleRows.push(['', '']);
-    vehicleRows.push([tr(lang, 'gaps.title'), '']);
-    vehicleRows.push([tr(lang, 'xls.gapType'), tr(lang, 'xls.gapValue')]);
-    enabledGaps.forEach(g => vehicleRows.push([g.label, fmtGap(g.value)]));
-  }
-  const wsVehicle = XLSX.utils.aoa_to_sheet(vehicleRows);
-  wsVehicle['!cols'] = [{ wch: 24 }, { wch: 20 }];
-  XLSX.utils.book_append_sheet(wb, wsVehicle, tr(lang, 'xls.sheet.vehicle'));
+  buildSummarySheet(wb, vehicle, variants, best, settings, fmt, fmtWeight, U, W, weightUnit, lang);
+  buildCargoSheet(wb, best, fmt, fmtWeight, W, weightUnit, lang);
+  buildGapsSheet(wb, settings, fmt, lang);
+  buildInstructionsSheet(wb, lang);
 
-  // --- Лист «Грузы» ---
-  const cargoRows: SheetRows = [
-    [tr(lang, 'xls.name'), tr(lang, 'xls.shape'), trf(lang, 'xls.lengthU', { u: U }), trf(lang, 'xls.widthU', { u: U }), trf(lang, 'xls.diamHeightU', { u: U }), trf(lang, 'xls.weightU', { u: W }), tr(lang, 'xls.qty'), tr(lang, 'xls.volumeM3'), tr(lang, 'xls.stackable')],
-  ];
-  cargos.forEach((c) => {
-    cargoRows.push([
-      nameOf(c, lang),
-      c.shape === 'cylinder' ? tr(lang, 'shape.cylinder') : tr(lang, 'shape.rect'),
-      fmt(c.length),
-      c.shape === 'box' ? (c.width != null ? fmt(c.width) : '') : '',
-      c.shape === 'cylinder' ? (c.diameter != null ? fmt(c.diameter) : '') : (c.height != null ? fmt(c.height) : ''),
-      formatWeight(c.weight, weightUnit),
-      c.quantity,
-      round2((getCargoVolume(c) * c.quantity) / 1e9),
-      c.stackable ? tr(lang, 'xls.yes') : tr(lang, 'xls.no'),
-    ]);
-  });
-  const wsCargo = XLSX.utils.aoa_to_sheet(cargoRows);
-  wsCargo['!cols'] = [{ wch: 24 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 10 }, { wch: 8 }, { wch: 12 }, { wch: 14 }];
-  XLSX.utils.book_append_sheet(wb, wsCargo, tr(lang, 'xls.sheet.cargo'));
-
-  // --- Листы «Вариант N» ---
-  variants.forEach((variant, idx) => {
-    const sheetName = trf(lang, 'xls.sheet.variant', { n: idx + 1 });
-    const rows: SheetRows = [
-      [trf(lang, 'xls.variantLabel', { label: tr(lang, variant.labelKey) }), '', '', ''],
-      [tr(lang, 'xls.fillVolume'), variant.volumeFill, '', ''],
-      [tr(lang, 'xls.fillWeight'), variant.weightFill, '', ''],
-      [trf(lang, 'xls.totalWeightU', { u: W }), formatWeight(variant.totalWeight, weightUnit), '', ''],
-      [tr(lang, 'xls.freeVolume'), round2(variant.freeVolume / 1e9), '', ''],
-      ['', '', '', ''],
-      [tr(lang, 'xls.name'), tr(lang, 'xls.shape'), trf(lang, 'xls.sizeDWH', { u: U }), trf(lang, 'xls.weightU', { u: W })],
-    ];
-
-    variant.items.forEach((item) => {
-      const sizeText =
-        item.shape === 'cylinder'
-          ? `Ø${fmt(item.diameter ?? 0)} × ${fmt(item.dimensions.length)}`
-          : `${fmt(item.dimensions.length)}×${fmt(item.dimensions.width)}×${fmt(item.dimensions.height)}`;
-      rows.push([
-        nameOf(item, lang),
-        item.shape === 'cylinder' ? tr(lang, 'shape.cylinder') : tr(lang, 'shape.rect'),
-        sizeText,
-        formatWeight(item.weight, weightUnit),
-      ]);
-    });
-
-    const wsVariant = XLSX.utils.aoa_to_sheet(rows);
-    wsVariant['!cols'] = [{ wch: 28 }, { wch: 14 }, { wch: 30 }, { wch: 10 }];
-    XLSX.utils.book_append_sheet(wb, wsVariant, sheetName);
-  });
-
-  // Скачиваем файл
-  XLSX.writeFile(wb, `load-report-${Date.now()}.xlsx`);
+  XLSX.writeFile(wb, 'cargo-plan.xlsx');
 }
 
-/** Округляет до двух знаков */
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
+// ─── Sheet 1: Сводка / Summary ──────────────────────────────────────────────
+
+function buildSummarySheet(
+  wb: XLSX.WorkBook,
+  vehicle: Vehicle,
+  variants: LayoutVariant[],
+  best: LayoutVariant,
+  settings: import('../../types').PackSettings,
+  fmt: (mm: number) => string,
+  fmtWeight: (kg: number, wu: WeightUnit) => string,
+  U: string,
+  W: string,
+  wu: WeightUnit,
+  lang: Lang,
+): void {
+  const r: SheetRows = [];
+  const nl = () => r.push(['', '']);
+
+  r.push([tr(lang, 'xl.param'), tr(lang, 'xl.value')]);
+  nl();
+  r.push([tr(lang, 'xl.date'), new Date().toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US')]);
+  nl();
+
+  // Vehicle
+  r.push([tr(lang, 'xl.vehicle'), '']);
+  r.push([tr(lang, 'xls.name'), nameOf(vehicle, lang)]);
+  r.push([tr(lang, 'xl.dimensions'), `${fmt(vehicle.length)}×${fmt(vehicle.width)}×${fmt(vehicle.height)} ${U}`]);
+  r.push([tr(lang, 'xls.maxWeightU').replace(', {u}', `, ${W}`), fmtWeight(vehicle.maxWeight, wu)]);
+  r.push([tr(lang, 'xl.bodyVolume'), volumeToM3(vehicle.length * vehicle.width * vehicle.height, lang)]);
+  nl();
+
+  // Variant
+  r.push([tr(lang, 'xl.bestVariant'), `${tr(lang, 'xls.variantLabel').replace('{label}', tr(lang, best.labelKey)).replace('Вариант: ', '').replace('Variant: ', '')}`]);
+  r.push([tr(lang, 'xl.numVariants'), variants.length]);
+  r.push([tr(lang, 'metric.placed'), best.items.length]);
+  r.push([tr(lang, 'xl.totalWeight'), fmtWeight(best.totalWeight, wu)]);
+  nl();
+  r.push([tr(lang, 'xl.bodyVolumeM3'), volumeToM3(vehicle.length * vehicle.width * vehicle.height, lang)]);
+  r.push([tr(lang, 'xl.cargoVolumeM3'), volumeToM3(best.totalVolume, lang)]);
+  r.push([tr(lang, 'xl.freeVolumeM3'), volumeToM3(best.freeVolume, lang)]);
+  r.push([tr(lang, 'metric.volumeFill'), `${round2(best.volumeFill)}%`]);
+  r.push([tr(lang, 'metric.weightFill'), `${round2(best.weightFill)}%`]);
+  nl();
+
+  // COG
+  const n = best.items.length;
+  if (n > 0) {
+    let sx = 0, sy = 0, sz = 0, tw = 0;
+    for (const it of best.items) { sx += it.position.x * it.weight; sy += it.position.y * it.weight; sz += it.position.z * it.weight; tw += it.weight; }
+    if (tw > 0) {
+      r.push([tr(lang, 'xl.cog'), '']);
+      r.push([tr(lang, 'xl.cogX'), `${fmt(sx / tw)} ${U}`]);
+      r.push([tr(lang, 'xl.cogY'), `${fmt(sy / tw)} ${U}`]);
+      r.push([tr(lang, 'xl.cogZ'), `${fmt(sz / tw)} ${U}`]);
+      nl();
+    }
+  }
+
+  // Layers
+  const maxLayer = best.items.reduce((m, it) => Math.max(m, it.layer ?? 0), 0);
+  r.push([tr(lang, 'metric.layers'), maxLayer + 1]);
+  nl();
+
+  // Gaps
+  r.push([tr(lang, 'gaps.title'), '']);
+  r.push([tr(lang, 'gaps.walls'), settings.gapWalls > 0 ? `${fmt(settings.gapWalls)} ${U}` : '—']);
+  r.push([tr(lang, 'gaps.width'), settings.gapWidth > 0 ? `${fmt(settings.gapWidth)} ${U}` : '—']);
+  r.push([tr(lang, 'gaps.length'), settings.gapLength > 0 ? `${fmt(settings.gapLength)} ${U}` : '—']);
+  r.push([tr(lang, 'xl.gapsEnabled'), settings.gapsEnabled ? tr(lang, 'xls.yes') : tr(lang, 'xls.no')]);
+
+  const ws = XLSX.utils.aoa_to_sheet(r);
+  ws['!cols'] = [{ wch: 32 }, { wch: 24 }];
+  XLSX.utils.book_append_sheet(wb, ws, tr(lang, 'xl.sheet.summary'));
+}
+
+// ─── Sheet 2: Грузы / Cargo ─────────────────────────────────────────────────
+
+function buildCargoSheet(
+  wb: XLSX.WorkBook,
+  best: LayoutVariant,
+  fmt: (mm: number) => string,
+  fmtWeight: (kg: number, wu: WeightUnit) => string,
+  W: string,
+  wu: WeightUnit,
+  lang: Lang,
+): void {
+  const hdr: SheetRows = [
+    [
+      tr(lang, 'xl.col.no'),
+      tr(lang, 'xls.name'),
+      tr(lang, 'xls.shape'),
+      tr(lang, 'xl.col.dims'),
+      tr(lang, 'xl.col.layer'),
+      tr(lang, 'xl.col.rotation'),
+      tr(lang, 'xl.col.method'),
+      tr(lang, 'xls.weightU').replace('{u}', W),
+      tr(lang, 'xl.col.stopOrder'),
+      tr(lang, 'xl.col.maxLoad'),
+      tr(lang, 'xl.col.compatGroup'),
+      tr(lang, 'xl.col.position'),
+    ],
+  ];
+  best.items.forEach((it, idx) => {
+    const dims = `${fmt(it.dimensions.length)}×${fmt(it.dimensions.width)}×${fmt(it.dimensions.height)}`;
+    const pos = `(${fmt(it.position.x)}, ${fmt(it.position.y)}, ${fmt(it.position.z)})`;
+    const method = (it.layer ?? 0) > 0 ? tr(lang, 'xl.method.stacking') : tr(lang, 'xl.method.sideBySide');
+    hdr.push([
+      idx + 1,
+      nameOf(it, lang),
+      it.shape === 'cylinder' ? tr(lang, 'shape.cylinder') : tr(lang, 'shape.rect'),
+      dims,
+      (it.layer ?? 0) + 1,
+      it.rotationY ?? 0,
+      method,
+      fmtWeight(it.weight, wu),
+      it.stopOrder ?? '',
+      it.maxLoad ?? '',
+      it.compatibilityGroup ?? '',
+      pos,
+    ]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(hdr);
+  ws['!cols'] = [{ wch: 6 }, { wch: 24 }, { wch: 14 }, { wch: 32 }, { wch: 8 }, { wch: 10 }, { wch: 16 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 16 }, { wch: 30 }];
+  XLSX.utils.book_append_sheet(wb, ws, tr(lang, 'xl.sheet.cargo'));
+}
+
+// ─── Sheet 3: Зазоры / Gaps ─────────────────────────────────────────────────
+
+function buildGapsSheet(
+  wb: XLSX.WorkBook,
+  settings: import('../../types').PackSettings,
+  fmt: (mm: number) => string,
+  lang: Lang,
+): void {
+  const unit = useAppStore.getState().unit;
+  const U = UNIT_LABEL[unit];
+  const r: SheetRows = [
+    [tr(lang, 'xl.gapParam'), tr(lang, 'xl.value'), tr(lang, 'xl.status')],
+  ];
+  r.push([tr(lang, 'gaps.walls'), settings.gapWalls > 0 ? `${fmt(settings.gapWalls)} ${U}` : '—', settings.gapWalls > 0 ? tr(lang, 'xl.enabled') : tr(lang, 'xl.disabled')]);
+  r.push([tr(lang, 'gaps.width'), settings.gapWidth > 0 ? `${fmt(settings.gapWidth)} ${U}` : '—', settings.gapWidth > 0 ? tr(lang, 'xl.enabled') : tr(lang, 'xl.disabled')]);
+  r.push([tr(lang, 'gaps.length'), settings.gapLength > 0 ? `${fmt(settings.gapLength)} ${U}` : '—', settings.gapLength > 0 ? tr(lang, 'xl.enabled') : tr(lang, 'xl.disabled')]);
+  r.push([tr(lang, 'xl.gapsEnabled'), settings.gapsEnabled ? tr(lang, 'xls.yes') : tr(lang, 'xls.no'), '']);
+  r.push(['', '', '']);
+  r.push([tr(lang, 'xl.note'), tr(lang, 'xl.gapsNote'), '']);
+  const ws = XLSX.utils.aoa_to_sheet(r);
+  ws['!cols'] = [{ wch: 32 }, { wch: 24 }, { wch: 12 }];
+  XLSX.utils.book_append_sheet(wb, ws, tr(lang, 'xl.sheet.gaps'));
+}
+
+// ─── Sheet 4: Инструкция / Instructions ─────────────────────────────────────
+
+function buildInstructionsSheet(wb: XLSX.WorkBook, lang: Lang): void {
+  const r: SheetRows = [
+    [tr(lang, 'xl.instrTopic'), tr(lang, 'xl.instrDesc')],
+    [tr(lang, 'xl.instrStopOrder'), tr(lang, 'xl.instrStopOrderDesc')],
+    [tr(lang, 'xl.instrMaxLoad'), tr(lang, 'xl.instrMaxLoadDesc')],
+    [tr(lang, 'xl.instrCompatGroup'), tr(lang, 'xl.instrCompatGroupDesc')],
+    [tr(lang, 'xl.instrMixed'), tr(lang, 'xl.instrMixedDesc')],
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(r);
+  ws['!cols'] = [{ wch: 24 }, { wch: 80 }];
+  XLSX.utils.book_append_sheet(wb, ws, tr(lang, 'xl.sheet.instructions'));
 }

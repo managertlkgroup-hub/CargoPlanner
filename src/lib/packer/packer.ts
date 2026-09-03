@@ -45,6 +45,9 @@ function toBox(cargo: Cargo, index: number): Box {
     height: size.height,
     weight: cargo.weight,
     stackable: cargo.stackable,
+    maxLoad: cargo.maxLoad,
+    stopOrder: cargo.stopOrder,
+    compatibilityGroup: cargo.compatibilityGroup,
     isOversize: cargo.isOversize,
     color: COLORS[index % COLORS.length],
   };
@@ -64,6 +67,16 @@ function isVerticalCylinder(p: PlacedBox): boolean {
  * иначе пересечение по основанию нестабильно физически.
  */
 function canStackOn(upper: Box, below: PlacedBox): boolean {
+  // Ограничение по нагрузке: если у нижнего задан maxLoad, верхний не должен его превышать.
+  // По умолчанию maxLoad = 0 => ставить сверху ничего нельзя.
+  const maxLoad = below.maxLoad ?? 0;
+  if (upper.weight > maxLoad) return false;
+
+  // Группы совместимости: если у обоих заданы группы и они различаются — штабелировать нельзя.
+  const upGroup = upper.compatibilityGroup;
+  const lowGroup = below.compatibilityGroup;
+  if (upGroup != null && lowGroup != null && upGroup !== lowGroup) return false;
+
   const upCylinder = upper.shape === 'cylinder';
   const lowCylinder = below.shape === 'cylinder';
   if (upCylinder !== lowCylinder) return false;             // паллета не на трубу и наоборот
@@ -235,14 +248,24 @@ function packIntoBin(
   const innerHgt = bin.height - gaps.walls;
   const points: { x: number; y: number; z: number }[] = [{ x: gaps.walls, y: 0, z: gaps.walls }];
 
-  // Сортировка боксов в зависимости от режима
+  // Сортировка боксов в зависимости от режима (с учётом порядка выгрузки stopOrder)
+  // stopOrder=1 (первая точка выгрузки) размещаем глубже (меньше X), т.е. укладываем раньше.
+  const stopComp = (a: Box, b: Box): number => {
+    const hasA = a.stopOrder != null;
+    const hasB = b.stopOrder != null;
+    if (hasA && hasB) return (a.stopOrder ?? 0) - (b.stopOrder ?? 0);
+    return hasA ? -1 : hasB ? 1 : 0;
+  };
   let sorted: Box[];
+  // Стратегия смешанных грузов: сначала прямоугольные (заполняют углы/края),
+  // затем цилиндрические заполняют оставшееся пространство.
+  const shapeRank = (b: Box) => (b.shape === 'box' ? 0 : 1);
   if (sortMode === 'along') {
-    sorted = [...boxes].sort((a, b) => b.length - a.length);
+    sorted = [...boxes].sort((a, b) => (shapeRank(a) - shapeRank(b)) || stopComp(a, b) || (b.length - a.length));
   } else if (sortMode === 'across') {
-    sorted = [...boxes].sort((a, b) => b.width - a.width);
+    sorted = [...boxes].sort((a, b) => (shapeRank(a) - shapeRank(b)) || stopComp(a, b) || (b.width - a.width));
   } else {
-    sorted = [...boxes].sort((a, b) => (b.length * b.width) - (a.length * a.width));
+    sorted = [...boxes].sort((a, b) => (shapeRank(a) - shapeRank(b)) || stopComp(a, b) || ((b.length * b.width) - (a.length * a.width)));
   }
 
   for (let boxIdx = 0; boxIdx < sorted.length; boxIdx++) {
@@ -454,6 +477,9 @@ function toPackedItem(p: PlacedBox, layerIndex: number): PackedItem {
     rotationY: p.rotY,
     color,
     stackable: p.stackable,
+    maxLoad: p.maxLoad,
+    stopOrder: p.stopOrder,
+    compatibilityGroup: p.compatibilityGroup,
     isOversize: p.isOversize,
     layer: layerIndex,
   };
@@ -582,4 +608,75 @@ export function packItems(
       variants: [],
     };
   }
+}
+
+/** Результат проверки возможности размещения/штабелирования */
+export interface FitCheck {
+  ok: boolean;
+  /** Причина невозможности (для тоста) */
+  reason: string;
+}
+
+function totalQuantity(cargo: Cargo[]): number {
+  return cargo.reduce((sum, c) => sum + Math.max(1, Math.floor(c.quantity || 1)), 0);
+}
+
+/** Размещает все грузы и возвращает число размещённых при заданных настройках */
+function countPlaced(vehicle: Vehicle, cargo: Cargo[], gaps: Gaps, maxStackHeight: number): number {
+  const s: PackSettings = {
+    maxStackHeight,
+    allowRotation: true,
+    gapsEnabled: true,
+    gap: gaps.walls,
+    gapWalls: gaps.walls,
+    gapWidth: gaps.width,
+    gapLength: gaps.length,
+  };
+  const result = packItems(vehicle, cargo, s, undefined);
+  return result.variants[0]?.items?.length ?? 0;
+}
+
+/** Проверка, помещаются ли все грузы при заданных зазорах и режиме штабелирования */
+export function canFitAll(vehicle: Vehicle, cargo: Cargo[], gaps: Gaps, stackingEnabled: boolean): FitCheck {
+  const total = totalQuantity(cargo);
+  const placed = countPlaced(vehicle, cargo, gaps, stackingEnabled ? vehicle.height : 0);
+  if (placed >= total) return { ok: true, reason: '' };
+  return { ok: false, reason: `Не хватает места: не поместилось ${total - placed} грузов` };
+}
+
+/** Проверка возможности штабелирования всех грузов при включении чекбокса */
+export function canStackAll(vehicle: Vehicle, cargo: Cargo[], gaps: Gaps, settings: PackSettings): FitCheck {
+  const total = totalQuantity(cargo);
+  // 1) Без учёта зазоров, но с учётом совместимости (canStackOn)
+  const noGapPlaced = countPlaced(vehicle, cargo, { walls: 0, width: 0, length: 0 }, vehicle.height);
+  if (noGapPlaced < total) {
+    return { ok: false, reason: `Невозможно штабелировать: ${detectStackReason(vehicle, cargo)}` };
+  }
+  // 2) С текущими зазорами, если они включены
+  const gapsOn = settings?.gapsEnabled && (gaps.walls > 0 || gaps.width > 0 || gaps.length > 0);
+  if (gapsOn) {
+    const withGapPlaced = countPlaced(vehicle, cargo, gaps, vehicle.height);
+    if (withGapPlaced < total) {
+      return { ok: false, reason: 'Невозможно штабелировать с текущими зазорами. Уменьшите зазоры или отключите их.' };
+    }
+  }
+  return { ok: true, reason: '' };
+}
+
+/** Определяет наиболее вероятную причину невозможности штабелирования */
+function detectStackReason(vehicle: Vehicle, cargo: Cargo[]): string {
+  const stackable = cargo.filter((c) => c.stackable);
+  const hasBox = stackable.some((c) => c.shape === 'box');
+  const hasCyl = stackable.some((c) => c.shape === 'cylinder');
+  if (hasBox && hasCyl) return 'несовместимые грузы (паллеты нельзя ставить на цилиндры и наоборот)';
+  for (const c of stackable) {
+    const size = getCargoSize(c);
+    const itemHeight = c.shape === 'cylinder'
+      ? (c.cylinderOrientation === 'vertical' ? size.length : (c.diameter ?? size.width))
+      : size.height;
+    if (itemHeight > 0 && vehicle.height > 0 && itemHeight > vehicle.height) {
+      return 'высота кузова не позволяет штабелировать';
+    }
+  }
+  return 'недостаточно места для размещения всех грузов';
 }

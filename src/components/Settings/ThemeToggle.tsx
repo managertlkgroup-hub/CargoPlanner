@@ -5,6 +5,7 @@
 import type { Theme } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { tr } from '../../i18n';
+import { Moon, Sun } from 'lucide-react';
 
 interface Props {
   theme: Theme;
@@ -21,7 +22,7 @@ export default function ThemeToggle({ theme, onToggle }: Props) {
       title={title}
       aria-label={title}
     >
-      {theme === 'light' ? '🌙' : '☀️'}
+      {theme === 'light' ? <Sun size={16} /> : <Moon size={16} />}
     </button>
   );
 }

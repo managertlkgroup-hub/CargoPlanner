@@ -18,6 +18,12 @@ export interface Box {
   height: number;
   weight: number;
   stackable: boolean;
+  /** Макс. нагрузка сверху, кг (0 = нельзя ничего ставить сверху) */
+  maxLoad?: number;
+  /** Порядок выгрузки (1 — первая точка) */
+  stopOrder?: number;
+  /** Группа совместимости штабелирования */
+  compatibilityGroup?: string;
   /** Негабаритный груз (может выступать за пределы кузова) */
   isOversize?: boolean;
   /** Цвет отображения в 3D-сцене */

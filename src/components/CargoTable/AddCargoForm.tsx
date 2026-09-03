@@ -148,6 +148,9 @@ export default function AddCargoForm() {
       weight,
       quantity,
       stackable: shape !== 'cylinder' ? true : fd.get('stackMode') === 'stack',
+      maxLoad: fd.get('maxLoad') ? Number(fd.get('maxLoad')) : 0,
+      stopOrder: fd.get('stopOrder') ? Number(fd.get('stopOrder')) : undefined,
+      compatibilityGroup: ((fd.get('compatibilityGroup') as string) || '').trim() || undefined,
       isOversize: (fd.get('isOversize') === 'on'),
       cylinderOrientation: shape === 'cylinder' ? ((fd.get('cylinderOrientation') as any) || 'horizontal') : undefined,
     };
@@ -368,6 +371,18 @@ export default function AddCargoForm() {
       <div className="form-group">
         <label>{tr(lang, 'form.qty')}</label>
         <input name="quantity" type="number" min={1} defaultValue={1} />
+      </div>
+      <div className="form-group">
+        <label>{tr(lang, 'form.maxLoad')}, {WEIGHT_UNIT_LABEL[weightUnit]}</label>
+        <input name="maxLoad" type="number" step="any" min={0} defaultValue={0} />
+      </div>
+      <div className="form-group">
+        <label>{tr(lang, 'form.stopOrder')}</label>
+        <input name="stopOrder" type="number" min={1} placeholder="1" />
+      </div>
+      <div className="form-group">
+        <label>{tr(lang, 'form.compatGroup')}</label>
+        <input name="compatibilityGroup" type="text" placeholder={tr(lang, 'form.compatGroupPh')} maxLength={30} />
       </div>
       <div className="form-group">
         <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
