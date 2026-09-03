@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAppStore, getCurrentVehicle } from './store/useAppStore';
-import { packItems, canStackAll } from './lib/packer/packer';
+import { packItems, canFitAll } from './lib/packer/packer';
 import Header from './components/Layout/Header';
 import Footer from './components/Layout/Footer';
 import VehicleSelector from './components/VehicleSelector/VehicleSelector';
@@ -335,26 +335,23 @@ const App: React.FC = () => {
                     checked={stacking}
                     onChange={(e) => {
                       const checked = e.target.checked;
-                      const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
-                      // Умная проверка: можно ли штабелировать текущие грузы
-                      if (checked && cargo.length > 0) {
-                        const check = canStackAll(vehicle, cargo, {
+                      const veh = getCurrentVehicle(selectedVehicleId, customVehicles);
+                      if (checked && cargo.length > 0 && veh) {
+                        const gaps = {
                           walls: settings.gapsEnabled ? (settings.gapWalls ?? 0) : 0,
                           width: settings.gapsEnabled ? (settings.gapWidth ?? 0) : 0,
                           length: settings.gapsEnabled ? (settings.gapLength ?? 0) : 0,
-                        }, settings);
+                        };
+                        const check = canFitAll(veh, cargo, gaps, true);
                         if (!check.ok) {
                           setStacking(false);
-                          setError(check.reason);
+                          setError(trf(lang, 'stacking.cannotEnable', { reason: check.reason }));
                           return;
                         }
                       }
                       setStacking(checked);
-                      // maxStackHeight = полная высота кузова — физический потолок,
-                      // чтобы груз любой высоты (напр. 1200мм) мог штабелироваться
-                      // до тех пор, пока суммарная высота не превышает высоту кузова.
-                      const newMaxH = checked ? vehicle.height : 0;
-                      recalcWithSettings(vehicle, { ...settings, maxStackHeight: newMaxH });
+                      const newMaxH = checked ? veh.height : 0;
+                      recalcWithSettings(veh, { ...settings, maxStackHeight: newMaxH });
                     }}
                   />
                   <label htmlFor="stacking-toggle" style={{ fontSize: 13, color: 'var(--text)' }}>
@@ -372,10 +369,23 @@ const App: React.FC = () => {
                       checked={settings.gapsEnabled}
                       onChange={(e) => {
                         const next = e.target.checked;
+                        const veh = getCurrentVehicle(selectedVehicleId, customVehicles);
+                        if (next && cargo.length > 0 && veh) {
+                          const testGaps = {
+                            walls: settings.gapWalls || 50,
+                            width: settings.gapWidth || 50,
+                            length: settings.gapLength || 50,
+                          };
+                          const check = canFitAll(veh, cargo, testGaps, stacking);
+                          if (!check.ok) {
+                            setError(trf(lang, 'gaps.cannotEnable', { reason: check.reason }));
+                            return;
+                          }
+                        }
                         const newSettings: PackSettings = next
                           ? { ...settings, gapsEnabled: true, gap: 0, gapWalls: settings.gapWalls || 50, gapWidth: settings.gapWidth || 50, gapLength: settings.gapLength || 50 }
                           : { ...settings, gapsEnabled: false, gap: 0, gapWalls: 0, gapWidth: 0, gapLength: 0 };
-                        recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), newSettings, true);
+                        recalcWithSettings(veh, newSettings, true);
                       }}
                     />
                     <label htmlFor="gaps-master-toggle" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--text)', cursor: 'pointer' }}>

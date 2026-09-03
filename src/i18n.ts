@@ -37,6 +37,8 @@ const ru: Dict = {
   'gaps.lengthShort': 'Между рядами (по длине)',
   'gaps.none': 'Зазоры не заданы',
   'gaps.gapTooBig': '⚠️ Увеличение зазора не позволяет разместить все грузы. Максимальный допустимый зазор: {max} {u}.',
+  'gaps.cannotEnable': 'Невозможно включить зазоры: грузы не помещаются. {reason}',
+  'stacking.cannotEnable': 'Невозможно включить штабелирование: {reason}',
   'visibility.body': 'Видимость кузова',
   'btn.add': '+ Добавить',
   'logout': 'Выход',
@@ -385,6 +387,7 @@ const ru: Dict = {
   'png.footer': 'Сгенерировано в CargoPlanner — 3D Планировщик загрузки автомобиля',
   'png.legend': 'Легенда:',
   'png.scale': 'Масштаб:',
+  'png.noScheme': 'Схема недоступна — сначала рассчитайте раскладку',
 
   // Настройки
   'settings.title': 'Настройки',
@@ -498,6 +501,9 @@ const ru: Dict = {
   'xl.sheet.cargo': 'Грузы',
   'xl.sheet.gaps': 'Зазоры',
   'xl.sheet.instructions': 'Инструкция',
+  'xl.sheet.scheme': 'Схема',
+  'xl.scheme.title': 'Схема расстановки грузов (вид сверху)',
+  'xl.scheme.legend': 'Номера грузов:',
   'xl.param': 'Параметр',
   'xl.value': 'Значение',
   'xl.date': 'Дата',
@@ -572,6 +578,8 @@ const en: Dict = {
   'gaps.lengthShort': 'Between rows (length)',
   'gaps.none': 'No gaps set',
   'gaps.gapTooBig': '⚠️ Increasing the gap prevents placing all cargo. Maximum allowed gap: {max} {u}.',
+  'gaps.cannotEnable': 'Cannot enable gaps: cargo doesn\'t fit. {reason}',
+  'stacking.cannotEnable': 'Cannot enable stacking: {reason}',
   'visibility.body': 'Body visibility',
   'btn.add': '+ Add',
   'logout': 'Logout',
@@ -904,6 +912,7 @@ const en: Dict = {
   'png.footer': 'Generated in CargoPlanner — Truck loading planner',
   'png.legend': 'Legend:',
   'png.scale': 'Scale:',
+  'png.noScheme': 'Scheme unavailable — calculate layout first',
 
   // Настройки
   'settings.title': 'Settings',
@@ -1016,6 +1025,9 @@ const en: Dict = {
   'xl.sheet.cargo': 'Cargo',
   'xl.sheet.gaps': 'Gaps',
   'xl.sheet.instructions': 'Instructions',
+  'xl.sheet.scheme': 'Scheme',
+  'xl.scheme.title': 'Cargo layout scheme (top view)',
+  'xl.scheme.legend': 'Cargo numbers:',
   'xl.param': 'Parameter',
   'xl.value': 'Value',
   'xl.date': 'Date',

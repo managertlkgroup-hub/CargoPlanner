@@ -1,18 +1,25 @@
 // ============================================================================
 // Экспорт текущего вида в PNG высокого разрешения
-// Содержит: заголовок, захват сцены, легенду грузов, шкалу масштаба,
-//           метрики, подпись варианта
+// Рисует: заголовок, 2D-схему грузов (вид сверху), легенду, шкалу масштаба,
+//         метрики, подпись варианта
 // ============================================================================
 
-import html2canvas from 'html2canvas';
 import type { Vehicle, LayoutVariant } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
-import   { unitLabel, formatWeight, WEIGHT_UNIT_LABEL, formatDimension, type WeightUnit, nameOf } from '../../utils/helpers';
+import { unitLabel, formatWeight, WEIGHT_UNIT_LABEL, formatDimension, type WeightUnit, nameOf } from '../../utils/helpers';
 import { tr, type Lang } from '../../i18n';
 
 /** Вычисляет слой груза */
 function layerOf(item: { position: { y: number }; dimensions: { height: number } }): number {
   return Math.round(item.position.y / Math.max(1, item.dimensions.height));
+}
+
+/** Габарит груза в плане (вид сверху) с учётом поворота вокруг Y */
+function ground(item: { dimensions: { length: number; width: number }; rotationY?: number }) {
+  const rot = Math.round(((item.rotationY ?? 0) % 360) / 90) % 2;
+  return rot === 1
+    ? { w: item.dimensions.width, h: item.dimensions.length }
+    : { w: item.dimensions.length, h: item.dimensions.width };
 }
 
 /** Выбирает «красивое» значение для шкалы масштаба: кратное 1/2/5 × 10^k,
@@ -32,9 +39,17 @@ function niceScale(mm: number): number {
   return Math.max(1, Math.round(nice));
 }
 
+/** Генерирует цвет фона из hex с заданной прозрачностью (rgba) */
+function withAlpha(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16) || 0;
+  const g = parseInt(hex.slice(3, 5), 16) || 0;
+  const b = parseInt(hex.slice(5, 7), 16) || 0;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 /**
- * Сохраняет вид приложения как PNG высокого разрешения.
- * Содержит: заголовок, захваченную сцену (html2canvas), легенду грузов,
+ * Сохраняет 2D-схему расстановки грузов как PNG высокого разрешения.
+ * Содержит: заголовок, 2D-схему (вид сверху), легенду грузов,
  *           шкалу масштаба, метрики, подпись варианта.
  */
 export async function exportSceneToPng(
@@ -45,23 +60,6 @@ export async function exportSceneToPng(
   weightUnit: WeightUnit = 'kg',
   lang: Lang = 'ru',
 ): Promise<void> {
-  const sceneEl = document.getElementById(_elementId);
-  if (!sceneEl) {
-    throw new Error(tr(lang, 'err.pngNotFound'));
-  }
-
-  let capturedCanvas: HTMLCanvasElement;
-  try {
-    capturedCanvas = await html2canvas(sceneEl, {
-      scale: 3,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-    });
-  } catch {
-    throw new Error(tr(lang, 'err.pngNotFound'));
-  }
-
   const unit = useAppStore.getState().unit;
   const settings = useAppStore.getState().settings;
   const fmt = (mm: number) => formatDimension(mm, unit);
@@ -96,12 +94,15 @@ export async function exportSceneToPng(
   const METRICS_H = (120 + enabledGaps.length * 18) * S;
   const FOOTER_H = 40 * S;
 
-  const srcW = capturedCanvas.width;
-  const srcH = capturedCanvas.height;
+  // Размер 2D-схемы (вид сверху), сохраняя пропорции кузова
+  const SCHEME_W = 1400;
+  const vlen = vehicle ? Math.max(1, vehicle.length) : 1000;
+  const vwid = vehicle ? Math.max(1, vehicle.width) : 1000;
+  const SCHEME_H = Math.max(200, Math.round(SCHEME_W * (vwid / vlen)));
 
   const minW = 1920;
-  const totalW = Math.max(minW, srcW + PAD * 2);
-  const totalH = HEADER_H + srcH + PAD + CARGO_LEGEND_H + SCALE_BAR_H + METRICS_H + FOOTER_H + PAD;
+  const totalW = Math.max(minW, SCHEME_W + PAD * 2);
+  const totalH = HEADER_H + SCHEME_H + PAD + CARGO_LEGEND_H + SCALE_BAR_H + METRICS_H + FOOTER_H + PAD;
 
   const canvas = document.createElement('canvas');
   canvas.width = totalW;
@@ -138,14 +139,52 @@ export async function exportSceneToPng(
     );
   }
 
-  const schemeX = (totalW - srcW) / 2;
+  // ── 2D-схема (вид сверху) ─────────────────────────────────────────────────
+  const schemeX = (totalW - SCHEME_W) / 2;
   const schemeY = HEADER_H + PAD / 2;
-  ctx.strokeStyle = '#e2e8f0';
-  ctx.lineWidth = 2 * S;
-  ctx.strokeRect(schemeX - 4 * S, schemeY - 4 * S, srcW + 8 * S, srcH + 8 * S);
-  ctx.drawImage(capturedCanvas, schemeX, schemeY, srcW, srcH);
+  const pxPerMm = SCHEME_W / vlen;
 
-  let currentY = schemeY + srcH + PAD;
+  // Фон кузова
+  ctx.fillStyle = '#fefefe';
+  ctx.fillRect(schemeX, schemeY, SCHEME_W, SCHEME_H);
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 3 * S;
+  ctx.strokeRect(schemeX, schemeY, SCHEME_W, SCHEME_H);
+
+  if (variant && vehicle) {
+    // Отрисуем грузы в порядке слоёв (нижние раньше)
+    const items = [...variant.items].sort((a, b) => layerOf(a) - layerOf(b));
+    items.forEach((item, i) => {
+      const { w, h } = ground(item);
+      const bx = schemeX + item.position.x * pxPerMm;
+      const by = schemeY + item.position.z * pxPerMm;
+      const bw = w * pxPerMm;
+      const bh = h * pxPerMm;
+      const color = item.color || '#3b82f6';
+
+      ctx.fillStyle = withAlpha(color, 0.75);
+      ctx.fillRect(bx, by, Math.max(3, bw), Math.max(3, bh));
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2 * S;
+      ctx.strokeRect(bx, by, Math.max(3, bw), Math.max(3, bh));
+
+      if (bw > 8 * S && bh > 6 * S) {
+        ctx.fillStyle = color;
+        ctx.font = `bold ${11 * S}px system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(i + 1), bx + bw / 2, by + bh / 2);
+      }
+    });
+  } else {
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = `${12 * S}px system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(tr(lang, 'png.noScheme'), schemeX + SCHEME_W / 2, schemeY + SCHEME_H / 2);
+  }
+
+  let currentY = schemeY + SCHEME_H + PAD;
 
   if (cargoLegend.length > 0) {
     ctx.fillStyle = '#1e293b';
@@ -174,8 +213,8 @@ export async function exportSceneToPng(
     ctx.fillText(tr(lang, 'png.scale'), PAD, currentY);
 
     const niceLen = niceScale(vehicle.length);
-    const barFraction = niceLen / vehicle.length;
-    const barPixelWidth = Math.max(60 * S, Math.round(srcW * barFraction));
+    const barPixelWidth = niceLen * pxPerMm;
+
     const barX = PAD;
     const barLineY = currentY + 26 * S;
 

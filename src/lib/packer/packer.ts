@@ -641,6 +641,19 @@ export function canFitAll(vehicle: Vehicle, cargo: Cargo[], gaps: Gaps, stacking
   const total = totalQuantity(cargo);
   const placed = countPlaced(vehicle, cargo, gaps, stackingEnabled ? vehicle.height : 0);
   if (placed >= total) return { ok: true, reason: '' };
+  // Специфичная причина для штабелирования: груз(ы) слишком высокие для кузова
+  if (stackingEnabled) {
+    for (const c of cargo) {
+      const size = getCargoSize(c);
+      const itemHeight = c.shape === 'cylinder'
+        ? (c.cylinderOrientation === 'vertical' ? size.length : (c.diameter ?? size.width))
+        : size.height;
+      if (itemHeight > vehicle.height) {
+        return { ok: false, reason: `груз «${c.name}» выше кузова` };
+      }
+    }
+    return { ok: false, reason: detectStackReason(vehicle, cargo) };
+  }
   return { ok: false, reason: `Не хватает места: не поместилось ${total - placed} грузов` };
 }
 

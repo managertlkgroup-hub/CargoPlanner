@@ -458,16 +458,19 @@ function LayerScheme({
   layerItems,
   maxWidth,
   lang,
+  allItems,
 }: {
   vehicle: Vehicle;
   layer: number;
   layerItems: PackedItem[];
   maxWidth: number;
   lang: Lang;
+  allItems?: PackedItem[];
 }) {
   const SCALE = Math.min(maxWidth / vehicle.length, 100 / vehicle.width, 1.2);
   const vw = vehicle.length * SCALE;
   const vh = vehicle.width * SCALE;
+  const source = allItems && allItems.length > 0 ? allItems : layerItems;
 
   return (
     <View style={styles.schemeContainer}>
@@ -484,7 +487,7 @@ function LayerScheme({
           const ih = h * SCALE;
           const color = item.color || '#3b82f6';
           const rgb = hexToRgb(color);
-          const name = nameOf(item, lang);
+          const num = source.findIndex((s) => s.id === item.id) + 1;
 
           return (
             <View
@@ -501,7 +504,7 @@ function LayerScheme({
               ]}
             >
               {iw > 22 && ih > 10 && (
-                <Text style={[styles.schemeItemText, { paddingHorizontal: 4 }]}>{name}</Text>
+                <Text style={[styles.schemeItemText, { paddingHorizontal: 4 }]}>{num}</Text>
               )}
             </View>
           );
@@ -613,8 +616,8 @@ function CargoTable({ cargo, items, unit, weightUnit, lang }: { cargo: Cargo[]; 
     <View>
       <Text style={styles.sectionTitle}>{tr(lang, 'pdf.cargoTable')}</Text>
 
-      {/* Шапка таблицы */}
-      <View style={styles.tableHeader}>
+      {/* Шапка таблицы — повторяется на каждой странице при переносе */}
+      <View fixed style={styles.tableHeader}>
         <Text style={[styles.tableHeaderText, { width: COL_W.num }]}>{tr(lang, 'pdf.th.num')}</Text>
         <Text style={[styles.tableHeaderText, { width: COL_W.name }]}>{tr(lang, 'pdf.th.name')}</Text>
         <Text style={[styles.tableHeaderText, { width: COL_W.shape }]}>{tr(lang, 'pdf.th.shape')}</Text>
@@ -731,6 +734,7 @@ function PDFDocument({ vehicle, cargo, variant, settings, unit, weightUnit, lang
             vehicle={vehicle}
             layer={0}
             layerItems={variant.items}
+            allItems={variant.items}
             maxWidth={SCHEME_MAX_W}
             lang={lang}
           />
@@ -747,6 +751,7 @@ function PDFDocument({ vehicle, cargo, variant, settings, unit, weightUnit, lang
                   vehicle={vehicle}
                   layer={li}
                   layerItems={layerItems}
+                  allItems={variant.items}
                   maxWidth={numLayers >= 3 ? (SCHEME_MAX_W - 16) / 2 : SCHEME_MAX_W}
                   lang={lang}
                 />

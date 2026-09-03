@@ -23,6 +23,20 @@ function fmtWeight(kg: number, wu: WeightUnit): string {
   return formatWeight(kg, wu);
 }
 
+/** Габарит груза в плане (вид сверху) с учётом поворота вокруг Y */
+function groundTop(item: { dimensions: { length: number; width: number }; rotationY?: number }) {
+  const rot = Math.round(((item.rotationY ?? 0) % 360) / 90) % 2;
+  return rot === 1
+    ? { w: item.dimensions.width, h: item.dimensions.length }
+    : { w: item.dimensions.length, h: item.dimensions.width };
+}
+
+/** Определяет номер слоя груза */
+function layerOfPacked(item: { layer?: number; position: { y: number }; dimensions: { height: number } }): number {
+  if (item.layer != null) return item.layer;
+  return Math.round(item.position.y / Math.max(1, item.dimensions.height));
+}
+
 export function exportToXLSX(
   vehicle: Vehicle,
   _cargos: Cargo[],
@@ -49,6 +63,7 @@ export function exportToXLSX(
 
   buildSummarySheet(wb, vehicle, variants, best, settings, fmt, fmtWeight, U, W, weightUnit, lang);
   buildCargoSheet(wb, best, fmt, fmtWeight, W, weightUnit, lang);
+  buildSchemeSheet(wb, vehicle, best, lang);
   buildGapsSheet(wb, settings, fmt, lang);
   buildInstructionsSheet(wb, lang);
 
@@ -181,7 +196,54 @@ function buildCargoSheet(
   XLSX.utils.book_append_sheet(wb, ws, tr(lang, 'xl.sheet.cargo'));
 }
 
-// ─── Sheet 3: Зазоры / Gaps ─────────────────────────────────────────────────
+// ─── Sheet 3: Схема / Scheme ─────────────────────────────────────────────────
+
+function buildSchemeSheet(
+  wb: XLSX.WorkBook,
+  vehicle: Vehicle,
+  best: LayoutVariant,
+  lang: Lang,
+): void {
+  const rows: SheetRows = [];
+  rows.push([tr(lang, 'xl.scheme.title')]);
+  rows.push([]);
+  rows.push([tr(lang, 'xl.scheme.legend')]);
+  rows.push([best.items.map((it, i) => `${i + 1} — ${nameOf(it, lang)}`).join('; ')]);
+  rows.push([]);
+
+  const maxL = best.items.reduce((m, it) => Math.max(m, layerOfPacked(it)), 0);
+  const G = 100;
+  const cols = Math.max(2, Math.ceil(vehicle.length / G));
+  const gridRows = Math.max(2, Math.ceil(vehicle.width / G));
+
+  for (let layer = 0; layer <= maxL; layer++) {
+    const layerItems = best.items
+      .map((it, i) => ({ it, i }))
+      .filter(({ it }) => layerOfPacked(it) === layer);
+    const grid: string[][] = Array.from({ length: gridRows }, () => Array<string>(cols).fill(''));
+    for (const { it, i } of layerItems) {
+      const { w, h } = groundTop(it);
+      const x0 = Math.max(0, Math.floor(it.position.x / G));
+      const y0 = Math.max(0, Math.floor(it.position.z / G));
+      const x1 = Math.min(cols - 1, Math.max(x0, Math.ceil((it.position.x + w) / G) - 1));
+      const y1 = Math.min(gridRows - 1, Math.max(y0, Math.ceil((it.position.z + h) / G) - 1));
+      for (let r = y0; r <= y1; r++) {
+        for (let c = x0; c <= x1; c++) {
+          grid[r][c] = `${i + 1}`;
+        }
+      }
+    }
+    rows.push([`${tr(lang, 'pdf.layer')} ${layer}${layer === 0 ? ` (${tr(lang, 'pdf.floor')})` : ''}`]);
+    grid.forEach((gridRow) => rows.push(['', ...gridRow]));
+    rows.push([]);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 4 }, ...Array.from({ length: cols }, () => ({ wch: 3 }))];
+  XLSX.utils.book_append_sheet(wb, ws, tr(lang, 'xl.sheet.scheme'));
+}
+
+// ─── Sheet 4: Зазоры / Gaps ─────────────────────────────────────────────────
 
 function buildGapsSheet(
   wb: XLSX.WorkBook,
@@ -205,7 +267,7 @@ function buildGapsSheet(
   XLSX.utils.book_append_sheet(wb, ws, tr(lang, 'xl.sheet.gaps'));
 }
 
-// ─── Sheet 4: Инструкция / Instructions ─────────────────────────────────────
+// ─── Sheet 5: Инструкция / Instructions ─────────────────────────────────────
 
 function buildInstructionsSheet(wb: XLSX.WorkBook, lang: Lang): void {
   const r: SheetRows = [
