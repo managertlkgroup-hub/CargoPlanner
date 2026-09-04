@@ -291,9 +291,9 @@ function CargoTab() {
     const marker = `builtin-${idx}`;
     const promotedPos = customCargoPresets.findIndex((c) => c.sourceId === marker);
     if (promotedPos >= 0) {
-      updateCustomCargoPreset(promotedPos, { ...patch, sourceId: marker });
+      updateCustomCargoPreset(promotedPos, { ...patch, sourceId: marker, nameKey: undefined });
     } else {
-      addCustomCargoPreset({ ...p, sourceId: marker, ...patch });
+      addCustomCargoPreset({ ...p, sourceId: marker, nameKey: undefined, ...patch });
     }
     setHiddenBuiltIn((prev) => new Set(prev).add(idx));
     setBuiltInEditIdx(null);
