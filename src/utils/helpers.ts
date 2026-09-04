@@ -48,8 +48,9 @@ import { tr } from '../i18n';
 /** Локализованное название объекта (Vehicle/Cargo/PackedItem/CargoPreset) по nameKey, иначе name */
 export function nameOf(x: { name?: string; nameKey?: string } | null | undefined, lang: Lang): string {
   if (!x) return '';
+  if (x.name) return x.name;
   if (x.nameKey) return tr(lang, x.nameKey);
-  return x.name ?? '';
+  return '';
 }
 
 /** Текущий язык для лейблов единиц (синхронизируется со стором) */

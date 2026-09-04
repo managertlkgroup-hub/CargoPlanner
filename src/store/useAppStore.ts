@@ -24,6 +24,8 @@ import { tr, type Lang } from '../i18n';
 const KEYS = {
   vehicles: 'mlp:custom-vehicles',
   customCargoPresets: 'mlp:custom-cargo-presets',
+  vehicleOverrides: 'mlp:vehicle-overrides',
+  cargoPresetOverrides: 'mlp:cargo-preset-overrides',
   cargo: 'mlp:cargo',
   vehicleId: 'mlp:vehicle-id',
   result: 'mlp:result',
@@ -92,6 +94,12 @@ interface AppState {
   removeCustomVehicle: (id: string) => void;
   updateCustomVehicle: (id: string, patch: Partial<Vehicle>) => void;
   selectVehicle: (id: string) => void;
+
+  // Правки стандартных пресетов «на месте» (без создания копий)
+  vehicleOverrides: Record<string, Vehicle>;
+  updateStandardVehicle: (id: string, patch: Partial<Vehicle>) => void;
+  cargoPresetOverrides: Record<number, Partial<CargoPreset>>;
+  updateStandardCargoPreset: (idx: number, patch: Partial<CargoPreset>) => void;
 
   // Грузы
   cargo: Cargo[];
@@ -292,6 +300,20 @@ export const useAppStore = create<AppState>()(
         set({ selectedVehicleId: id });
         get().setResult(null);
         get().setActiveVariant(null);
+      },
+      vehicleOverrides: loadFromStorage<Record<string, Vehicle>>(KEYS.vehicleOverrides, {}),
+      updateStandardVehicle: (id, patch) => {
+        const map = { ...get().vehicleOverrides, [id]: { ...get().vehicleOverrides[id], ...patch, id, isCustom: false } };
+        saveToStorage(KEYS.vehicleOverrides, map);
+        set({ vehicleOverrides: map });
+        get().setResult(null);
+        get().setActiveVariant(null);
+      },
+      cargoPresetOverrides: loadFromStorage<Record<number, Partial<CargoPreset>>>(KEYS.cargoPresetOverrides, {}),
+      updateStandardCargoPreset: (idx, patch) => {
+        const map = { ...get().cargoPresetOverrides, [idx]: { ...get().cargoPresetOverrides[idx], ...patch } };
+        saveToStorage(KEYS.cargoPresetOverrides, map);
+        set({ cargoPresetOverrides: map });
       },
 
       // --- Грузы ---
@@ -653,6 +675,8 @@ export const useAppStore = create<AppState>()(
       partialize: (s) => ({
         theme: s.theme,
         customCargoPresets: s.customCargoPresets,
+        vehicleOverrides: s.vehicleOverrides,
+        cargoPresetOverrides: s.cargoPresetOverrides,
         customVehicles: s.customVehicles,
         selectedVehicleId: s.selectedVehicleId,
         cargo: s.cargo,
@@ -673,8 +697,13 @@ export const useAppStore = create<AppState>()(
 
 /** Возвращает автомобиль по id (стандартный или пользовательский) */
 export function getCurrentVehicle(id: string, custom: Vehicle[]): Vehicle {
-  const found = [...getDefaultVehicles(), ...custom].find((v) => v.id === id);
-  return found ?? getDefaultVehicles()[0];
+  const defs = getDefaultVehicles();
+  const found = [...defs, ...custom].find((v) => v.id === id);
+  if (!found) return defs[0];
+  // Если есть правка стандартного пресета — применяем её «на месте»
+  const override = useAppStore.getState().vehicleOverrides?.[id];
+  if (override) return { ...found, ...override, id };
+  return found;
 }
 
 /** Возвращает текущий выбранный автомобиль из store */
@@ -687,7 +716,11 @@ export function useSelectedVehicle(): Vehicle {
 /** Возвращает список всех доступных автомобилей (пресеты + пользовательские) */
 export function useAllVehicles(): Vehicle[] {
   const customVehicles = useAppStore((s) => s.customVehicles);
-  return [...getDefaultVehicles(), ...customVehicles];
+  const overrides = useAppStore((s) => s.vehicleOverrides);
+  const defs = getDefaultVehicles().map((v) =>
+    overrides[v.id] ? { ...v, ...overrides[v.id], id: v.id } : v,
+  );
+  return [...defs, ...customVehicles];
 }
 
 /** Возвращает активный вариант раскладки */

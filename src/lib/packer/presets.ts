@@ -199,8 +199,10 @@ export const CARGO_PRESETS: CargoPreset[] = [
 ];
 
 /**
- * Возвращает список пресетов грузов для быстрого выбора.
+ * Возвращает пресеты грузов для быстрого выбора.
+ * Принимает правки стандартных пресетов (по индексу) и применяет их «на месте».
  */
-export function getCargoPresets(): CargoPreset[] {
-  return CARGO_PRESETS;
+export function getCargoPresets(overrides?: Record<number, Partial<CargoPreset>>): CargoPreset[] {
+  if (!overrides) return CARGO_PRESETS;
+  return CARGO_PRESETS.map((p, i) => (overrides[i] ? { ...p, ...overrides[i] } : p));
 }

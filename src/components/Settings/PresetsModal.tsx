@@ -5,7 +5,7 @@ import { Package, Truck, X, Save, Pencil } from 'lucide-react';
 
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import { getDefaultVehicles, CARGO_PRESETS, type CargoPreset } from '../../lib/packer/presets';
+import { getDefaultVehicles, getCargoPresets, type CargoPreset } from '../../lib/packer/presets';
 import type { CargoShape, Vehicle } from '../../types';
 import { UNIT_LABEL, toUnit, fromUnit, nameOf, formatDimension } from '../../utils/helpers';
 import CustomVehicleForm from '../VehicleSelector/CustomVehicleForm';
@@ -60,7 +60,8 @@ function VehiclesTab() {
   const customVehicles = useAppStore((s) => s.customVehicles);
   const removeCustomVehicle = useAppStore((s) => s.removeCustomVehicle);
   const updateCustomVehicle = useAppStore((s) => s.updateCustomVehicle);
-  const addCustomVehicle = useAppStore((s) => s.addCustomVehicle);
+  const vehicleOverrides = useAppStore((s) => s.vehicleOverrides);
+  const updateStandardVehicle = useAppStore((s) => s.updateStandardVehicle);
   const unit = useAppStore((s) => s.unit);
   const lang = useAppStore((s) => s.lang);
   const [showAdd, setShowAdd] = useState(false);
@@ -68,7 +69,9 @@ function VehiclesTab() {
   const [builtInEditId, setBuiltInEditId] = useState<string | null>(null);
   const [hiddenBuiltIn, setHiddenBuiltIn] = useState<Set<string>>(new Set());
 
-  const builtIn = getDefaultVehicles();
+  const builtIn = getDefaultVehicles().map((v) =>
+    vehicleOverrides[v.id] ? { ...v, ...vehicleOverrides[v.id], id: v.id } : v,
+  );
 
   const handleDeleteBuiltIn = (id: string) => {
     if (window.confirm(tr(lang, 'form.confirmHidePreset'))) {
@@ -82,23 +85,14 @@ function VehiclesTab() {
     }
   };
 
-  // Редактирование стандартного пресета: при сохранении «продвигаем» его
-  // в пользовательские с фиксированным id (custom-<id>), не создавая копий.
-  // Повторное редактирование обновляет ту же запись — дублей не появляется.
+  // Редактирование стандартного пресета происходит «на месте» —
+  // объект остаётся в категории «Стандартные», копий не создаётся.
   const handleEditBuiltIn = (v: Vehicle) => {
-    removeCustomVehicle(`custom-${v.id}`);
     setBuiltInEditId(builtInEditId === v.id ? null : v.id);
   };
 
   const handleSaveBuiltInEdit = (v: Vehicle, patch: Partial<Vehicle>) => {
-    const stableId = `custom-${v.id}`;
-    const exists = customVehicles.some((c) => c.id === stableId);
-    if (exists) {
-      updateCustomVehicle(stableId, patch);
-    } else {
-      addCustomVehicle({ ...v, id: stableId, nameKey: undefined, isCustom: true, ...patch });
-    }
-    setHiddenBuiltIn((prev) => new Set(prev).add(v.id));
+    updateStandardVehicle(v.id, patch);
     setBuiltInEditId(null);
   };
 
@@ -273,32 +267,24 @@ function EditVehicleForm({ vehicle, unit, onSave, onCancel }: {
 
 function CargoTab() {
   const customCargoPresets = useAppStore((s) => s.customCargoPresets);
-  const addCustomCargoPreset = useAppStore((s) => s.addCustomCargoPreset);
   const removeCustomCargoPreset = useAppStore((s) => s.removeCustomCargoPreset);
   const updateCustomCargoPreset = useAppStore((s) => s.updateCustomCargoPreset);
+  const cargoPresetOverrides = useAppStore((s) => s.cargoPresetOverrides);
+  const updateStandardCargoPreset = useAppStore((s) => s.updateStandardCargoPreset);
   const unit = useAppStore((s) => s.unit);
   const lang = useAppStore((s) => s.lang);
-  const builtInPresets = CARGO_PRESETS;
+  const builtInPresets = getCargoPresets(cargoPresetOverrides);
   const [showAdd, setShowAdd] = useState(false);
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [builtInEditIdx, setBuiltInEditIdx] = useState<number | null>(null);
   const [hiddenBuiltIn, setHiddenBuiltIn] = useState<Set<number>>(new Set());
 
-  // Редактирование стандартного пресета груза: при сохранении «продвигаем» его
-  // в пользовательские с фиксированным маркером sourceId (builtin-<idx>).
-  // Повторное редактирование обновляет ту же запись — дублей не появляется.
-  const handleSaveBuiltInEdit = (p: CargoPreset, idx: number, patch: Partial<CargoPreset>) => {
-    const marker = `builtin-${idx}`;
-    const promotedPos = customCargoPresets.findIndex((c) => c.sourceId === marker);
-    if (promotedPos >= 0) {
-      updateCustomCargoPreset(promotedPos, { ...patch, sourceId: marker, nameKey: undefined });
-    } else {
-      addCustomCargoPreset({ ...p, sourceId: marker, nameKey: undefined, ...patch });
-    }
-    setHiddenBuiltIn((prev) => new Set(prev).add(idx));
+  // Редактирование стандартного пресета груза происходит «на месте» —
+  // объект остаётся в категории «Стандартные», копий не создаётся.
+  const handleSaveBuiltInEdit = (_p: CargoPreset, idx: number, patch: Partial<CargoPreset>) => {
+    updateStandardCargoPreset(idx, patch);
     setBuiltInEditIdx(null);
   };
-
   return (
     <div>
       <div style={{ maxHeight: 320, overflowY: 'auto' }}>

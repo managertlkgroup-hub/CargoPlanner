@@ -37,11 +37,12 @@ const FIELDS = {
 export default function AddCargoForm() {
   const addCargo = useAppStore((s) => s.addCargo);
   const customCargoPresets = useAppStore((s) => s.customCargoPresets);
+  const cargoPresetOverrides = useAppStore((s) => s.cargoPresetOverrides);
   const unit = useAppStore((s) => s.unit);
   const weightUnit = useAppStore((s) => s.weightUnit);
   const lang = useAppStore((s) => s.lang);
   const [error, setError] = useState('');
-  const builtInPresets = getCargoPresets();
+  const builtInPresets = getCargoPresets(cargoPresetOverrides);
   const cargoPresets = [...builtInPresets, ...customCargoPresets];
 
   const [values, setValues] = useState<Record<string, string>>({});

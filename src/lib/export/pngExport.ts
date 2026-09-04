@@ -7,7 +7,7 @@
 import type { Vehicle, LayoutVariant } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { unitLabel, formatWeight, WEIGHT_UNIT_LABEL, formatDimension, type WeightUnit, nameOf } from '../../utils/helpers';
-import { tr, trf, type Lang } from '../../i18n';
+import { tr, type Lang } from '../../i18n';
 
 /** Вычисляет слой груза */
 function layerOf(item: { position: { y: number }; dimensions: { height: number } }): number {
@@ -73,7 +73,6 @@ export async function exportSceneToPng(
   const PAD = 40 * S;
   const HEADER_H = 70 * S;
   const CARGO_LEGEND_H = cargoLegend.length > 0 ? (cargoLegend.length * 22 + 40) * S : 0;
-  const DIMS_CAPTION_H = vehicle && vehicle.length > 0 ? 60 * S : 0;
   const METRICS_H = (120 + enabledGaps.length * 18) * S;
   const FOOTER_H = 40 * S;
 
@@ -85,7 +84,7 @@ export async function exportSceneToPng(
 
   const minW = 1920;
   const totalW = Math.max(minW, SCHEME_W + PAD * 2);
-  const totalH = HEADER_H + SCHEME_H + PAD + CARGO_LEGEND_H + DIMS_CAPTION_H + METRICS_H + FOOTER_H + PAD;
+  const totalH = HEADER_H + SCHEME_H + PAD + CARGO_LEGEND_H + METRICS_H + FOOTER_H + PAD;
 
   const canvas = document.createElement('canvas');
   canvas.width = totalW;
@@ -186,15 +185,6 @@ export async function exportSceneToPng(
       ly += 22 * S;
     }
     currentY = ly + 10 * S;
-  }
-
-  if (vehicle && vehicle.length > 0) {
-    ctx.fillStyle = '#334155';
-    ctx.font = `${12 * S}px system-ui, sans-serif`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(trf(lang, 'png.dimsIn', { unit: unitLabel(lang, unit) }), PAD, currentY + 22 * S);
-    currentY += 44 * S;
   }
 
   const metricsY = currentY + 10 * S;

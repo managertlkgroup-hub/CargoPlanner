@@ -385,10 +385,9 @@ const ru: Dict = {
   'png.totalWeight': 'Вес',
   'png.fillWeight': 'Заполнение по весу',
   'png.footer': 'Сгенерировано в CargoPlanner — 3D Планировщик загрузки автомобиля',
-'png.legend': 'Легенда:',
-'png.scale': 'Масштаб:',
-'png.dimsIn': 'Размеры указаны в {unit}.',
-'png.noScheme': 'Схема недоступна — сначала рассчитайте раскладку',
+  'png.legend': 'Легенда:',
+  'png.scale': 'Масштаб:',
+  'png.noScheme': 'Схема недоступна — сначала рассчитайте раскладку',
 
   // Настройки
   'settings.title': 'Настройки',
@@ -922,10 +921,9 @@ const en: Dict = {
   'png.totalWeight': 'Weight',
   'png.fillWeight': 'Weight fill',
   'png.footer': 'Generated in CargoPlanner — Truck loading planner',
-'png.legend': 'Legend:',
-'png.scale': 'Scale:',
-'png.dimsIn': 'Dimensions are in {unit}.',
-'png.noScheme': 'Scheme unavailable — calculate layout first',
+  'png.legend': 'Legend:',
+  'png.scale': 'Scale:',
+  'png.noScheme': 'Scheme unavailable — calculate layout first',
 
   // Настройки
   'settings.title': 'Settings',
