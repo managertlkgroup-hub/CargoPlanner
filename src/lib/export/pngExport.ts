@@ -1,13 +1,13 @@
 // ============================================================================
 // Экспорт текущего вида в PNG высокого разрешения
-// Рисует: заголовок, 2D-схему грузов (вид сверху), легенду, шкалу масштаба,
-//         метрики, подпись варианта
+// Рисует: заголовок, 2D-схему грузов (вид сверху), легенду, подпись о единицах
+//         измерения, метрики, подпись варианта
 // ============================================================================
 
 import type { Vehicle, LayoutVariant } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { unitLabel, formatWeight, WEIGHT_UNIT_LABEL, formatDimension, type WeightUnit, nameOf } from '../../utils/helpers';
-import { tr, type Lang } from '../../i18n';
+import { tr, trf, type Lang } from '../../i18n';
 
 /** Вычисляет слой груза */
 function layerOf(item: { position: { y: number }; dimensions: { height: number } }): number {
@@ -22,25 +22,6 @@ function ground(item: { dimensions: { length: number; width: number }; rotationY
     : { w: item.dimensions.length, h: item.dimensions.width };
 }
 
-/** Выбирает «красивое» значение для шкалы масштаба: кратное 1/2/5 × 10^k,
- *  ближайшее к ~35% длины кузова, но не больше ~40% длины кузова,
- *  чтобы линейка занимала разумную долю (примерно 20–35%) ширины схемы
- *  и была читаемой. Например, для кузова 13.6 м вернёт 5 м (≈37%),
- *  для 20 м — 5 м (25%), для 3 м — 1 м (33%). */
-function niceScale(mm: number): number {
-  if (mm <= 0) return 1000;
-  const target = mm * 0.35;
-  const pow = Math.pow(10, Math.floor(Math.log10(target)));
-  const norm = target / pow;
-  const mul = norm < 1.5 ? 1 : norm < 3.5 ? 2 : norm < 7.5 ? 5 : 10;
-  let nice = mul * pow;
-  const cap = mm * 0.4;
-  while (nice > cap) {
-    nice /= 10;
-  }
-  return Math.max(1, Math.round(nice));
-}
-
 /** Генерирует цвет фона из hex с заданной прозрачностью (rgba) */
 function withAlpha(hex: string, alpha: number): string {
   const r = parseInt(hex.slice(1, 3), 16) || 0;
@@ -52,7 +33,7 @@ function withAlpha(hex: string, alpha: number): string {
 /**
  * Сохраняет 2D-схему расстановки грузов как PNG высокого разрешения.
  * Содержит: заголовок, 2D-схему (вид сверху), легенду грузов,
- *           шкалу масштаба, метрики, подпись варианта.
+ *           подпись о единицах измерения, метрики, подпись варианта.
  */
 export async function exportSceneToPng(
   _elementId: string,
@@ -92,7 +73,7 @@ export async function exportSceneToPng(
   const PAD = 40 * S;
   const HEADER_H = 70 * S;
   const CARGO_LEGEND_H = cargoLegend.length > 0 ? (cargoLegend.length * 22 + 40) * S : 0;
-  const SCALE_BAR_H = vehicle && vehicle.length > 0 ? 60 * S : 0;
+  const DIMS_CAPTION_H = vehicle && vehicle.length > 0 ? 60 * S : 0;
   const METRICS_H = (120 + enabledGaps.length * 18) * S;
   const FOOTER_H = 40 * S;
 
@@ -104,7 +85,7 @@ export async function exportSceneToPng(
 
   const minW = 1920;
   const totalW = Math.max(minW, SCHEME_W + PAD * 2);
-  const totalH = HEADER_H + SCHEME_H + PAD + CARGO_LEGEND_H + SCALE_BAR_H + METRICS_H + FOOTER_H + PAD;
+  const totalH = HEADER_H + SCHEME_H + PAD + CARGO_LEGEND_H + DIMS_CAPTION_H + METRICS_H + FOOTER_H + PAD;
 
   const canvas = document.createElement('canvas');
   canvas.width = totalW;
@@ -208,43 +189,12 @@ export async function exportSceneToPng(
   }
 
   if (vehicle && vehicle.length > 0) {
-    ctx.fillStyle = '#1e293b';
-    ctx.font = `bold ${14 * S}px system-ui, sans-serif`;
+    ctx.fillStyle = '#334155';
+    ctx.font = `${12 * S}px system-ui, sans-serif`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(tr(lang, 'png.scale'), PAD, currentY);
-
-    const niceLen = niceScale(vehicle.length);
-    const barPixelWidth = niceLen * pxPerMm;
-
-    const barX = PAD;
-    const barLineY = currentY + 26 * S;
-
-    ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = 3 * S;
-    ctx.beginPath();
-    ctx.moveTo(barX, barLineY);
-    ctx.lineTo(barX + barPixelWidth, barLineY);
-    ctx.stroke();
-
-    const tickH = 8 * S;
-    ctx.lineWidth = 2 * S;
-    ctx.beginPath();
-    ctx.moveTo(barX, barLineY - tickH);
-    ctx.lineTo(barX, barLineY + tickH);
-    ctx.moveTo(barX + barPixelWidth, barLineY - tickH);
-    ctx.lineTo(barX + barPixelWidth, barLineY + tickH);
-    ctx.stroke();
-
-    const niceDisplay = formatDimension(niceLen, unit);
-    const label = `${niceDisplay} ${unitLabel(lang, unit)}`;
-    ctx.fillStyle = '#1e293b';
-    ctx.font = `${11 * S}px system-ui, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText(label, barX + barPixelWidth / 2, barLineY + tickH + 6 * S);
-
-    currentY = barLineY + tickH + 30 * S;
+    ctx.fillText(trf(lang, 'png.dimsIn', { unit: unitLabel(lang, unit) }), PAD, currentY + 22 * S);
+    currentY += 44 * S;
   }
 
   const metricsY = currentY + 10 * S;
