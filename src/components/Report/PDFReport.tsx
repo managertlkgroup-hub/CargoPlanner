@@ -142,6 +142,22 @@ const styles = StyleSheet.create({
     color: '#64748b',
     marginBottom: 2,
   },
+  // Пояснение к центру тяжести
+  cogInfo: {
+    marginTop: 4,
+    padding: 6,
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    borderRadius: 4,
+  },
+  cogWarn: {
+    marginTop: 3,
+    fontSize: 10,
+    fontFamily: 'Roboto',
+    fontWeight: 700,
+    color: '#b45309',
+  },
   // Метрики — две колонки
   metricsRow: {
     flexDirection: 'row',
@@ -377,9 +393,24 @@ function Metrics({ variant, vehicle, unit, weightUnit, lang }: { variant: Layout
         </View>
       </View>
       {cog && (
-        <Text style={styles.text}>
-          {tr(lang, 'pdf.cog')}: X {fmt(cog.x)}, Y {fmt(cog.y)}, Z {fmt(cog.z)}
-        </Text>
+        <View style={styles.cogInfo}>
+          <Text style={styles.text}>
+            {tr(lang, 'pdf.cog')}: X {fmt(cog.x)}, Y {fmt(cog.y)}, Z {fmt(cog.z)}
+          </Text>
+          <Text style={styles.text}>{tr(lang, 'pdf.cog.explain')}</Text>
+          {(() => {
+            const offX = Math.abs(cog.x - vehicle.length / 2);
+            const offZ = Math.abs(cog.z - vehicle.width / 2);
+            const warnLong = offX > vehicle.length * 0.1;
+            const warnLat = offZ > vehicle.width * 0.1;
+            return (
+              <>
+                {warnLong && <Text style={styles.cogWarn}>{tr(lang, 'pdf.cog.warnLong')}</Text>}
+                {warnLat && <Text style={styles.cogWarn}>{tr(lang, 'pdf.cog.warnLat')}</Text>}
+              </>
+            );
+          })()}
+        </View>
       )}
 
       {/* Распределение по слоям */}
