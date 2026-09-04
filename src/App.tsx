@@ -72,6 +72,7 @@ const App: React.FC = () => {
   const isCalculating = useAppStore((s) => s.isCalculating);
   const unit = useAppStore((s) => s.unit);
   const lang = useAppStore((s) => s.lang);
+  const activeVariant = useAppStore((s) => s.activeVariant);
   const vehicle = getCurrentVehicle(selectedVehicleId, customVehicles);
 
   const setResult = useAppStore((s) => s.setResult);
@@ -109,6 +110,20 @@ const App: React.FC = () => {
   useEffect(() => {
     setStacking(settings.maxStackHeight > 0);
   }, [settings.maxStackHeight]);
+
+  // Пересчёт при смене активного режима раскладки (вдоль / поперёк / смешанный):
+  // гарантирует, что зазоры и штабелирование корректно применяются для выбранного
+  // режима. Режим не «откатывается» как при редактировании зазора — пользователь
+  // должен видеть раскладку выбранного режима даже если в нём помещается меньше.
+  const prevActiveVariantRef = useRef<string | null>(activeVariant);
+  useEffect(() => {
+    if (prevActiveVariantRef.current === activeVariant) return;
+    prevActiveVariantRef.current = activeVariant;
+    if (cargo.length > 0 && (settings.gapsEnabled || stacking)) {
+      const veh = getCurrentVehicle(selectedVehicleId, customVehicles);
+      recalcWithSettings(veh, settings, false);
+    }
+  }, [activeVariant]);
 
   // Одноразовая миграция старого единого зазора (gap) в три независимых
   const migratedGaps = useRef(false);
