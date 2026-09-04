@@ -70,6 +70,12 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
   return { r, g, b };
 }
 
+// Лёгкая подложка строки по цвету слоя (высветленный цвет слоя на белом фоне)
+function layerBg(layer: number): string {
+  const { r, g, b } = hexToRgb(LAYER_COLORS[layer % LAYER_COLORS.length]);
+  return `rgb(${Math.round(255 - (255 - r) * 0.9)}, ${Math.round(255 - (255 - g) * 0.9)}, ${Math.round(255 - (255 - b) * 0.9)})`;
+}
+
 // ─── Стили ─────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
@@ -248,9 +254,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: '#e2e8f0',
     padding: 3,
-  },
-  tableRowAlt: {
-    backgroundColor: '#f8fafc',
   },
   tableCell: {
     fontSize: 8,
@@ -632,7 +635,7 @@ function CargoTable({ cargo, items, unit, weightUnit, lang }: { cargo: Cargo[]; 
       </View>
 
       {/* Строки данных — по одному грузу на каждую позицию */}
-      {rows.map(({ item, c, idx }, rowIdx) => {
+      {rows.map(({ item, c, idx }) => {
         const name = nameOf(item, lang);
         const shape = item.shape;
         const len = item.dimensions.length;
@@ -649,11 +652,11 @@ function CargoTable({ cargo, items, unit, weightUnit, lang }: { cargo: Cargo[]; 
         const maxLoad = item.maxLoad != null ? String(item.maxLoad) : '–';
         const compat = item.compatibilityGroup || c?.compatibilityGroup || '–';
 
-        return (
-          <View
-            key={`${item.id}-${idx}`}
-            style={[styles.tableRow, rowIdx % 2 === 0 ? styles.tableRowAlt : {}]}
-          >
+          return (
+            <View
+              key={`${item.id}-${idx}`}
+              style={[styles.tableRow, { backgroundColor: layerBg(layer) }]}
+            >
             <Text style={[styles.tableCell, { width: COL_W.num }]}>{idx}</Text>
             <Text style={[styles.tableCell, { width: COL_W.name }]}>{name}</Text>
             <Text style={[styles.tableCell, { width: COL_W.shape }]}>
