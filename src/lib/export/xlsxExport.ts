@@ -1,15 +1,14 @@
 // ============================================================================
-// Экспорт отчёта в XLSX — 4 листа: Сводка, Грузы, Зазоры, Инструкция
+// Экспорт отчёта в XLSX — 5 листов: Сводка, Грузы, Схема (с фигурами), Зазоры, Инструкция
+// Использует exceljs для рисования прямоугольников на листе "Схема"
 // ============================================================================
 
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import type { Cargo, LayoutVariant, Vehicle } from '../../types';
 import { formatWeight, formatDimension, UNIT_LABEL, nameOf, type Unit, weightUnitLabel, volumeToM3 } from '../../utils/helpers';
 import type { WeightUnit } from '../../utils/helpers';
 import { useAppStore } from '../../store/useAppStore';
 import { tr, type Lang } from '../../i18n';
-
-type SheetRows = (string | number)[][];
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -23,10 +22,10 @@ function fmtWeight(kg: number, wu: WeightUnit): string {
   return formatWeight(kg, wu);
 }
 
-// Цвета слоёв для визуальной схемы (полный тон — номер в легенде, светлый — фон ячейки)
+// Цвета слоёв для визуальной схемы
 const SCHEME_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-const SCHEME_BG = ['#dbeafe', '#dcfce7', '#fef3c7', '#fee2e2', '#ede9fe', '#fce7f3'];
-const EMPTY_BG = 'F1F5F9';
+const SCHEME_BG = ['FFDBEAFE', 'FFDCFCE7', 'FFFEF3C7', 'FFFFE2E2', 'FFEDE9FE', 'FFFCE7F3'];
+const EMPTY_BG = 'FFF1F5F9';
 
 /** Определяет номер слоя груза */
 function layerOfPacked(item: { layer?: number; position: { y: number }; dimensions: { height: number } }): number {
@@ -34,21 +33,20 @@ function layerOfPacked(item: { layer?: number; position: { y: number }; dimensio
   return Math.round(item.position.y / Math.max(1, item.dimensions.height));
 }
 
-export function exportToXLSX(
+export async function exportToXLSX(
   vehicle: Vehicle,
   _cargos: Cargo[],
   variants: LayoutVariant[],
   weightUnit: WeightUnit = 'kg',
   lang: Lang = 'ru',
-): void {
-  const wb = XLSX.utils.book_new();
+): Promise<void> {
+  const workbook = new ExcelJS.Workbook();
   const { unit, settings } = useAppStore.getState();
   const U = UNIT_LABEL[unit];
   const W = weightUnitLabel(lang, weightUnit);
   const fmt = (mm: number) => fmtDimension(mm, unit);
 
-  // «Лучший вариант» — по максимальному заполнению объёма кузова,
-  // при равенстве — по заполнению веса, затем по количеству грузов.
+  // «Лучший вариант» — по максимальному заполнению объёма кузова
   const best = [...variants].sort((a, b) => {
     const dv = (b.volumeFill ?? 0) - (a.volumeFill ?? 0);
     if (dv !== 0) return dv;
@@ -58,19 +56,26 @@ export function exportToXLSX(
   })[0];
   if (!best) return;
 
-  buildSummarySheet(wb, vehicle, variants, best, settings, fmt, fmtWeight, U, W, weightUnit, lang);
-  buildCargoSheet(wb, best, fmt, fmtWeight, W, weightUnit, lang);
-  buildSchemeSheet(wb, vehicle, best, lang);
-  buildGapsSheet(wb, settings, fmt, lang);
-  buildInstructionsSheet(wb, lang);
+  await buildSummarySheet(workbook, vehicle, variants, best, settings, fmt, fmtWeight, U, W, weightUnit, lang);
+  await buildCargoSheet(workbook, best, fmt, fmtWeight, W, weightUnit, lang);
+  await buildSchemeSheet(workbook, vehicle, best, lang, unit);
+  await buildGapsSheet(workbook, settings, fmt, lang);
+  await buildInstructionsSheet(workbook, lang);
 
-  XLSX.writeFile(wb, 'cargo-plan.xlsx');
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'cargo-plan.xlsx';
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 // ─── Sheet 1: Сводка / Summary ──────────────────────────────────────────────
 
-function buildSummarySheet(
-  wb: XLSX.WorkBook,
+async function buildSummarySheet(
+  wb: ExcelJS.Workbook,
   vehicle: Vehicle,
   variants: LayoutVariant[],
   best: LayoutVariant,
@@ -81,8 +86,9 @@ function buildSummarySheet(
   W: string,
   wu: WeightUnit,
   lang: Lang,
-): void {
-  const r: SheetRows = [];
+): Promise<void> {
+  const ws = wb.addWorksheet(tr(lang, 'xl.sheet.summary'));
+  const r: (string | number)[][] = [];
   const nl = () => r.push(['', '']);
 
   r.push([tr(lang, 'xl.param'), tr(lang, 'xl.value')]);
@@ -137,43 +143,48 @@ function buildSummarySheet(
   r.push([tr(lang, 'gaps.length'), settings.gapLength > 0 ? `${fmt(settings.gapLength)} ${U}` : '—']);
   r.push([tr(lang, 'xl.gapsEnabled'), settings.gapsEnabled ? tr(lang, 'xls.yes') : tr(lang, 'xls.no')]);
 
-  const ws = XLSX.utils.aoa_to_sheet(r);
-  ws['!cols'] = [{ wch: 32 }, { wch: 24 }];
-  XLSX.utils.book_append_sheet(wb, ws, tr(lang, 'xl.sheet.summary'));
+  r.forEach((row, i) => {
+    const rowNum = i + 1;
+    ws.getRow(rowNum).values = row;
+  });
+  ws.columns = [{ width: 32 }, { width: 24 }];
 }
 
 // ─── Sheet 2: Грузы / Cargo ─────────────────────────────────────────────────
 
-function buildCargoSheet(
-  wb: XLSX.WorkBook,
+async function buildCargoSheet(
+  wb: ExcelJS.Workbook,
   best: LayoutVariant,
   fmt: (mm: number) => string,
   fmtWeight: (kg: number, wu: WeightUnit) => string,
   W: string,
   wu: WeightUnit,
   lang: Lang,
-): void {
-  const hdr: SheetRows = [
-    [
-      tr(lang, 'xl.col.no'),
-      tr(lang, 'xls.name'),
-      tr(lang, 'xls.shape'),
-      tr(lang, 'xl.col.dims'),
-      tr(lang, 'xl.col.layer'),
-      tr(lang, 'xl.col.rotation'),
-      tr(lang, 'xl.col.method'),
-      tr(lang, 'xls.weightU').replace('{u}', W),
-      tr(lang, 'xl.col.stopOrder'),
-      tr(lang, 'xl.col.maxLoad'),
-      tr(lang, 'xl.col.compatGroup'),
-      tr(lang, 'xl.col.position'),
-    ],
+): Promise<void> {
+  const ws = wb.addWorksheet(tr(lang, 'xl.sheet.cargo'));
+  const hdr: (string | number)[] = [
+    tr(lang, 'xl.col.no'),
+    tr(lang, 'xls.name'),
+    tr(lang, 'xls.shape'),
+    tr(lang, 'xl.col.dims'),
+    tr(lang, 'xl.col.layer'),
+    tr(lang, 'xl.col.rotation'),
+    tr(lang, 'xl.col.method'),
+    tr(lang, 'xls.weightU').replace('{u}', W),
+    tr(lang, 'xl.col.stopOrder'),
+    tr(lang, 'xl.col.maxLoad'),
+    tr(lang, 'xl.col.compatGroup'),
+    tr(lang, 'xl.col.position'),
   ];
+  ws.getRow(1).values = hdr;
+  ws.getRow(1).font = { bold: true };
+
   best.items.forEach((it, idx) => {
     const dims = `${fmt(it.dimensions.length)}×${fmt(it.dimensions.width)}×${fmt(it.dimensions.height)}`;
     const pos = `(${fmt(it.position.x)}, ${fmt(it.position.y)}, ${fmt(it.position.z)})`;
     const method = (it.layer ?? 0) > 0 ? tr(lang, 'xl.method.stacking') : tr(lang, 'xl.method.sideBySide');
-    hdr.push([
+    const rowNum = idx + 2;
+    ws.getRow(rowNum).values = [
       idx + 1,
       nameOf(it, lang),
       it.shape === 'cylinder' ? tr(lang, 'shape.cylinder') : tr(lang, 'shape.rect'),
@@ -186,124 +197,130 @@ function buildCargoSheet(
       it.maxLoad ?? '',
       it.compatibilityGroup ?? '',
       pos,
-    ]);
+    ];
   });
-  const ws = XLSX.utils.aoa_to_sheet(hdr);
-  ws['!cols'] = [{ wch: 6 }, { wch: 24 }, { wch: 14 }, { wch: 32 }, { wch: 8 }, { wch: 10 }, { wch: 16 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 16 }, { wch: 30 }];
-  XLSX.utils.book_append_sheet(wb, ws, tr(lang, 'xl.sheet.cargo'));
+  ws.columns = [
+    { width: 6 }, { width: 24 }, { width: 14 }, { width: 32 }, { width: 8 },
+    { width: 10 }, { width: 16 }, { width: 10 }, { width: 10 }, { width: 10 },
+    { width: 16 }, { width: 30 },
+  ];
 }
 
-// ─── Sheet 3: Схема / Scheme ─────────────────────────────────────────────────
-//
-// Визуальная схема «вид сверху»: для каждого слоя — сетка ячеек, где каждая
-// ячейка соответствует фрагменту пола кузова (разрешение RES мм). Клетки,
-// занятые грузом, заливаются цветом слоя и проставляется номер груза.
-// В конце — легенда «№ — название — размеры».
+// ─── Sheet 3: Схема / Scheme (с фигурами) ───────────────────────────────────
 
-function buildSchemeSheet(
-  wb: XLSX.WorkBook,
+async function buildSchemeSheet(
+  wb: ExcelJS.Workbook,
   vehicle: Vehicle,
   best: LayoutVariant,
   lang: Lang,
-): void {
-  const { unit } = useAppStore.getState();
-  const aoa: SheetRows = [];
-  let top = 0;
-  const push = (row: (string | number)[]) => { aoa[top++] = row; };
+  unit: Unit,
+): Promise<void> {
+  const ws = wb.addWorksheet(tr(lang, 'xl.sheet.scheme'));
 
-  push([tr(lang, 'xl.scheme.title')]);
-  push([tr(lang, 'xl.vehicle'), nameOf(vehicle, lang)]);
-  push([tr(lang, 'xl.scheme.gridHint')]);
-  push([]);
+  // Заголовок
+  ws.getRow(1).values = [tr(lang, 'xl.scheme.title')];
+  ws.getRow(1).font = { bold: true, size: 14 };
+  ws.getRow(2).values = [tr(lang, 'xl.vehicle'), nameOf(vehicle, lang)];
+  ws.getRow(3).values = [tr(lang, 'xl.scheme.gridHint')];
+  ws.getRow(4).values = [''];
 
   const numbered = best.items.map((it, i) => ({ it, num: i + 1 }));
   const maxL = best.items.reduce((m, it) => Math.max(m, layerOfPacked(it)), 0);
 
-  const RES = 100; // мм на ячейку сетки
-  const nCols = Math.max(1, Math.round(vehicle.length / RES));
-  const nRows = Math.max(1, Math.round(vehicle.width / RES));
+  // Масштаб: 1 ячейка Excel = 10 мм
+  const MM_PER_CELL = 10;
+  const nCols = Math.max(1, Math.ceil(vehicle.length / MM_PER_CELL));
+  const nRows = Math.max(1, Math.ceil(vehicle.width / MM_PER_CELL));
 
-  type CellInfo = { num: number; colorIdx: number };
-  const grids: { startRow: number; nRows: number; nCols: number; cells: Map<string, CellInfo> }[] = [];
+  let currentRow = 5;
 
   for (let layer = 0; layer <= maxL; layer++) {
     const layerItems = numbered.filter(({ it }) => layerOfPacked(it) === layer);
     const colorIdx = layer % SCHEME_COLORS.length;
-    push([`${tr(lang, 'xl.scheme.layer')} ${layer + 1}${layer === 0 ? tr(lang, 'xl.scheme.layerFloor') : ''}`]);
+    const layerColor = SCHEME_COLORS[colorIdx];
+    const layerBg = SCHEME_BG[colorIdx];
 
-    const cells = new Map<string, CellInfo>();
-    const grid: (string | number)[][] = Array.from({ length: nRows }, () => new Array(nCols).fill(''));
+    ws.getRow(currentRow).values = [`${tr(lang, 'xl.scheme.layer')} ${layer + 1}${layer === 0 ? tr(lang, 'xl.scheme.layerFloor') : ''}`];
+    ws.getRow(currentRow).font = { bold: true };
+    currentRow++;
+
+    // Рисуем границы кузова
+    const startRow = currentRow;
+
+    // Рисуем прямоугольники для каждого груза через ячейки с цветом и номером
     for (const { it, num } of layerItems) {
-      const c0 = Math.max(0, Math.floor(it.position.x / RES));
-      const c1 = Math.min(nCols - 1, Math.floor((it.position.x + it.dimensions.length) / RES));
-      const r0 = Math.max(0, Math.floor(it.position.z / RES));
-      const r1 = Math.min(nRows - 1, Math.floor((it.position.z + it.dimensions.width) / RES));
-      for (let cc = c0; cc <= c1; cc++) {
-        for (let rr = r0; rr <= r1; rr++) {
-          grid[rr][cc] = num;
-          cells.set(`${cc},${rr}`, { num, colorIdx });
+      const cellX = Math.floor(it.position.x / MM_PER_CELL) + 1; // 1-based column
+      const cellZ = Math.floor(it.position.z / MM_PER_CELL) + 1; // 1-based row
+      // const cellW = Math.ceil(it.dimensions.length / MM_PER_CELL);
+      // const cellH = Math.ceil(it.dimensions.width / MM_PER_CELL);
+      const centerCellRow = startRow + cellZ - 1;
+      const centerCellCol = cellX;
+      const cell = ws.getCell(centerCellRow, centerCellCol);
+      cell.value = num;
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: layerBg.replace('FF', '') } };
+      cell.border = {
+        top: { style: 'thin', color: { argb: layerColor.replace('#', 'FF') } },
+        left: { style: 'thin', color: { argb: layerColor.replace('#', 'FF') } },
+        bottom: { style: 'thin', color: { argb: layerColor.replace('#', 'FF') } },
+        right: { style: 'thin', color: { argb: layerColor.replace('#', 'FF') } },
+      };
+    }
+
+    // Устанавливаем размеры ячеек для сетки
+    for (let rr = 0; rr < nRows; rr++) {
+      for (let cc = 0; cc < nCols; cc++) {
+        const cell = ws.getCell(startRow + rr, cc + 1);
+        if (!cell.value) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EMPTY_BG.replace('FF', '') } };
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            right: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+          };
         }
       }
     }
 
-    const startRow = top;
-    for (let rr = 0; rr < nRows; rr++) push(grid[rr]);
-    push([]);
-    grids.push({ startRow, nRows, nCols, cells });
+    // Высота строки = 10 мм (~38 точек = 10 мм в Excel)
+    for (let rr = 0; rr < nRows; rr++) {
+      ws.getRow(startRow + rr).height = 38;
+    }
+    // Ширина колонки = 10 мм (~5 единиц ширины Excel)
+    for (let cc = 0; cc < nCols; cc++) {
+      ws.getColumn(cc + 1).width = 5;
+    }
+
+    currentRow += nRows;
+    ws.getRow(currentRow).values = [''];
+    currentRow++;
   }
 
-  push([tr(lang, 'xl.scheme.legend')]);
+  // Легенда
+  ws.getRow(currentRow).values = [tr(lang, 'xl.scheme.legend')];
+  ws.getRow(currentRow).font = { bold: true };
+  currentRow++;
+
   for (const { it, num } of numbered) {
     const dims = `${fmtDimension(it.dimensions.length, unit)}×${fmtDimension(it.dimensions.width, unit)}×${fmtDimension(it.dimensions.height, unit)}`;
-    push([`${num}. ${nameOf(it, lang)}`, dims]);
+    ws.getRow(currentRow).values = [`${num}. ${nameOf(it, lang)}`, dims];
+    currentRow++;
   }
-
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  const maxCol = aoa.reduce((m, row) => Math.max(m, row.length), 0);
-  ws['!cols'] = Array.from({ length: maxCol }, () => ({ wch: 3 }));
-
-  const border = {
-    top: { style: 'thin', color: { rgb: 'CBD5E1' } },
-    bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
-    left: { style: 'thin', color: { rgb: 'CBD5E1' } },
-    right: { style: 'thin', color: { rgb: 'CBD5E1' } },
-  };
-
-  for (const g of grids) {
-    for (let rr = 0; rr < g.nRows; rr++) {
-      for (let cc = 0; cc < g.nCols; cc++) {
-        const addr = XLSX.utils.encode_cell({ r: g.startRow + rr, c: cc });
-        const cell = ws[addr];
-        if (!cell) continue;
-        const info = g.cells.get(`${cc},${rr}`);
-        cell.s = info
-          ? {
-              fill: { patternType: 'solid', fgColor: { rgb: SCHEME_BG[info.colorIdx] } },
-              border,
-              alignment: { horizontal: 'center', vertical: 'center' },
-            }
-          : {
-              fill: { patternType: 'solid', fgColor: { rgb: EMPTY_BG } },
-              border,
-            };
-      }
-    }
-  }
-
-  XLSX.utils.book_append_sheet(wb, ws, tr(lang, 'xl.sheet.scheme'));
 }
 
 // ─── Sheet 4: Зазоры / Gaps ─────────────────────────────────────────────────
 
-function buildGapsSheet(
-  wb: XLSX.WorkBook,
+async function buildGapsSheet(
+  wb: ExcelJS.Workbook,
   settings: import('../../types').PackSettings,
   fmt: (mm: number) => string,
   lang: Lang,
-): void {
+): Promise<void> {
   const unit = useAppStore.getState().unit;
   const U = UNIT_LABEL[unit];
-  const r: SheetRows = [
+  const ws = wb.addWorksheet(tr(lang, 'xl.sheet.gaps'));
+  const r: (string | number)[][] = [
     [tr(lang, 'xl.gapParam'), tr(lang, 'xl.value'), tr(lang, 'xl.status')],
   ];
   r.push([tr(lang, 'gaps.walls'), settings.gapWalls > 0 ? `${fmt(settings.gapWalls)} ${U}` : '—', settings.gapWalls > 0 ? tr(lang, 'xl.enabled') : tr(lang, 'xl.disabled')]);
@@ -312,22 +329,27 @@ function buildGapsSheet(
   r.push([tr(lang, 'xl.gapsEnabled'), settings.gapsEnabled ? tr(lang, 'xls.yes') : tr(lang, 'xls.no'), '']);
   r.push(['', '', '']);
   r.push([tr(lang, 'xl.note'), tr(lang, 'xl.gapsNote'), '']);
-  const ws = XLSX.utils.aoa_to_sheet(r);
-  ws['!cols'] = [{ wch: 32 }, { wch: 24 }, { wch: 12 }];
-  XLSX.utils.book_append_sheet(wb, ws, tr(lang, 'xl.sheet.gaps'));
+
+  r.forEach((row, i) => {
+    ws.getRow(i + 1).values = row;
+  });
+  ws.columns = [{ width: 32 }, { width: 24 }, { width: 12 }];
 }
 
 // ─── Sheet 5: Инструкция / Instructions ─────────────────────────────────────
 
-function buildInstructionsSheet(wb: XLSX.WorkBook, lang: Lang): void {
-  const r: SheetRows = [
+async function buildInstructionsSheet(wb: ExcelJS.Workbook, lang: Lang): Promise<void> {
+  const ws = wb.addWorksheet(tr(lang, 'xl.sheet.instructions'));
+  const r: (string | number)[][] = [
     [tr(lang, 'xl.instrTopic'), tr(lang, 'xl.instrDesc')],
     [tr(lang, 'xl.instrStopOrder'), tr(lang, 'xl.instrStopOrderDesc')],
     [tr(lang, 'xl.instrMaxLoad'), tr(lang, 'xl.instrMaxLoadDesc')],
     [tr(lang, 'xl.instrCompatGroup'), tr(lang, 'xl.instrCompatGroupDesc')],
     [tr(lang, 'xl.instrMixed'), tr(lang, 'xl.instrMixedDesc')],
   ];
-  const ws = XLSX.utils.aoa_to_sheet(r);
-  ws['!cols'] = [{ wch: 24 }, { wch: 80 }];
-  XLSX.utils.book_append_sheet(wb, ws, tr(lang, 'xl.sheet.instructions'));
+
+  r.forEach((row, i) => {
+    ws.getRow(i + 1).values = row;
+  });
+  ws.columns = [{ width: 24 }, { width: 80 }];
 }
