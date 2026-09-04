@@ -7,6 +7,13 @@ import { calculateCOG } from '../../lib/physics/cog';
 import { canFitAll } from '../../lib/packer/packer';
 import { tr, trf } from '../../i18n';
 
+// id размещённого предмета имеет формат `${cargoId}-${x}-${y}-${z}` (см. packer.ts),
+// поэтому базовый id груза восстанавливаем, отбрасывая 3 хвостовых сегмента позиции.
+function baseIdOf(itemId: string): string {
+  const seg = itemId.split('-');
+  return seg.length > 3 ? seg.slice(0, seg.length - 3).join('-') : itemId;
+}
+
 export default function MetricsPanel() {
   // Все хуки ДО любого раннего возврата
   const variant = useActiveVariant();
@@ -36,7 +43,10 @@ export default function MetricsPanel() {
     const placedQty = variant ? variant.items.length : 0;
     const restQty = Math.max(0, totalQty - placedQty);
     const placedById: Record<string, number> = {};
-    variant?.items.forEach((it) => { placedById[it.id] = (placedById[it.id] ?? 0) + 1; });
+    variant?.items.forEach((it) => {
+      const base = baseIdOf(it.id);
+      placedById[base] = (placedById[base] ?? 0) + 1;
+    });
     const missing: {
       id: string; name: string; qty: number; weight: number; volume: number;
     }[] = [];
@@ -188,8 +198,9 @@ export default function MetricsPanel() {
               <div style={{ fontWeight: 600, marginBottom: 4 }}>{tr(lang, 'metric.unplacedList')}</div>
               {unplaced.missing.map((m) => (
                 <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '2px 0' }}>
-                  <span style={{ flex: 1, color: 'var(--color-ink, #1e293b)' }}>{m.name}</span>
-                  <span>{trf(lang, 'metric.unplacedQty', { n: m.qty })}</span>
+                  <span style={{ flex: 1, color: 'var(--color-ink, #1e293b)' }}>
+                    {m.name} <span style={{ color: 'var(--color-warning)' }}>{trf(lang, 'metric.unplacedItem', { n: m.qty })}</span>
+                  </span>
                   <span>{formatWeight(m.weight, weightUnit)} {weightUnitLabel(lang, weightUnit)}</span>
                   <span>{volumeToM3(m.volume, lang)}</span>
                 </div>
