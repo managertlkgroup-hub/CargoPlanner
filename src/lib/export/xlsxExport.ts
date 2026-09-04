@@ -23,6 +23,11 @@ function fmtWeight(kg: number, wu: WeightUnit): string {
   return formatWeight(kg, wu);
 }
 
+// Цвета слоёв для визуальной схемы (полный тон — номер в легенде, светлый — фон ячейки)
+const SCHEME_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+const SCHEME_BG = ['#dbeafe', '#dcfce7', '#fef3c7', '#fee2e2', '#ede9fe', '#fce7f3'];
+const EMPTY_BG = 'F1F5F9';
+
 /** Определяет номер слоя груза */
 function layerOfPacked(item: { layer?: number; position: { y: number }; dimensions: { height: number } }): number {
   if (item.layer != null) return item.layer;
@@ -190,10 +195,10 @@ function buildCargoSheet(
 
 // ─── Sheet 3: Схема / Scheme ─────────────────────────────────────────────────
 //
-// Компактная читаемая таблица расстановки грузов по слоям:
-// для каждого слоя — строки грузов с номером, названием, размерами, способом
-// укладки и координатами (X, Y, Z). Заменяет прежнюю «сетку» из повторяющихся
-// цифр, которая была нечитаемой.
+// Визуальная схема «вид сверху»: для каждого слоя — сетка ячеек, где каждая
+// ячейка соответствует фрагменту пола кузова (разрешение RES мм). Клетки,
+// занятые грузом, заливаются цветом слоя и проставляется номер груза.
+// В конце — легенда «№ — название — размеры».
 
 function buildSchemeSheet(
   wb: XLSX.WorkBook,
@@ -202,55 +207,89 @@ function buildSchemeSheet(
   lang: Lang,
 ): void {
   const { unit } = useAppStore.getState();
-  const rows: SheetRows = [];
-  rows.push([tr(lang, 'xl.scheme.title')]);
-  rows.push([tr(lang, 'xl.vehicle'), nameOf(vehicle, lang)]);
-  rows.push([]);
+  const aoa: SheetRows = [];
+  let top = 0;
+  const push = (row: (string | number)[]) => { aoa[top++] = row; };
 
+  push([tr(lang, 'xl.scheme.title')]);
+  push([tr(lang, 'xl.vehicle'), nameOf(vehicle, lang)]);
+  push([tr(lang, 'xl.scheme.gridHint')]);
+  push([]);
+
+  const numbered = best.items.map((it, i) => ({ it, num: i + 1 }));
   const maxL = best.items.reduce((m, it) => Math.max(m, layerOfPacked(it)), 0);
 
-  const hdr = [
-    tr(lang, 'xl.col.no'),
-    tr(lang, 'xl.scheme.name'),
-    tr(lang, 'xl.scheme.dims'),
-    tr(lang, 'xl.scheme.method'),
-    tr(lang, 'xl.scheme.posX'),
-    tr(lang, 'xl.scheme.posY'),
-    tr(lang, 'xl.scheme.posZ'),
-    tr(lang, 'xl.scheme.rot'),
-  ];
+  const RES = 100; // мм на ячейку сетки
+  const nCols = Math.max(1, Math.round(vehicle.length / RES));
+  const nRows = Math.max(1, Math.round(vehicle.width / RES));
 
-  // Нумеруем грузы по списку variant.items (№ совпадает с остальными листами)
-  const numbered = best.items.map((it, i) => ({ it, num: i + 1 }));
+  type CellInfo = { num: number; colorIdx: number };
+  const grids: { startRow: number; nRows: number; nCols: number; cells: Map<string, CellInfo> }[] = [];
 
   for (let layer = 0; layer <= maxL; layer++) {
     const layerItems = numbered.filter(({ it }) => layerOfPacked(it) === layer);
-    rows.push([`${tr(lang, 'xl.scheme.layer')} ${layer + 1}${layer === 0 ? tr(lang, 'xl.scheme.layerFloor') : ''}`]);
-    rows.push(hdr);
-    if (layerItems.length === 0) {
-      rows.push([tr(lang, 'xl.value')]);
-    }
+    const colorIdx = layer % SCHEME_COLORS.length;
+    push([`${tr(lang, 'xl.scheme.layer')} ${layer + 1}${layer === 0 ? tr(lang, 'xl.scheme.layerFloor') : ''}`]);
+
+    const cells = new Map<string, CellInfo>();
+    const grid: (string | number)[][] = Array.from({ length: nRows }, () => new Array(nCols).fill(''));
     for (const { it, num } of layerItems) {
-      const method = layerOfPacked(it) > 0 ? tr(lang, 'xl.method.stacking') : tr(lang, 'xl.method.sideBySide');
-      rows.push([
-        num,
-        nameOf(it, lang),
-        `${fmtDimension(it.dimensions.length, unit)}×${fmtDimension(it.dimensions.width, unit)}×${fmtDimension(it.dimensions.height, unit)}`,
-        method,
-        fmtDimension(it.position.x, unit),
-        fmtDimension(it.position.y, unit),
-        fmtDimension(it.position.z, unit),
-        it.rotationY ?? 0,
-      ]);
+      const c0 = Math.max(0, Math.floor(it.position.x / RES));
+      const c1 = Math.min(nCols - 1, Math.floor((it.position.x + it.dimensions.length) / RES));
+      const r0 = Math.max(0, Math.floor(it.position.z / RES));
+      const r1 = Math.min(nRows - 1, Math.floor((it.position.z + it.dimensions.width) / RES));
+      for (let cc = c0; cc <= c1; cc++) {
+        for (let rr = r0; rr <= r1; rr++) {
+          grid[rr][cc] = num;
+          cells.set(`${cc},${rr}`, { num, colorIdx });
+        }
+      }
     }
-    rows.push([]);
+
+    const startRow = top;
+    for (let rr = 0; rr < nRows; rr++) push(grid[rr]);
+    push([]);
+    grids.push({ startRow, nRows, nCols, cells });
   }
 
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [
-    { wch: 6 }, { wch: 28 }, { wch: 26 }, { wch: 16 },
-    { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 12 },
-  ];
+  push([tr(lang, 'xl.scheme.legend')]);
+  for (const { it, num } of numbered) {
+    const dims = `${fmtDimension(it.dimensions.length, unit)}×${fmtDimension(it.dimensions.width, unit)}×${fmtDimension(it.dimensions.height, unit)}`;
+    push([`${num}. ${nameOf(it, lang)}`, dims]);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const maxCol = aoa.reduce((m, row) => Math.max(m, row.length), 0);
+  ws['!cols'] = Array.from({ length: maxCol }, () => ({ wch: 3 }));
+
+  const border = {
+    top: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    right: { style: 'thin', color: { rgb: 'CBD5E1' } },
+  };
+
+  for (const g of grids) {
+    for (let rr = 0; rr < g.nRows; rr++) {
+      for (let cc = 0; cc < g.nCols; cc++) {
+        const addr = XLSX.utils.encode_cell({ r: g.startRow + rr, c: cc });
+        const cell = ws[addr];
+        if (!cell) continue;
+        const info = g.cells.get(`${cc},${rr}`);
+        cell.s = info
+          ? {
+              fill: { patternType: 'solid', fgColor: { rgb: SCHEME_BG[info.colorIdx] } },
+              border,
+              alignment: { horizontal: 'center', vertical: 'center' },
+            }
+          : {
+              fill: { patternType: 'solid', fgColor: { rgb: EMPTY_BG } },
+              border,
+            };
+      }
+    }
+  }
+
   XLSX.utils.book_append_sheet(wb, ws, tr(lang, 'xl.sheet.scheme'));
 }
 
