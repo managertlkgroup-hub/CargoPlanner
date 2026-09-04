@@ -146,7 +146,11 @@ const App: React.FC = () => {
         const result = packItems(veh, cargo, nextSettings, loadingPoints);
         if (!result.error) {
           const totalQty = cargo.reduce((sum, c) => sum + Math.max(1, Math.floor(c.quantity || 1)), 0);
-          const placedQty = (result.variants[0]?.items?.length ?? 0);
+          // Оцениваем по режиму, который сейчас выбран пользователем (вдоль/поперёк/смешанный),
+          // чтобы откат зазора не блокировал режим, в котором грузы реально помещаются.
+          const activeMode = useAppStore.getState().activeVariant;
+          const activeVariant = result.variants.find((v) => v.id === activeMode) ?? result.variants[0];
+          const placedQty = activeVariant?.items?.length ?? 0;
 
           // Блокировка превышения применима ТОЛЬКО когда пользователь меняет значения зазора.
           // Если грузы не поместились по другой причине (напр. выключено штабелирование) —
@@ -180,11 +184,30 @@ const App: React.FC = () => {
           const keep = cur && result.variants.some(v => v.id === cur) ? cur : result.variants[0].id;
           setActiveVariant(keep);
 
-          // Если все грузы помещаются — запоминаем как рабочее состояние
-          if (totalQty === 0 || placedQty >= totalQty) {
-            prevGoodSettingsRef.current = nextSettings;
-            prevGoodResultRef.current = result;
-          }
+          // Запоминаем как рабочее состояние каждый раз, когда packer не вернул ошибку
+          // (даже если не все грузы поместились — это лучше, чем состояние с ошибкой).
+          prevGoodSettingsRef.current = nextSettings;
+          prevGoodResultRef.current = result;
+        } else if (isGapEdit && prevGoodResultRef.current && prevGoodSettingsRef.current) {
+          // packItems вернул ошибку (напр. слишком большой зазор → отрицательное пространство)
+          // при редактировании зазора — откатываем к последнему рабочему состоянию.
+          const goodSettings = prevGoodSettingsRef.current;
+          const goodResult = prevGoodResultRef.current;
+          setResult(goodResult);
+          const pristineMap: Record<string, typeof goodResult.variants[number]['items']> = {};
+          goodResult.variants.forEach((v) => { pristineMap[v.id] = v.items; });
+          setPristine(pristineMap);
+          setActiveVariant(useAppStore.getState().activeVariant && goodResult.variants.some(v => v.id === useAppStore.getState().activeVariant)
+            ? useAppStore.getState().activeVariant : goodResult.variants[0].id);
+          setSettings(goodSettings);
+          const maxVal = Math.max(
+            goodSettings.gapWalls ?? 0,
+            goodSettings.gapWidth ?? 0,
+            goodSettings.gapLength ?? 0,
+          );
+          const maxStr = formatDimension(maxVal, unit);
+          setError(trf(lang, 'gaps.gapTooBig', { max: maxStr, u: UNIT_LABEL[unit] }));
+          return;
         }
       } catch (err) { /* пересчёт зазора */ }
       finally { setCalculating(false); }

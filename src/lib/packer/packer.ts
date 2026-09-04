@@ -621,7 +621,13 @@ function totalQuantity(cargo: Cargo[]): number {
   return cargo.reduce((sum, c) => sum + Math.max(1, Math.floor(c.quantity || 1)), 0);
 }
 
-/** Размещает все грузы и возвращает число размещённых при заданных настройках */
+/**
+ * Размещает все грузы и возвращает МАКСИМАЛЬНОЕ число размещённых грузов среди
+ * всех трёх режимов укладки (вдоль / поперёк / смешанный) при заданных настройках.
+ * Важно: режим «поперёк» может вместить грузы, которые не помещаются «вдоль»
+ * (и наоборот), поэтому проверка возможности зазоров/штабелирования должна
+ * учитывать любой достижимый режим, а не только первый (variants[0]).
+ */
 function countPlaced(vehicle: Vehicle, cargo: Cargo[], gaps: Gaps, maxStackHeight: number): number {
   const s: PackSettings = {
     maxStackHeight,
@@ -633,7 +639,11 @@ function countPlaced(vehicle: Vehicle, cargo: Cargo[], gaps: Gaps, maxStackHeigh
     gapLength: gaps.length,
   };
   const result = packItems(vehicle, cargo, s, undefined);
-  return result.variants[0]?.items?.length ?? 0;
+  let max = 0;
+  for (const v of result.variants) {
+    max = Math.max(max, v?.items?.length ?? 0);
+  }
+  return max;
 }
 
 /** Проверка, помещаются ли все грузы при заданных зазорах и режиме штабелирования */

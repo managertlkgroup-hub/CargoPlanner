@@ -23,16 +23,18 @@ function ground(item: { dimensions: { length: number; width: number }; rotationY
 }
 
 /** Выбирает «красивое» значение для шкалы масштаба: кратное 1/2/5 × 10^k,
- *  ближайшее к ~40% длины кузова, но не больше ~60% длины кузова.
- *  Например, для кузова 13.6 м вернёт 5 м (не 10 м), для 20 м — 10 м, для 3 м — 1 м. */
+ *  ближайшее к ~35% длины кузова, но не больше ~40% длины кузова,
+ *  чтобы линейка занимала разумную долю (примерно 20–35%) ширины схемы
+ *  и была читаемой. Например, для кузова 13.6 м вернёт 5 м (≈37%),
+ *  для 20 м — 5 м (25%), для 3 м — 1 м (33%). */
 function niceScale(mm: number): number {
   if (mm <= 0) return 1000;
-  const target = mm * 0.4;
+  const target = mm * 0.35;
   const pow = Math.pow(10, Math.floor(Math.log10(target)));
   const norm = target / pow;
   const mul = norm < 1.5 ? 1 : norm < 3.5 ? 2 : norm < 7.5 ? 5 : 10;
   let nice = mul * pow;
-  const cap = mm * 0.6;
+  const cap = mm * 0.4;
   while (nice > cap) {
     nice /= 10;
   }

@@ -23,14 +23,6 @@ function fmtWeight(kg: number, wu: WeightUnit): string {
   return formatWeight(kg, wu);
 }
 
-/** Габарит груза в плане (вид сверху) с учётом поворота вокруг Y */
-function groundTop(item: { dimensions: { length: number; width: number }; rotationY?: number }) {
-  const rot = Math.round(((item.rotationY ?? 0) % 360) / 90) % 2;
-  return rot === 1
-    ? { w: item.dimensions.width, h: item.dimensions.length }
-    : { w: item.dimensions.length, h: item.dimensions.width };
-}
-
 /** Определяет номер слоя груза */
 function layerOfPacked(item: { layer?: number; position: { y: number }; dimensions: { height: number } }): number {
   if (item.layer != null) return item.layer;
@@ -197,6 +189,11 @@ function buildCargoSheet(
 }
 
 // ─── Sheet 3: Схема / Scheme ─────────────────────────────────────────────────
+//
+// Компактная читаемая таблица расстановки грузов по слоям:
+// для каждого слоя — строки грузов с номером, названием, размерами, способом
+// укладки и координатами (X, Y, Z). Заменяет прежнюю «сетку» из повторяющихся
+// цифр, которая была нечитаемой.
 
 function buildSchemeSheet(
   wb: XLSX.WorkBook,
@@ -204,42 +201,56 @@ function buildSchemeSheet(
   best: LayoutVariant,
   lang: Lang,
 ): void {
+  const { unit } = useAppStore.getState();
   const rows: SheetRows = [];
   rows.push([tr(lang, 'xl.scheme.title')]);
-  rows.push([]);
-  rows.push([tr(lang, 'xl.scheme.legend')]);
-  rows.push([best.items.map((it, i) => `${i + 1} — ${nameOf(it, lang)}`).join('; ')]);
+  rows.push([tr(lang, 'xl.vehicle'), nameOf(vehicle, lang)]);
   rows.push([]);
 
   const maxL = best.items.reduce((m, it) => Math.max(m, layerOfPacked(it)), 0);
-  const G = 100;
-  const cols = Math.max(2, Math.ceil(vehicle.length / G));
-  const gridRows = Math.max(2, Math.ceil(vehicle.width / G));
+
+  const hdr = [
+    tr(lang, 'xl.col.no'),
+    tr(lang, 'xl.scheme.name'),
+    tr(lang, 'xl.scheme.dims'),
+    tr(lang, 'xl.scheme.method'),
+    tr(lang, 'xl.scheme.posX'),
+    tr(lang, 'xl.scheme.posY'),
+    tr(lang, 'xl.scheme.posZ'),
+    tr(lang, 'xl.scheme.rot'),
+  ];
+
+  // Нумеруем грузы по списку variant.items (№ совпадает с остальными листами)
+  const numbered = best.items.map((it, i) => ({ it, num: i + 1 }));
 
   for (let layer = 0; layer <= maxL; layer++) {
-    const layerItems = best.items
-      .map((it, i) => ({ it, i }))
-      .filter(({ it }) => layerOfPacked(it) === layer);
-    const grid: string[][] = Array.from({ length: gridRows }, () => Array<string>(cols).fill(''));
-    for (const { it, i } of layerItems) {
-      const { w, h } = groundTop(it);
-      const x0 = Math.max(0, Math.floor(it.position.x / G));
-      const y0 = Math.max(0, Math.floor(it.position.z / G));
-      const x1 = Math.min(cols - 1, Math.max(x0, Math.ceil((it.position.x + w) / G) - 1));
-      const y1 = Math.min(gridRows - 1, Math.max(y0, Math.ceil((it.position.z + h) / G) - 1));
-      for (let r = y0; r <= y1; r++) {
-        for (let c = x0; c <= x1; c++) {
-          grid[r][c] = `${i + 1}`;
-        }
-      }
+    const layerItems = numbered.filter(({ it }) => layerOfPacked(it) === layer);
+    rows.push([`${tr(lang, 'xl.scheme.layer')} ${layer + 1}${layer === 0 ? tr(lang, 'xl.scheme.layerFloor') : ''}`]);
+    rows.push(hdr);
+    if (layerItems.length === 0) {
+      rows.push([tr(lang, 'xl.value')]);
     }
-    rows.push([`${tr(lang, 'pdf.layer')} ${layer}${layer === 0 ? ` (${tr(lang, 'pdf.floor')})` : ''}`]);
-    grid.forEach((gridRow) => rows.push(['', ...gridRow]));
+    for (const { it, num } of layerItems) {
+      const method = layerOfPacked(it) > 0 ? tr(lang, 'xl.method.stacking') : tr(lang, 'xl.method.sideBySide');
+      rows.push([
+        num,
+        nameOf(it, lang),
+        `${fmtDimension(it.dimensions.length, unit)}×${fmtDimension(it.dimensions.width, unit)}×${fmtDimension(it.dimensions.height, unit)}`,
+        method,
+        fmtDimension(it.position.x, unit),
+        fmtDimension(it.position.y, unit),
+        fmtDimension(it.position.z, unit),
+        it.rotationY ?? 0,
+      ]);
+    }
     rows.push([]);
   }
 
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{ wch: 4 }, ...Array.from({ length: cols }, () => ({ wch: 3 }))];
+  ws['!cols'] = [
+    { wch: 6 }, { wch: 28 }, { wch: 26 }, { wch: 16 },
+    { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 12 },
+  ];
   XLSX.utils.book_append_sheet(wb, ws, tr(lang, 'xl.sheet.scheme'));
 }
 

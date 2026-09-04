@@ -65,6 +65,7 @@ function VehiclesTab() {
   const lang = useAppStore((s) => s.lang);
   const [showAdd, setShowAdd] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [builtInEditId, setBuiltInEditId] = useState<string | null>(null);
   const [hiddenBuiltIn, setHiddenBuiltIn] = useState<Set<string>>(new Set());
 
   const builtIn = getDefaultVehicles();
@@ -81,11 +82,24 @@ function VehiclesTab() {
     }
   };
 
-  const handleCopyBuiltIn = (v: Vehicle) => {
-    const newId = `custom-${Date.now()}`;
-    const copy: Vehicle = { ...v, id: newId, name: `${v.name} (${tr(lang, 'presets.copy')})` };
-    addCustomVehicle(copy);
-    setEditId(newId);
+  // Редактирование стандартного пресета: при сохранении «продвигаем» его
+  // в пользовательские с фиксированным id (custom-<id>), не создавая копий.
+  // Повторное редактирование обновляет ту же запись — дублей не появляется.
+  const handleEditBuiltIn = (v: Vehicle) => {
+    removeCustomVehicle(`custom-${v.id}`);
+    setBuiltInEditId(builtInEditId === v.id ? null : v.id);
+  };
+
+  const handleSaveBuiltInEdit = (v: Vehicle, patch: Partial<Vehicle>) => {
+    const stableId = `custom-${v.id}`;
+    const exists = customVehicles.some((c) => c.id === stableId);
+    if (exists) {
+      updateCustomVehicle(stableId, patch);
+    } else {
+      addCustomVehicle({ ...v, id: stableId, nameKey: undefined, isCustom: true, ...patch });
+    }
+    setHiddenBuiltIn((prev) => new Set(prev).add(v.id));
+    setBuiltInEditId(null);
   };
 
   return (
@@ -96,8 +110,8 @@ function VehiclesTab() {
           {tr(lang, 'presets.standard')}
         </div>
         {builtIn.filter((v) => !hiddenBuiltIn.has(v.id)).map((v) => (
+          <div key={v.id}>
           <div
-            key={v.id}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '6px 8px', borderRadius: 6, marginBottom: 2, fontSize: 13,
@@ -107,9 +121,9 @@ function VehiclesTab() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <button
                 type="button"
-                onClick={() => handleCopyBuiltIn(v)}
+                onClick={() => handleEditBuiltIn(v)}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-accent)', fontSize: 12, padding: '0 4px' }}
-                title={tr(lang, 'presets.copy')}
+                title={tr(lang, 'presets.edit')}
               >
                 <Pencil size={13} />
               </button>
@@ -125,8 +139,17 @@ function VehiclesTab() {
                 <X size={14} />
               </button>
             </div>
-           </div>
-         ))}
+          </div>
+          {builtInEditId === v.id && (
+            <EditVehicleForm
+              vehicle={v}
+              unit={unit}
+              onCancel={() => setBuiltInEditId(null)}
+              onSave={(patch) => handleSaveBuiltInEdit(v, patch)}
+            />
+          )}
+          </div>
+        ))}
 
          {/* Custom presets */}
          {customVehicles.length > 0 && (
@@ -258,7 +281,23 @@ function CargoTab() {
   const builtInPresets = CARGO_PRESETS;
   const [showAdd, setShowAdd] = useState(false);
   const [editIdx, setEditIdx] = useState<number | null>(null);
+  const [builtInEditIdx, setBuiltInEditIdx] = useState<number | null>(null);
   const [hiddenBuiltIn, setHiddenBuiltIn] = useState<Set<number>>(new Set());
+
+  // Редактирование стандартного пресета груза: при сохранении «продвигаем» его
+  // в пользовательские с фиксированным маркером sourceId (builtin-<idx>).
+  // Повторное редактирование обновляет ту же запись — дублей не появляется.
+  const handleSaveBuiltInEdit = (p: CargoPreset, idx: number, patch: Partial<CargoPreset>) => {
+    const marker = `builtin-${idx}`;
+    const promotedPos = customCargoPresets.findIndex((c) => c.sourceId === marker);
+    if (promotedPos >= 0) {
+      updateCustomCargoPreset(promotedPos, { ...patch, sourceId: marker });
+    } else {
+      addCustomCargoPreset({ ...p, sourceId: marker, ...patch });
+    }
+    setHiddenBuiltIn((prev) => new Set(prev).add(idx));
+    setBuiltInEditIdx(null);
+  };
 
   return (
     <div>
@@ -269,8 +308,8 @@ function CargoTab() {
         </div>
         {builtInPresets.map((p, idx) => (
           hiddenBuiltIn.has(idx) ? null : (
+            <div key={p.name + idx}>
             <div
-              key={p.name + idx}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '6px 8px', borderRadius: 6, marginBottom: 2, fontSize: 13,
@@ -280,12 +319,9 @@ function CargoTab() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <button
                   type="button"
-                  onClick={() => {
-                    const copy = { ...p, name: `${p.name} (${tr(lang, 'presets.copy')})` };
-                    addCustomCargoPreset(copy);
-                  }}
+                  onClick={() => setBuiltInEditIdx(builtInEditIdx === idx ? null : idx)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-accent)', fontSize: 12, padding: '0 4px' }}
-                  title={tr(lang, 'presets.copy')}
+                  title={tr(lang, 'presets.edit')}
                 >
                   <Pencil size={13} />
                 </button>
@@ -305,6 +341,14 @@ function CargoTab() {
                   <X size={14} />
                 </button>
               </div>
+            </div>
+            {builtInEditIdx === idx && (
+              <EditCargoPresetForm
+                preset={p}
+                onCancel={() => setBuiltInEditIdx(null)}
+                onSave={(patch) => handleSaveBuiltInEdit(p, idx, patch)}
+              />
+            )}
             </div>
           )
         ))}
