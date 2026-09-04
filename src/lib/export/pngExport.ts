@@ -73,7 +73,8 @@ export async function exportSceneToPng(
   const PAD = 40 * S;
   const HEADER_H = 70 * S;
   const CARGO_LEGEND_H = cargoLegend.length > 0 ? (cargoLegend.length * 22 + 40) * S : 0;
-  const METRICS_H = (120 + enabledGaps.length * 18) * S;
+  const METRICS_LINES = 6 + (enabledGaps.length > 0 ? 1 + enabledGaps.length : 0) + 1;
+  const METRICS_H = (30 + METRICS_LINES * 18) * S;
   const FOOTER_H = 40 * S;
 
   // Размер 2D-схемы (вид сверху), сохраняя пропорции кузова
@@ -202,14 +203,33 @@ export async function exportSceneToPng(
 
     const layers = new Set(variant.items.map(i => layerOf(i))).size;
 
+    // Габариты груза: если все грузы одного размера — одно значение,
+    // иначе — диапазон по каждой оси (мин–макс).
+    const itemSizes = variant.items.map((i) => i.dimensions);
+    let cargoDims = '';
+    const first = itemSizes[0];
+    const sameSize = itemSizes.every((d) =>
+      d.length === first.length && d.width === first.width && d.height === first.height,
+    );
+    if (itemSizes.length > 0) {
+      if (sameSize) {
+        cargoDims = `${fmt(first.length)}×${fmt(first.width)}×${fmt(first.height)}`;
+      } else {
+        const min = (f: (d: { length: number; width: number; height: number }) => number) => Math.min(...itemSizes.map(f));
+        const max = (f: (d: { length: number; width: number; height: number }) => number) => Math.max(...itemSizes.map(f));
+        cargoDims = `${fmt(min((d) => d.length))}–${fmt(max((d) => d.length))} × ${fmt(min((d) => d.width))}–${fmt(max((d) => d.width))} × ${fmt(min((d) => d.height))}–${fmt(max((d) => d.height))}`;
+      }
+    }
+
     const metrics = [
       `${nameOf(vehicle, lang)} (${fmt(vehicle.length)}×${fmt(vehicle.width)}×${fmt(vehicle.height)} ${unitLabel(lang, unit)})`,
       `${tr(lang, 'png.items')}: ${variant.items.length}`,
       `${tr(lang, 'png.layers')}: ${layers}`,
+      cargoDims ? `${tr(lang, 'png.cargo')}: ${cargoDims} ${unitLabel(lang, unit)}` : '',
       `${tr(lang, 'png.fillVolume')}: ${variant.volumeFill ?? 0}%`,
       `${tr(lang, 'png.totalWeight')}: ${formatWeight(variant.totalWeight ?? 0, weightUnit)} ${WEIGHT_UNIT_LABEL[weightUnit]}`,
       `${tr(lang, 'png.fillWeight')}: ${variant.weightFill ?? 0}%`,
-    ];
+    ].filter((m) => m !== '');
     metrics.forEach((m, i) => {
       ctx.fillText(m, PAD + 10 * S, metricsY + 18 * S + i * 18 * S);
     });

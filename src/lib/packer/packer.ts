@@ -67,10 +67,11 @@ function isVerticalCylinder(p: PlacedBox): boolean {
  * иначе пересечение по основанию нестабильно физически.
  */
 function canStackOn(upper: Box, below: PlacedBox): boolean {
-  // Ограничение по нагрузке: если у нижнего задан maxLoad, верхний не должен его превышать.
-  // По умолчанию maxLoad = 0 => ставить сверху ничего нельзя.
+  // Ограничение по нагрузке: если у нижнего задан положительный maxLoad,
+  // верхний не должен его превышать. maxLoad = 0/не задан означает
+  // «без ограничения» — ставить сверху можно грузы любого веса.
   const maxLoad = below.maxLoad ?? 0;
-  if (upper.weight > maxLoad) return false;
+  if (maxLoad > 0 && upper.weight > maxLoad) return false;
 
   // Группы совместимости: если у обоих заданы группы и они различаются — штабелировать нельзя.
   const upGroup = upper.compatibilityGroup;

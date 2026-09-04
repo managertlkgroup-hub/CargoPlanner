@@ -387,6 +387,7 @@ const ru: Dict = {
   'png.footer': 'Сгенерировано в CargoPlanner — 3D Планировщик загрузки автомобиля',
   'png.legend': 'Легенда:',
   'png.scale': 'Масштаб:',
+  'png.cargo': 'Груз',
   'png.noScheme': 'Схема недоступна — сначала рассчитайте раскладку',
 
   // Настройки
@@ -923,6 +924,7 @@ const en: Dict = {
   'png.footer': 'Generated in CargoPlanner — Truck loading planner',
   'png.legend': 'Legend:',
   'png.scale': 'Scale:',
+  'png.cargo': 'Cargo',
   'png.noScheme': 'Scheme unavailable — calculate layout first',
 
   // Настройки

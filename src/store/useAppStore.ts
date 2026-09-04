@@ -292,8 +292,6 @@ export const useAppStore = create<AppState>()(
         const list = get().customVehicles.map((v) => (v.id === id ? { ...v, ...patch } : v));
         saveToStorage(KEYS.vehicles, list);
         set({ customVehicles: list });
-        get().setResult(null);
-        get().setActiveVariant(null);
       },
       selectVehicle: (id) => {
         saveToStorage(KEYS.vehicleId, id);
@@ -306,8 +304,6 @@ export const useAppStore = create<AppState>()(
         const map = { ...get().vehicleOverrides, [id]: { ...get().vehicleOverrides[id], ...patch, id, isCustom: false } };
         saveToStorage(KEYS.vehicleOverrides, map);
         set({ vehicleOverrides: map });
-        get().setResult(null);
-        get().setActiveVariant(null);
       },
       cargoPresetOverrides: loadFromStorage<Record<number, Partial<CargoPreset>>>(KEYS.cargoPresetOverrides, {}),
       updateStandardCargoPreset: (idx, patch) => {

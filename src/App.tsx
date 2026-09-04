@@ -409,14 +409,32 @@ const App: React.FC = () => {
                         const next = e.target.checked;
                         const veh = getCurrentVehicle(selectedVehicleId, customVehicles);
                         if (next && cargo.length > 0 && veh) {
-                          const testGaps = {
-                            walls: settings.gapWalls || 50,
-                            width: settings.gapWidth || 50,
-                            length: settings.gapLength || 50,
+                          // Пробуем включить зазоры с сохранёнными значениями.
+                          // Если грузы с ними не помещаются — снижаем до минимального
+                          // возможного зазора (50 мм), чтобы зазоры всё же включились.
+                          const MIN = 50;
+                          const want = {
+                            walls: settings.gapWalls || MIN,
+                            width: settings.gapWidth || MIN,
+                            length: settings.gapLength || MIN,
                           };
-                          const check = canFitAll(veh, cargo, testGaps, stacking);
+                          let effective = want;
+                          let check = canFitAll(veh, cargo, want, stacking);
+                          if (!check.ok) {
+                            const minimal = { walls: MIN, width: MIN, length: MIN };
+                            const minCheck = canFitAll(veh, cargo, minimal, stacking);
+                            if (minCheck.ok) {
+                              effective = minimal;
+                              check = minCheck;
+                            }
+                          }
                           if (!check.ok) {
                             setError(trf(lang, 'gaps.cannotEnable', { reason: check.reason }));
+                            return;
+                          }
+                          if (effective !== want) {
+                            const fallback: PackSettings = { ...settings, gapsEnabled: true, gap: 0, gapWalls: effective.walls, gapWidth: effective.width, gapLength: effective.length };
+                            recalcWithSettings(veh, fallback, true);
                             return;
                           }
                         }
