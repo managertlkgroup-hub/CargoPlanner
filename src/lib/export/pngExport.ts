@@ -4,7 +4,7 @@
 //         измерения, метрики, подпись варианта
 // ============================================================================
 
-import type { Vehicle, LayoutVariant } from '../../types';
+import type { Cargo, Vehicle, LayoutVariant } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { unitLabel, formatWeight, WEIGHT_UNIT_LABEL, formatDimension, type WeightUnit, nameOf } from '../../utils/helpers';
 import { tr, type Lang } from '../../i18n';
@@ -20,6 +20,15 @@ function ground(item: { dimensions: { length: number; width: number }; rotationY
   return rot === 1
     ? { w: item.dimensions.width, h: item.dimensions.length }
     : { w: item.dimensions.length, h: item.dimensions.width };
+}
+
+/** Отображаемые габариты груза (L×W×H) с учётом формы */
+function displayDims(c: Pick<Cargo, 'shape' | 'length' | 'width' | 'height' | 'diameter'>) {
+  if (c.shape === 'cylinder') {
+    const d = c.diameter ?? 0;
+    return { length: c.length || 0, width: d, height: d };
+  }
+  return { length: c.length || 0, width: c.width ?? 0, height: c.height ?? 0 };
 }
 
 /** Генерирует цвет фона из hex с заданной прозрачностью (rgba) */
@@ -45,6 +54,7 @@ export async function exportSceneToPng(
 ): Promise<void> {
   const unit = useAppStore.getState().unit;
   const settings = useAppStore.getState().settings;
+  const cargoList = useAppStore.getState().cargo;
   const fmt = (mm: number) => formatDimension(mm, unit);
 
   const enabledGaps = [
@@ -203,29 +213,36 @@ export async function exportSceneToPng(
 
     const layers = new Set(variant.items.map(i => layerOf(i))).size;
 
-    // Габариты груза: если все грузы одного размера — одно значение,
-    // иначе — диапазон по каждой оси (мин–макс).
-    const itemSizes = variant.items.map((i) => i.dimensions);
-    let cargoDims = '';
-    const first = itemSizes[0];
-    const sameSize = itemSizes.every((d) =>
-      d.length === first.length && d.width === first.width && d.height === first.height,
-    );
-    if (itemSizes.length > 0) {
-      if (sameSize) {
-        cargoDims = `${fmt(first.length)}×${fmt(first.width)}×${fmt(first.height)}`;
-      } else {
-        const min = (f: (d: { length: number; width: number; height: number }) => number) => Math.min(...itemSizes.map(f));
-        const max = (f: (d: { length: number; width: number; height: number }) => number) => Math.max(...itemSizes.map(f));
-        cargoDims = `${fmt(min((d) => d.length))}–${fmt(max((d) => d.length))} × ${fmt(min((d) => d.width))}–${fmt(max((d) => d.width))} × ${fmt(min((d) => d.height))}–${fmt(max((d) => d.height))}`;
+    // Габариты грузов: если все грузы одного размера — одно значение,
+    // иначе — список уникальных размеров через запятую (или диапазон).
+    const uniqueSizes: { length: number; width: number; height: number }[] = [];
+    const seenSizes = new Set<string>();
+    for (const c of cargoList) {
+      if ((c.quantity ?? 0) <= 0) continue;
+      const d = displayDims(c);
+      const key = `${d.length}|${d.width}|${d.height}`;
+      if (!seenSizes.has(key)) {
+        seenSizes.add(key);
+        uniqueSizes.push(d);
       }
+    }
+    let cargoDims = '';
+    let cargoLabelKey = 'png.cargo';
+    if (uniqueSizes.length === 1) {
+      const d = uniqueSizes[0];
+      cargoDims = `${fmt(d.length)}×${fmt(d.width)}×${fmt(d.height)}`;
+    } else if (uniqueSizes.length > 1) {
+      cargoLabelKey = 'png.cargoes';
+      cargoDims = uniqueSizes
+        .map((d) => `${fmt(d.length)}×${fmt(d.width)}×${fmt(d.height)}`)
+        .join(', ');
     }
 
     const metrics = [
       `${nameOf(vehicle, lang)} (${fmt(vehicle.length)}×${fmt(vehicle.width)}×${fmt(vehicle.height)} ${unitLabel(lang, unit)})`,
       `${tr(lang, 'png.items')}: ${variant.items.length}`,
       `${tr(lang, 'png.layers')}: ${layers}`,
-      cargoDims ? `${tr(lang, 'png.cargo')}: ${cargoDims} ${unitLabel(lang, unit)}` : '',
+      cargoDims ? `${tr(lang, cargoLabelKey)}: ${cargoDims} ${unitLabel(lang, unit)}` : '',
       `${tr(lang, 'png.fillVolume')}: ${variant.volumeFill ?? 0}%`,
       `${tr(lang, 'png.totalWeight')}: ${formatWeight(variant.totalWeight ?? 0, weightUnit)} ${WEIGHT_UNIT_LABEL[weightUnit]}`,
       `${tr(lang, 'png.fillWeight')}: ${variant.weightFill ?? 0}%`,

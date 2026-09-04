@@ -392,6 +392,7 @@ const ru: Dict = {
   'png.legend': 'Легенда:',
   'png.scale': 'Масштаб:',
   'png.cargo': 'Груз',
+  'png.cargoes': 'Грузы',
   'png.noScheme': 'Схема недоступна — сначала рассчитайте раскладку',
 
   // Настройки
@@ -933,6 +934,7 @@ const en: Dict = {
   'png.legend': 'Legend:',
   'png.scale': 'Scale:',
   'png.cargo': 'Cargo',
+  'png.cargoes': 'Cargoes',
   'png.noScheme': 'Scheme unavailable — calculate layout first',
 
   // Настройки
