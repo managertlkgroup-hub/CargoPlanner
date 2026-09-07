@@ -638,7 +638,7 @@ export interface FitCheck {
   cargoName?: string;
 }
 
-/** Высота груза в уложенном виде (одинаково для canFitAll/detectStackReason) */
+/** Высота груза в уложенном виде (одинаково для canFitAll/canStackAll) */
 function itemPlacedHeight(c: Cargo): number {
   const size = getCargoSize(c);
   return c.shape === 'cylinder'
@@ -765,33 +765,30 @@ export function findMaxGapByType(
   return { walls, width, length };
 }
 
-/** Проверка возможности штабелирования всех грузов при включении чекбокса */
-export function canStackAll(vehicle: Vehicle, cargo: Cargo[], gaps: Gaps, settings: PackSettings): FitCheck {
+/**
+ * Проверка возможности штабелирования всех грузов при включении чекбокса.
+ * НЕ зависит от текущих зазоров: зазоры не могут помешать штабелированию.
+ * Проверяются только совместимость грузов (паллеты/цилиндры), высота груза
+ * относительно высоты кузова и физическая раскладка при нулевых зазорах на
+ * полную высоту кузова (несколько слоёв).
+ */
+export function canStackAll(vehicle: Vehicle, cargo: Cargo[]): FitCheck {
   const total = totalQuantity(cargo);
-  // 1) Без учёта зазоров, но с учётом совместимости (canStackOn)
-  const noGapPlaced = countPlaced(vehicle, cargo, { walls: 0, width: 0, length: 0 }, vehicle.height);
-  if (noGapPlaced < total) {
-    return { ok: false, reason: `Невозможно штабелировать: ${detectStackReason(vehicle, cargo)}` };
+  // 1) Несовместимые типы грузов (паллеты нельзя ставить на цилиндры и наоборот)
+  if (stackIncompatible(cargo)) {
+    return { ok: false, code: 'incompatible', reason: 'несовместимые грузы (паллеты нельзя ставить на цилиндры и наоборот)' };
   }
-  // 2) С текущими зазорами, если они включены
-  const gapsOn = settings?.gapsEnabled && (gaps.walls > 0 || gaps.width > 0 || gaps.length > 0);
-  if (gapsOn) {
-    const withGapPlaced = countPlaced(vehicle, cargo, gaps, vehicle.height);
-    if (withGapPlaced < total) {
-      return { ok: false, reason: 'Невозможно штабелировать с текущими зазорами. Уменьшите зазоры или отключите их.' };
-    }
-  }
-  return { ok: true, reason: '' };
-}
-
-/** Определяет наиболее вероятную причину невозможности штабелирования */
-function detectStackReason(vehicle: Vehicle, cargo: Cargo[]): string {
-  if (stackIncompatible(cargo)) return 'несовместимые грузы (паллеты нельзя ставить на цилиндры и наоборот)';
+  // 2) Груз выше кузова — штабелирование в принципе невозможно
   for (const c of cargo) {
     const itemHeight = itemPlacedHeight(c);
-    if (itemHeight > 0 && vehicle.height > 0 && itemHeight > vehicle.height) {
-      return 'высота кузова не позволяет штабелировать';
+    if (itemHeight > vehicle.height) {
+      return { ok: false, code: 'tooHigh', cargoName: c.name, reason: `груз "${c.name}" выше кузова` };
     }
   }
-  return 'недостаточно места для размещения всех грузов';
+  // 3) Раскладка при нулевых зазорах и полной высоте кузова — несколько слоёв
+  const placed = countPlaced(vehicle, cargo, { walls: 0, width: 0, length: 0 }, vehicle.height);
+  if (placed < total) {
+    return { ok: false, code: 'space', reason: `Не хватает места: не поместилось ${total - placed} грузов` };
+  }
+  return { ok: true, reason: '' };
 }

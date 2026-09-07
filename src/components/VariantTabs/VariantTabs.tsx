@@ -31,7 +31,7 @@ export default function VariantTabs() {
           className={`variant-tab ${v.id === activeVariant ? 'active' : ''}`}
           onClick={() => setActiveVariant(v.id)}
         >
-          {tr(lang, LABEL_KEYS[v.id] ?? 'mode.along')} · {v.volumeFill}%
+          {tr(lang, LABEL_KEYS[v.id] ?? 'mode.along')} · {v.volumeFill ?? 0}%
         </button>
       ))}
     </div>

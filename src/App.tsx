@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAppStore, getCurrentVehicle } from './store/useAppStore';
-import { packItems, canFitAll, findMaxGapByType } from './lib/packer/packer';
+import { packItems, canFitAll, canStackAll, findMaxGapByType } from './lib/packer/packer';
 import Header from './components/Layout/Header';
 import Footer from './components/Layout/Footer';
 import VehicleSelector from './components/VehicleSelector/VehicleSelector';
@@ -447,12 +447,10 @@ const App: React.FC = () => {
                       const checked = e.target.checked;
                       const veh = getCurrentVehicle(selectedVehicleId, customVehicles);
                       if (checked && cargo.length > 0 && veh) {
-                        const gaps = {
-                          walls: settings.gapsEnabled ? (settings.gapWalls ?? 0) : 0,
-                          width: settings.gapsEnabled ? (settings.gapWidth ?? 0) : 0,
-                          length: settings.gapsEnabled ? (settings.gapLength ?? 0) : 0,
-                        };
-                        const check = canFitAll(veh, cargo, gaps, true);
+                        // Штабелирование не зависит от текущих зазоров: проверяются
+                        // только совместимость грузов, высота относительно кузова и
+                        // раскладка при нулевых зазорах на полную высоту кузова.
+                        const check = canStackAll(veh, cargo);
                         if (!check.ok) {
                           setStacking(false);
                           if (check.code === 'tooHigh') setError(trf(lang, 'stacking.cannotTooHigh', { name: check.cargoName ?? '' }));
@@ -462,7 +460,7 @@ const App: React.FC = () => {
                         }
                       }
                       setStacking(checked);
-                      const newMaxH = checked ? veh.height : 0;
+                      const newMaxH = checked ? (veh ? veh.height : 0) : 0;
                       recalcWithSettings(veh, { ...settings, maxStackHeight: newMaxH });
                     }}
                   />
