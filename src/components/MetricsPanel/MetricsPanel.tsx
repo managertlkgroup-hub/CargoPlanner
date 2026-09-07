@@ -88,25 +88,17 @@ export default function MetricsPanel() {
     return layers.size;
   }, [variant]);
 
-  // Габариты размещённого груза
-  const cargoDimensions = useMemo(() => {
-    if (!variant || variant.items.length === 0) return null;
-    let maxX = 0, maxZ = 0, maxY = 0;
-    variant.items.forEach((item) => {
-      const rotY = item.rotationY ?? 0;
-      const isOdd90 = Math.round(((rotY % 360) + 360) % 360 / 90) % 2 === 1;
-      const effL = isOdd90 ? item.dimensions.width : item.dimensions.length;
-      const effW = isOdd90 ? item.dimensions.length : item.dimensions.width;
-      maxX = Math.max(maxX, item.position.x + effL);
-      maxZ = Math.max(maxZ, item.position.z + effW);
-      maxY = Math.max(maxY, item.position.y + item.dimensions.height);
-    });
-    return {
-      length: Math.round(maxX),
-      width: Math.round(maxZ),
-      height: Math.round(maxY),
-    };
-  }, [variant]);
+  // Зазоры считаются включёнными, если чекбокс включён и хотя бы один тип > 0 —
+  // тогда дополнительно показываем строку «Габариты с зазорами».
+  const gapsOn =
+    settings.gapsEnabled &&
+    ((settings.gapWalls ?? 0) > 0 || (settings.gapWidth ?? 0) > 0 || (settings.gapLength ?? 0) > 0);
+
+  // Форматирование линейных габаритов в выбранной единице
+  const dimValue = (d?: { length: number; width: number; height: number }) =>
+    d
+      ? `${formatDimension(d.length, unit)}×${formatDimension(d.width, unit)}×${formatDimension(d.height, unit)}`
+      : '';
 
   // Объём груза = сумма реальных объёмов размещённых предметов (не bounding box)
   const cargoVolumeMm3 = useMemo(() => {
@@ -240,20 +232,31 @@ export default function MetricsPanel() {
           <div className="metric-label">{tr(lang, 'metric.layers')}</div>
         </div>
       )}
-      {cargoDimensions && (
+      {variant.dimensions && (
         <>
-          <div className="metric-card" title={tr(lang, 'metric.dimensionsHint')}>
-            <div className="metric-value" style={{ fontSize: '14px' }}>
-              {formatDimension(cargoDimensions.length, unit)}×{formatDimension(cargoDimensions.width, unit)}×{formatDimension(cargoDimensions.height, unit)}
+          {gapsOn ? (
+            <>
+              <div className="metric-card" title={tr(lang, 'metric.dimWithoutGapsHint')}>
+                <div className="metric-value" style={{ fontSize: '14px' }}>
+                  {dimValue(variant.dimensionsWithoutGaps)}
+                </div>
+                <div className="metric-label">{tr(lang, 'metric.dimWithoutGaps')}, {unitLabel(lang, unit)}</div>
+              </div>
+              <div className="metric-card" title={tr(lang, 'metric.dimWithGapsHint')}>
+                <div className="metric-value" style={{ fontSize: '14px' }}>
+                  {dimValue(variant.dimensions)}
+                </div>
+                <div className="metric-label">{tr(lang, 'metric.dimWithGaps')}, {unitLabel(lang, unit)}</div>
+              </div>
+            </>
+          ) : (
+            <div className="metric-card" title={tr(lang, 'metric.dimensionsHint')}>
+              <div className="metric-value" style={{ fontSize: '14px' }}>
+                {dimValue(variant.dimensions)}
+              </div>
+              <div className="metric-label">{tr(lang, 'metric.dimensions')}, {unitLabel(lang, unit)}</div>
             </div>
-            <div className="metric-label">{tr(lang, 'metric.dimensions')}, {unitLabel(lang, unit)}</div>
-          </div>
-          <div className="metric-card" title={tr(lang, 'metric.dimWithGapsHint')}>
-            <div className="metric-value" style={{ fontSize: '14px' }}>
-              {formatDimension(cargoDimensions.length + (settings.gapWidth ?? 0), unit)}×{formatDimension(cargoDimensions.width + (settings.gapLength ?? 0), unit)}×{formatDimension(cargoDimensions.height, unit)}
-            </div>
-            <div className="metric-label">{tr(lang, 'metric.dimWithGaps')}, {unitLabel(lang, unit)}</div>
-          </div>
+          )}
           <div className="metric-card">
             <div className="metric-value">{volumeToM3(cargoVolumeMm3, lang)}</div>
             <div className="metric-label">{tr(lang, 'metric.cargoVolume')}</div>

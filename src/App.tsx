@@ -103,6 +103,9 @@ const App: React.FC = () => {
   const setMaxGapWalls = useAppStore((s) => s.setMaxGapWalls);
   const setMaxGapWidth = useAppStore((s) => s.setMaxGapWidth);
   const setMaxGapLength = useAppStore((s) => s.setMaxGapLength);
+  const maxGapWalls = useAppStore((s) => s.maxGapWalls);
+  const maxGapWidth = useAppStore((s) => s.maxGapWidth);
+  const maxGapLength = useAppStore((s) => s.maxGapLength);
   const error = useAppStore((s) => s.error);
   const setError = useAppStore((s) => s.setError);
 
@@ -267,9 +270,13 @@ const App: React.FC = () => {
     }
   };
 
-  // Правка конкретного типа зазора: проверяется только этот тип. Если новое
-  // значение ≤ 0 мм или грузы с ним не помещаются — значение не меняется
-  // (откат к последнему допустимому > 0) и показывается тост.
+  // Правка конкретного типа зазора (строгая проверка ввода):
+  //  - если введено значение, превышающее допустимый максимум этого типа
+  //    (maxGapWalls/maxGapWidth/maxGapLength), ввод блокируется: значение
+  //    откатывается к максимуму и показывается тост с точным значением;
+  //  - если введено 0 или отрицательное значение — значение не меняется
+  //    (остаётся прежнее), показывается тост с допустимым максимумом;
+  //  - иначе (0 < value <= maxGap) значение применяется.
   const editGapType = (key: 'gapWalls' | 'gapWidth' | 'gapLength', v: number) => {
     const veh = getCurrentVehicle(selectedVehicleId, customVehicles);
     const prev = settings[key] ?? 0;
@@ -278,21 +285,20 @@ const App: React.FC = () => {
       setSettings({ ...settings, gap: 0, [key]: v });
       return;
     }
+    const maxOfType = key === 'gapWalls' ? maxGapWalls : key === 'gapWidth' ? maxGapWidth : maxGapLength;
+    if (v > maxOfType && maxOfType > 0) {
+      // Блокировка: откат к допустимому максимуму этого типа + тост с точным значением
+      const next = { ...settings, gap: 0, [key]: maxOfType };
+      recalcWithSettings(veh, next, false);
+      setError(trf(lang, 'gaps.typeTooBig', { max: formatDimension(maxOfType, unit), u: UNIT_LABEL[unit] }));
+      return;
+    }
     if (v <= 0) {
-      setError(trf(lang, 'gaps.typeTooBig', { max: formatDimension(prev || 1, unit), u: UNIT_LABEL[unit] }));
+      // 0/отрицательное — не применяется, показываем тост с допустимым максимумом
+      setError(trf(lang, 'gaps.typeTooBig', { max: formatDimension(maxOfType, unit), u: UNIT_LABEL[unit] }));
       return;
     }
-    const next = { ...settings, gap: 0, [key]: v };
-    const fit = canFitAll(veh, cargo, {
-      walls: next.gapWalls ?? 0,
-      width: next.gapWidth ?? 0,
-      length: next.gapLength ?? 0,
-    }, stacking, currentMode(activeVariant));
-    if (!fit.ok) {
-      setError(trf(lang, 'gaps.typeTooBig', { max: formatDimension(prev, unit), u: UNIT_LABEL[unit] }));
-      return;
-    }
-    recalcWithSettings(veh, next, false);
+    recalcWithSettings(veh, { ...settings, gap: 0, [key]: v }, false);
   };
 
   // Сохранение состояния секций левой панели в localStorage

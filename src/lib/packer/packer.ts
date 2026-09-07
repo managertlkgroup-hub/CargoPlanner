@@ -486,6 +486,18 @@ function toPackedItem(p: PlacedBox, layerIndex: number): PackedItem {
   };
 }
 
+/** Габариты (bounding box) размещённых боксов по фактическим координатам, мм */
+function measureBBox(placed: PlacedBox[]): { length: number; width: number; height: number } | undefined {
+  if (placed.length === 0) return undefined;
+  let maxX = 0, maxZ = 0, maxY = 0;
+  for (const p of placed) {
+    maxX = Math.max(maxX, p.x + p.placedLength);
+    maxZ = Math.max(maxZ, p.z + p.placedWidth);
+    maxY = Math.max(maxY, p.y + p.placedHeight);
+  }
+  return { length: Math.round(maxX), width: Math.round(maxZ), height: Math.round(maxY) };
+}
+
 /** Основная функция расчёта раскладки */
 export function packItems(
   vehicle: Vehicle,
@@ -574,33 +586,34 @@ export function packItems(
       const binVolume = bin.length * bin.width * bin.height;
       const weightFill = vehicle.maxWeight > 0 ? (totalWeight / vehicle.maxWeight) * 100 : 0;
 
-      // Габариты размещённого груза (bounding box)
-      let maxCargoX = 0, maxCargoZ = 0, maxCargoY = 0;
-      items.forEach((item) => {
-        const rotY = item.rotationY ?? 0;
-        const isOdd90 = Math.round(((rotY % 360) + 360) % 360 / 90) % 2 === 1;
-        const effL = isOdd90 ? item.dimensions.width : item.dimensions.length;
-        const effW = isOdd90 ? item.dimensions.length : item.dimensions.width;
-        maxCargoX = Math.max(maxCargoX, item.position.x + effL);
-        maxCargoZ = Math.max(maxCargoZ, item.position.z + effW);
-        maxCargoY = Math.max(maxCargoY, item.position.y + item.dimensions.height);
-      });
-      const cargoVolume = items.length > 0 ? maxCargoX * maxCargoZ * maxCargoY : 0;
-      const volumeFill = binVolume > 0 ? (cargoVolume / binVolume) * 100 : 0;
+      // Габариты укладки (bounding box) с учётом зазоров: позиции грузов уже
+      // включают зазоры (стены + между рядами), поэтому bbox растёт с зазорами.
+      const dims = measureBBox(placed);
+      // Габариты без учёта зазоров: перекладываем с нулевыми зазорами и замеряем
+      // bbox по фактическим координатам грузов — не должна меняться от зазоров.
+      const dimsWithoutGaps =
+        gaps.walls > 0 || gaps.width > 0 || gaps.length > 0
+          ? measureBBox(
+              packIntoBin(bin, vehicle.maxWeight, boxes, resolvedSettings, mode, { walls: 0, width: 0, length: 0 }),
+            )
+          : dims;
+
+      // Заполнение объёма и свободный объём считаются от СУММЫ физических объёмов
+      // грузов (totalVolume), а не от bounding box — зазоры на них не влияют.
+      const volumeFill = binVolume > 0 ? (totalVolume / binVolume) * 100 : 0;
 
       return {
         id: mode,
         label,
         labelKey: `mode.${mode}`,
         items,
-        dimensions: items.length > 0
-          ? { length: Math.round(maxCargoX), width: Math.round(maxCargoZ), height: Math.round(maxCargoY) }
-          : undefined,
+        dimensions: items.length > 0 ? dims : undefined,
+        dimensionsWithoutGaps: items.length > 0 ? dimsWithoutGaps : undefined,
         volumeFill: Math.round(volumeFill * 10) / 10,
         weightFill: Math.round(weightFill * 10) / 10,
         totalWeight: Math.round(totalWeight),
-        totalVolume: Math.round(cargoVolume),
-        freeVolume: Math.max(0, binVolume - cargoVolume),
+        totalVolume: Math.round(totalVolume),
+        freeVolume: Math.max(0, binVolume - totalVolume),
         freeWeight: Math.max(0, vehicle.maxWeight - totalWeight),
       };
     });
@@ -710,7 +723,9 @@ export interface GapTypeMaxes {
 /**
  * Ищет максимально допустимые значения для каждого типа зазора (от стен, между
  * рядами по ширине, между рядами по длине) для текущего режима раскладки.
- * Каждый тип ищется от 50 мм вниз с шагом 1 мм. Типы перебираются поочерёдно,
+ * Используется прямой геометрический расчёт: для каждого типа ищется наибольшее
+ * значение (сверху вниз от геометрической верхней границы кузова) с точностью
+ * до 1 мм, при котором все грузы ещё помещаются. Типы перебираются поочерёдно,
  * фиксируя уже найденные значения предыдущих — итоговый набор гарантированно
  * помещается. Если даже с зазором 1 мм грузы не помещаются — тип считается
  * невозможным и возвращается 0 мм.
@@ -721,11 +736,28 @@ export function findMaxGapByType(
   mode?: string,
   stackingEnabled = false,
 ): GapTypeMaxes {
+  // Геометрические верхние границы поиска (в мм): зазор не может быть больше
+  // соответствующего габарита кузова, от стен — больше минимального габарита.
+  const bounds: Record<'walls' | 'width' | 'length', number> = {
+    walls: Math.floor(Math.min(vehicle.length, vehicle.width, vehicle.height)),
+    width: Math.floor(vehicle.width),
+    length: Math.floor(vehicle.length),
+  };
   const search = (key: 'walls' | 'width' | 'length', base: Gaps): number => {
-    for (let g = 50; g >= 1; g -= 1) {
-      if (canFitAll(vehicle, cargo, { ...base, [key]: g }, stackingEnabled, mode).ok) return g;
+    if (!canFitAll(vehicle, cargo, { ...base, [key]: 1 }, stackingEnabled, mode).ok) return 0;
+    let lo = 1;
+    let hi = bounds[key];
+    // Возможность размещения монотонно убывает с ростом зазора — бинарный поиск
+    // точного максимума с шагом 1 мм.
+    while (lo <= hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (canFitAll(vehicle, cargo, { ...base, [key]: mid }, stackingEnabled, mode).ok) {
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
     }
-    return 0;
+    return Math.max(0, hi);
   };
   const walls = search('walls', { walls: 0, width: 0, length: 0 });
   const width = search('width', { walls, width: 0, length: 0 });
