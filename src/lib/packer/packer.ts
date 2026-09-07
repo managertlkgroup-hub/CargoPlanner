@@ -769,8 +769,9 @@ export function findMaxGapByType(
  * Проверка возможности штабелирования всех грузов при включении чекбокса.
  * НЕ зависит от текущих зазоров: зазоры не могут помешать штабелированию.
  * Проверяются только совместимость грузов (паллеты/цилиндры), высота груза
- * относительно высоты кузова и физическая раскладка при нулевых зазорах на
- * полную высоту кузова (несколько слоёв).
+ * (двойная высота должна помещаться в кузов, иначе штабелирование бессмысленно,
+ * а один груз не может быть выше кузова) и физическая раскладка при нулевых
+ * зазорах на полную высоту кузова (несколько слоёв).
  */
 export function canStackAll(vehicle: Vehicle, cargo: Cargo[]): FitCheck {
   const total = totalQuantity(cargo);
@@ -778,11 +779,13 @@ export function canStackAll(vehicle: Vehicle, cargo: Cargo[]): FitCheck {
   if (stackIncompatible(cargo)) {
     return { ok: false, code: 'incompatible', reason: 'несовместимые грузы (паллеты нельзя ставить на цилиндры и наоборот)' };
   }
-  // 2) Груз выше кузова — штабелирование в принципе невозможно
+  // 2) Высота груза: для штабелирования двухслойной постановки нужно, чтобы две
+  //    высоты помещались в кузов (груз.height * 2 <= vehicle.height), а один груз
+  //    не был выше кузова. Иначе штабелирование в принципе невозможно.
   for (const c of cargo) {
     const itemHeight = itemPlacedHeight(c);
-    if (itemHeight > vehicle.height) {
-      return { ok: false, code: 'tooHigh', cargoName: c.name, reason: `груз "${c.name}" выше кузова` };
+    if (itemHeight > 0 && itemHeight * 2 > vehicle.height) {
+      return { ok: false, code: 'tooHigh', cargoName: c.name, reason: `нельзя штабелировать 2 слоя груза "${c.name}"` };
     }
   }
   // 3) Раскладка при нулевых зазорах и полной высоте кузова — несколько слоёв

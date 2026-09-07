@@ -28,20 +28,7 @@ type LayoutMode = 'along' | 'across' | 'mixed';
 const currentMode = (v: string | null | undefined): LayoutMode | undefined =>
   v === 'along' || v === 'across' || v === 'mixed' ? v : undefined;
 
-/** Тост со списком максимальных значений по типам зазора (только возможные > 0) */
-const gapMaximaMsg = (
-  m: { walls: number; width: number; length: number },
-  unit: Unit,
-  lang: ReturnType<typeof useAppStore.getState>['lang'],
-): string => {
-  const parts: string[] = [];
-  if (m.walls > 0) parts.push(`${tr(lang, 'gaps.wallShort')} — ${formatDimension(m.walls, unit)}`);
-  if (m.width > 0) parts.push(`${tr(lang, 'gaps.widthShort')} — ${formatDimension(m.width, unit)}`);
-  if (m.length > 0) parts.push(`${tr(lang, 'gaps.lengthShort')} — ${formatDimension(m.length, unit)}`);
-  return trf(lang, 'gaps.enabledMaxima', { parts: parts.join(', ') });
-};
-
-/** Строка настройки одного зазора: если тип невозможен (≤ 0) — серая надпись «Невозможно», иначе числовое поле */
+/** Строка настройки одного зазора: если тип невозможен (maxGap ≤ 0) — серая надпись «Невозможно», иначе числовое поле */
 const GapRow: React.FC<{
   id: string;
   lang: ReturnType<typeof useAppStore.getState>['lang'];
@@ -60,7 +47,7 @@ const GapRow: React.FC<{
       </div>
     );
   }
-  const value = Number(toUnit(valueMm || 1, unit).toFixed(unit === 'm' ? 2 : 1));
+  const value = Number(toUnit(valueMm, unit).toFixed(unit === 'm' ? 2 : 1));
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
       <span style={{ fontSize: 13, color: 'var(--text)', flex: 1, minWidth: 0 }}>{label}</span>
@@ -132,50 +119,48 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<'3d' | '2d'>('2d');
   const [stacking, setStacking] = useState(settings.maxStackHeight > 0);
 
+  // Автоматический пересчёт максимально допустимых зазоров для каждого типа
+  // (walls/width/length) в текущем режиме раскладки при изменении любых данных.
+  // Эти максимумы — только для отображения («Невозможно», если = 0) и для
+  // блокировки ввода; сами значения зазоров пользователь вводит вручную и они
+  // не автозаполняются при включении.
+  const recomputeMaxGaps = () => {
+    const veh = getCurrentVehicle(selectedVehicleId, customVehicles);
+    if (cargo.length === 0 || !veh) return;
+    const res = findMaxGapByType(veh, cargo, currentMode(activeVariant), stacking);
+    setMaxGapWalls(res.walls);
+    setMaxGapWidth(res.width);
+    setMaxGapLength(res.length);
+  };
+
   // Синхронизация чекбокса с настройками
   useEffect(() => {
     setStacking(settings.maxStackHeight > 0);
   }, [settings.maxStackHeight]);
 
+  // При изменении количества грузов, автомобиля, режима раскладки или
+  // штабелирования — автоматически пересчитываем максимальные зазоры по типам.
+  useEffect(() => {
+    recomputeMaxGaps();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cargo, selectedVehicleId, activeVariant, stacking]);
+
   // Пересчёт при смене активного режима раскладки (вдоль / поперёк / смешанный):
-  // гарантирует, что зазоры и штабелирование корректно применяются для выбранного
-  // режима. Режим не «откатывается» как при редактировании зазора — пользователь
-  // должен видеть раскладку выбранного режима даже если в нём помещается меньше.
+  // режим не «откатывается» — пользователь видит раскладку выбранного режима даже
+  // если в нём помещается меньше. Переключение только меняет activeVariant и
+  // пересчитывает раскладку при активных зазорах/штабелировании (без автозаполнения
+  // зазоров и без принудительного применения максимумов).
   const prevActiveVariantRef = useRef<string | null>(activeVariant);
   useEffect(() => {
     if (prevActiveVariantRef.current === activeVariant) return;
     prevActiveVariantRef.current = activeVariant;
     if (cargo.length > 0 && vehicle) {
-      // При смене режима раскладки пересчитываем зазоры/штабелирование для нового
-      // режима. Если с текущими зазорами грузы в новом режиме не помещаются —
-      // отключаем зазоры и показываем тост.
-      if (settings.gapsEnabled) {
-        // При смене режима пересчитываем максимальные значения всех типов зазора
-        // для нового режима и применяем их. Если ни один тип не возможен —
-        // отключаем зазоры и показываем тост.
-        const res = findMaxGapByType(vehicle, cargo, currentMode(activeVariant), stacking);
-        if (res.walls === 0 && res.width === 0 && res.length === 0) {
-          const off: PackSettings = { ...settings, gapsEnabled: false, gap: 0, gapWalls: 0, gapWidth: 0, gapLength: 0 };
-          setSettings(off);
-          recalcWithSettings(vehicle, off, false);
-          setError(tr(lang, 'gaps.cannotEnable'));
-          return;
-        }
-        const gapChanged = res.walls !== (settings.gapWalls ?? 0) || res.width !== (settings.gapWidth ?? 0) || res.length !== (settings.gapLength ?? 0);
-        if (gapChanged) {
-          setMaxGapWalls(res.walls);
-          setMaxGapWidth(res.width);
-          setMaxGapLength(res.length);
-          const next: PackSettings = { ...settings, gapsEnabled: true, gap: 0, gapWalls: res.walls, gapWidth: res.width, gapLength: res.length };
-          recalcWithSettings(vehicle, next, false);
-          setError(gapMaximaMsg(res, unit, lang));
-          return;
-        }
-      }
+      recomputeMaxGaps();
       if (settings.gapsEnabled || stacking) {
         recalcWithSettings(vehicle, settings, false);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeVariant]);
 
   // Одноразовая миграция старого единого зазора (gap) в три независимых
@@ -286,16 +271,18 @@ const App: React.FC = () => {
       return;
     }
     const maxOfType = key === 'gapWalls' ? maxGapWalls : key === 'gapWidth' ? maxGapWidth : maxGapLength;
-    if (v > maxOfType && maxOfType > 0) {
-      // Блокировка: откат к допустимому максимуму этого типа + тост с точным значением
-      const next = { ...settings, gap: 0, [key]: maxOfType };
+    // Значение 0 всегда допустимо (зазор «на нуле» — грузы вплотную). Любое
+    // значение больше максимума этого типа — блокируется: откат к последнему
+    // допустимому значению + тост с точным максимумом.
+    if (v > 0 && maxOfType > 0 && v > maxOfType) {
+      const next = { ...settings, gap: 0, [key]: prev };
       recalcWithSettings(veh, next, false);
       setError(trf(lang, 'gaps.typeTooBig', { max: formatDimension(maxOfType, unit), u: UNIT_LABEL[unit] }));
       return;
     }
-    if (v <= 0) {
-      // 0/отрицательное — не применяется, показываем тост с допустимым максимумом
-      setError(trf(lang, 'gaps.typeTooBig', { max: formatDimension(maxOfType, unit), u: UNIT_LABEL[unit] }));
+    if (v > 0 && maxOfType <= 0) {
+      // Тип в текущем режиме вообще невозможен — ввод блокируем (поле не показывается)
+      setError(trf(lang, 'gaps.typeTooBig', { max: formatDimension(0, unit), u: UNIT_LABEL[unit] }));
       return;
     }
     recalcWithSettings(veh, { ...settings, gap: 0, [key]: v }, false);
@@ -480,27 +467,14 @@ const App: React.FC = () => {
                       onChange={(e) => {
                         const next = e.target.checked;
                         const veh = getCurrentVehicle(selectedVehicleId, customVehicles);
-                        if (next && cargo.length > 0 && veh) {
-                          // При включении зазоров подбираем максимальное значение для
-                          // каждого типа (от стен, по ширине, по длине) в текущем режиме.
-                          // Если ни один тип невозможен (≤ 0) — не включаем и показываем тост.
-                          const res = findMaxGapByType(veh, cargo, currentMode(activeVariant), stacking);
-                          if (res.walls === 0 && res.width === 0 && res.length === 0) {
-                            setError(tr(lang, 'gaps.cannotEnable'));
-                            return;
-                          }
-                          setMaxGapWalls(res.walls);
-                          setMaxGapWidth(res.width);
-                          setMaxGapLength(res.length);
-                          const on: PackSettings = { ...settings, gapsEnabled: true, gap: 0, gapWalls: res.walls, gapWidth: res.width, gapLength: res.length };
-                          recalcWithSettings(veh, on, false);
-                          setError(gapMaximaMsg(res, unit, lang));
-                        } else {
-                          const newSettings: PackSettings = next
-                            ? { ...settings, gapsEnabled: true, gap: 0, gapWalls: 50, gapWidth: 50, gapLength: 50 }
-                            : { ...settings, gapsEnabled: false, gap: 0, gapWalls: 0, gapWidth: 0, gapLength: 0 };
-                          recalcWithSettings(veh, newSettings, true);
-                        }
+                        // При включении/выключении зазоров пересчитываем максимальные
+                        // значения по типам (для отображения «Невозможно»), но поля
+                        // ввода остаются пустыми (0) — пользователь вводит сам.
+                        recomputeMaxGaps();
+                        const newSettings: PackSettings = next
+                          ? { ...settings, gapsEnabled: true, gap: 0, gapWalls: 0, gapWidth: 0, gapLength: 0 }
+                          : { ...settings, gapsEnabled: false, gap: 0, gapWalls: 0, gapWidth: 0, gapLength: 0 };
+                        recalcWithSettings(veh, newSettings, false);
                       }}
                     />
                     <label htmlFor="gaps-master-toggle" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--text)', cursor: 'pointer' }}>
@@ -513,7 +487,7 @@ const App: React.FC = () => {
                         id="gap-walls-toggle"
                         lang={lang}
                         unit={unit}
-                        possible={(settings.gapWalls ?? 0) > 0}
+                        possible={maxGapWalls > 0}
                         label={tr(lang, 'gaps.walls')}
                         valueMm={settings.gapWalls ?? 0}
                         onChange={(v) => editGapType('gapWalls', v)}
@@ -522,7 +496,7 @@ const App: React.FC = () => {
                         id="gap-width-toggle"
                         lang={lang}
                         unit={unit}
-                        possible={(settings.gapWidth ?? 0) > 0}
+                        possible={maxGapWidth > 0}
                         label={tr(lang, 'gaps.width')}
                         valueMm={settings.gapWidth ?? 0}
                         onChange={(v) => editGapType('gapWidth', v)}
@@ -531,7 +505,7 @@ const App: React.FC = () => {
                         id="gap-length-toggle"
                         lang={lang}
                         unit={unit}
-                        possible={(settings.gapLength ?? 0) > 0}
+                        possible={maxGapLength > 0}
                         label={tr(lang, 'gaps.length')}
                         valueMm={settings.gapLength ?? 0}
                         onChange={(v) => editGapType('gapLength', v)}
