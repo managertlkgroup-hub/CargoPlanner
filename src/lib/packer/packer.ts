@@ -616,6 +616,26 @@ export interface FitCheck {
   ok: boolean;
   /** Причина невозможности (для тоста) */
   reason: string;
+  /** Код причины для локализованного тоста (только если !ok) */
+  code?: 'tooHigh' | 'incompatible' | 'spaceWithGaps' | 'space';
+  /** Имя груза, вызвавшего невозможность (для code='tooHigh') */
+  cargoName?: string;
+}
+
+/** Высота груза в уложенном виде (одинаково для canFitAll/detectStackReason) */
+function itemPlacedHeight(c: Cargo): number {
+  const size = getCargoSize(c);
+  return c.shape === 'cylinder'
+    ? (c.cylinderOrientation === 'vertical' ? size.length : (c.diameter ?? size.width))
+    : size.height;
+}
+
+/** Есть ли заведомо несовместимые типы грузов (паллеты + цилиндры) для совместного штабелирования */
+function stackIncompatible(cargo: Cargo[]): boolean {
+  const stackable = cargo.filter((c) => c.stackable);
+  const hasBox = stackable.some((c) => c.shape === 'box');
+  const hasCyl = stackable.some((c) => c.shape === 'cylinder');
+  return hasBox && hasCyl;
 }
 
 function totalQuantity(cargo: Cargo[]): number {
@@ -652,20 +672,26 @@ export function canFitAll(vehicle: Vehicle, cargo: Cargo[], gaps: Gaps, stacking
   const total = totalQuantity(cargo);
   const placed = countPlaced(vehicle, cargo, gaps, stackingEnabled ? vehicle.height : 0);
   if (placed >= total) return { ok: true, reason: '' };
-  // Специфичная причина для штабелирования: груз(ы) слишком высокие для кузова
   if (stackingEnabled) {
+    // 1) Груз выше кузова — штабелирование в принципе невозможно
     for (const c of cargo) {
-      const size = getCargoSize(c);
-      const itemHeight = c.shape === 'cylinder'
-        ? (c.cylinderOrientation === 'vertical' ? size.length : (c.diameter ?? size.width))
-        : size.height;
+      const itemHeight = itemPlacedHeight(c);
       if (itemHeight > vehicle.height) {
-        return { ok: false, reason: `груз «${c.name}» выше кузова` };
+        return { ok: false, code: 'tooHigh', cargoName: c.name, reason: `груз "${c.name}" выше кузова` };
       }
     }
-    return { ok: false, reason: detectStackReason(vehicle, cargo) };
+    // 2) Несовместимые типы грузов (паллеты нельзя ставить на цилиндры и наоборот)
+    if (stackIncompatible(cargo)) {
+      return { ok: false, code: 'incompatible', reason: 'несовместимые грузы' };
+    }
+    // 3) Не помещается по месту с текущими зазорами (можно уменьшить зазоры или отключить их)
+    return {
+      ok: false,
+      code: 'spaceWithGaps',
+      reason: 'грузы не помещаются с текущими зазорами. Уменьшите зазоры или отключите их.',
+    };
   }
-  return { ok: false, reason: `Не хватает места: не поместилось ${total - placed} грузов` };
+  return { ok: false, code: 'space', reason: `Не хватает места: не поместилось ${total - placed} грузов` };
 }
 
 /** Проверка возможности штабелирования всех грузов при включении чекбокса */
@@ -689,15 +715,9 @@ export function canStackAll(vehicle: Vehicle, cargo: Cargo[], gaps: Gaps, settin
 
 /** Определяет наиболее вероятную причину невозможности штабелирования */
 function detectStackReason(vehicle: Vehicle, cargo: Cargo[]): string {
-  const stackable = cargo.filter((c) => c.stackable);
-  const hasBox = stackable.some((c) => c.shape === 'box');
-  const hasCyl = stackable.some((c) => c.shape === 'cylinder');
-  if (hasBox && hasCyl) return 'несовместимые грузы (паллеты нельзя ставить на цилиндры и наоборот)';
-  for (const c of stackable) {
-    const size = getCargoSize(c);
-    const itemHeight = c.shape === 'cylinder'
-      ? (c.cylinderOrientation === 'vertical' ? size.length : (c.diameter ?? size.width))
-      : size.height;
+  if (stackIncompatible(cargo)) return 'несовместимые грузы (паллеты нельзя ставить на цилиндры и наоборот)';
+  for (const c of cargo) {
+    const itemHeight = itemPlacedHeight(c);
     if (itemHeight > 0 && vehicle.height > 0 && itemHeight > vehicle.height) {
       return 'высота кузова не позволяет штабелировать';
     }

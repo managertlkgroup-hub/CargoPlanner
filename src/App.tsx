@@ -154,43 +154,47 @@ const App: React.FC = () => {
 
   // Общий пересчёт с заданными настройками (используется для штабелирования и зазора)
   const recalcWithSettings = (veh: ReturnType<typeof getCurrentVehicle>, nextSettings: PackSettings, isGapEdit = false) => {
+    // Откат к последнему допустимому состоянию + тост «Максимальный допустимый зазор: X мм»
+    const revertToPrevGood = (goodSettings: PackSettings, goodResult: ReturnType<typeof packItems>) => {
+      setResult(goodResult);
+      const pristineMap: Record<string, typeof goodResult.variants[number]['items']> = {};
+      goodResult.variants.forEach((v) => { pristineMap[v.id] = v.items; });
+      setPristine(pristineMap);
+      setActiveVariant(useAppStore.getState().activeVariant && goodResult.variants.some(v => v.id === useAppStore.getState().activeVariant)
+        ? useAppStore.getState().activeVariant : goodResult.variants[0].id);
+      // Через setSettings откатываем именно то значение, которое превысило допустимое
+      setSettings(goodSettings);
+      const maxVal = Math.max(
+        goodSettings.gapWalls ?? 0,
+        goodSettings.gapWidth ?? 0,
+        goodSettings.gapLength ?? 0,
+      );
+      const maxStr = formatDimension(maxVal, unit);
+      setError(trf(lang, 'gaps.gapTooBig', { max: maxStr, u: UNIT_LABEL[unit] }));
+    };
+
     setSettings(nextSettings);
     if (cargo.length > 0 && veh) {
+      // При изменении любого зазора сначала проверяем, помещаются ли все грузы
+      // с новым значением (во всех трёх режимах раскладки). Если нет — откатываем
+      // к последнему допустимому значению и показываем тост.
+      if (isGapEdit && prevGoodResultRef.current && prevGoodSettingsRef.current) {
+        const gaps = {
+          walls: nextSettings.gapWalls ?? 0,
+          width: nextSettings.gapWidth ?? 0,
+          length: nextSettings.gapLength ?? 0,
+        };
+        const fit = canFitAll(veh, cargo, gaps, stacking);
+        if (!fit.ok) {
+          revertToPrevGood(prevGoodSettingsRef.current, prevGoodResultRef.current);
+          return;
+        }
+      }
+
       setCalculating(true);
       try {
         const result = packItems(veh, cargo, nextSettings, loadingPoints);
         if (!result.error) {
-          const totalQty = cargo.reduce((sum, c) => sum + Math.max(1, Math.floor(c.quantity || 1)), 0);
-          // Оцениваем по режиму, который сейчас выбран пользователем (вдоль/поперёк/смешанный),
-          // чтобы откат зазора не блокировал режим, в котором грузы реально помещаются.
-          const activeMode = useAppStore.getState().activeVariant;
-          const activeVariant = result.variants.find((v) => v.id === activeMode) ?? result.variants[0];
-          const placedQty = activeVariant?.items?.length ?? 0;
-
-          // Блокировка превышения применима ТОЛЬКО когда пользователь меняет значения зазора.
-          // Если грузы не поместились по другой причине (напр. выключено штабелирование) —
-          // откатывать настройку и показывать тост про зазор нельзя.
-          if (isGapEdit && totalQty > 0 && placedQty < totalQty && prevGoodResultRef.current && prevGoodSettingsRef.current) {
-            const goodSettings = prevGoodSettingsRef.current;
-            const goodResult = prevGoodResultRef.current;
-            setResult(goodResult);
-            const pristineMap: Record<string, typeof goodResult.variants[number]['items']> = {};
-            goodResult.variants.forEach((v) => { pristineMap[v.id] = v.items; });
-            setPristine(pristineMap);
-            setActiveVariant(useAppStore.getState().activeVariant && goodResult.variants.some(v => v.id === useAppStore.getState().activeVariant)
-              ? useAppStore.getState().activeVariant : goodResult.variants[0].id);
-            // Через setSettings откатываем именно то значение, которое превысило допустимое
-            setSettings(goodSettings);
-            const maxVal = Math.max(
-              goodSettings.gapWalls ?? 0,
-              goodSettings.gapWidth ?? 0,
-              goodSettings.gapLength ?? 0,
-            );
-            const maxStr = formatDimension(maxVal, unit);
-            setError(trf(lang, 'gaps.gapTooBig', { max: maxStr, u: UNIT_LABEL[unit] }));
-            return;
-          }
-
           setResult(result);
           const pristineMap: Record<string, typeof result.variants[number]['items']> = {};
           result.variants.forEach((v) => { pristineMap[v.id] = v.items; });
@@ -200,28 +204,12 @@ const App: React.FC = () => {
           setActiveVariant(keep);
 
           // Запоминаем как рабочее состояние каждый раз, когда packer не вернул ошибку
-          // (даже если не все грузы поместились — это лучше, чем состояние с ошибкой).
           prevGoodSettingsRef.current = nextSettings;
           prevGoodResultRef.current = result;
         } else if (isGapEdit && prevGoodResultRef.current && prevGoodSettingsRef.current) {
           // packItems вернул ошибку (напр. слишком большой зазор → отрицательное пространство)
           // при редактировании зазора — откатываем к последнему рабочему состоянию.
-          const goodSettings = prevGoodSettingsRef.current;
-          const goodResult = prevGoodResultRef.current;
-          setResult(goodResult);
-          const pristineMap: Record<string, typeof goodResult.variants[number]['items']> = {};
-          goodResult.variants.forEach((v) => { pristineMap[v.id] = v.items; });
-          setPristine(pristineMap);
-          setActiveVariant(useAppStore.getState().activeVariant && goodResult.variants.some(v => v.id === useAppStore.getState().activeVariant)
-            ? useAppStore.getState().activeVariant : goodResult.variants[0].id);
-          setSettings(goodSettings);
-          const maxVal = Math.max(
-            goodSettings.gapWalls ?? 0,
-            goodSettings.gapWidth ?? 0,
-            goodSettings.gapLength ?? 0,
-          );
-          const maxStr = formatDimension(maxVal, unit);
-          setError(trf(lang, 'gaps.gapTooBig', { max: maxStr, u: UNIT_LABEL[unit] }));
+          revertToPrevGood(prevGoodSettingsRef.current, prevGoodResultRef.current);
           return;
         }
       } catch (err) { /* пересчёт зазора */ }
@@ -383,7 +371,9 @@ const App: React.FC = () => {
                         const check = canFitAll(veh, cargo, gaps, true);
                         if (!check.ok) {
                           setStacking(false);
-                          setError(trf(lang, 'stacking.cannotEnable', { reason: check.reason }));
+                          if (check.code === 'tooHigh') setError(trf(lang, 'stacking.cannotTooHigh', { name: check.cargoName ?? '' }));
+                          else if (check.code === 'incompatible') setError(tr(lang, 'stacking.cannotIncompatible'));
+                          else setError(tr(lang, 'stacking.cannotSpace'));
                           return;
                         }
                       }
@@ -409,37 +399,18 @@ const App: React.FC = () => {
                         const next = e.target.checked;
                         const veh = getCurrentVehicle(selectedVehicleId, customVehicles);
                         if (next && cargo.length > 0 && veh) {
-                          // Пробуем включить зазоры с сохранёнными значениями.
-                          // Если грузы с ними не помещаются — снижаем до минимального
-                          // возможного зазора (50 мм), чтобы зазоры всё же включились.
+                          // При включении зазоров проверяем, помещаются ли все грузы
+                          // (во всех трёх режимах раскладки) с минимальным зазором 50 мм.
                           const MIN = 50;
-                          const want = {
-                            walls: settings.gapWalls || MIN,
-                            width: settings.gapWidth || MIN,
-                            length: settings.gapLength || MIN,
-                          };
-                          let effective = want;
-                          let check = canFitAll(veh, cargo, want, stacking);
+                          const minimal = { walls: MIN, width: MIN, length: MIN };
+                          const check = canFitAll(veh, cargo, minimal, stacking);
                           if (!check.ok) {
-                            const minimal = { walls: MIN, width: MIN, length: MIN };
-                            const minCheck = canFitAll(veh, cargo, minimal, stacking);
-                            if (minCheck.ok) {
-                              effective = minimal;
-                              check = minCheck;
-                            }
-                          }
-                          if (!check.ok) {
-                            setError(trf(lang, 'gaps.cannotEnable', { reason: check.reason }));
-                            return;
-                          }
-                          if (effective !== want) {
-                            const fallback: PackSettings = { ...settings, gapsEnabled: true, gap: 0, gapWalls: effective.walls, gapWidth: effective.width, gapLength: effective.length };
-                            recalcWithSettings(veh, fallback, true);
+                            setError(tr(lang, 'gaps.cannotEnable'));
                             return;
                           }
                         }
                         const newSettings: PackSettings = next
-                          ? { ...settings, gapsEnabled: true, gap: 0, gapWalls: settings.gapWalls || 50, gapWidth: settings.gapWidth || 50, gapLength: settings.gapLength || 50 }
+                          ? { ...settings, gapsEnabled: true, gap: 0, gapWalls: 50, gapWidth: 50, gapLength: 50 }
                           : { ...settings, gapsEnabled: false, gap: 0, gapWalls: 0, gapWidth: 0, gapLength: 0 };
                         recalcWithSettings(veh, newSettings, true);
                       }}
