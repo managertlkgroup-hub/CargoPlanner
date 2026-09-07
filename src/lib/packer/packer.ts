@@ -697,6 +697,35 @@ export function canFitAll(vehicle: Vehicle, cargo: Cargo[], gaps: Gaps, stacking
   return { ok: false, code: 'space', reason: `Не хватает места: не поместилось ${total - placed} грузов` };
 }
 
+/** Результат поиска максимально допустимого зазора */
+export interface MaxGapResult {
+  /** true — найден зазор (может быть 0 мм); false — даже при 0 мм грузы не помещаются */
+  ok: boolean;
+  /** Максимальный общий зазор (мм) для трёх типов, при котором помещаются все грузы */
+  gap: number;
+}
+
+/**
+ * Ищет максимально допустимый зазор для текущего режима раскладки.
+ * Поиск идёт от startGap вниз с шагом 5 мм; первое значение, при котором
+ * canFitAll возвращает true, — максимально допустимое (если даже 0 мм не
+ * помещается — ok=false). Если startGap не задан или ≤ 0, поиск стартует с 50 мм.
+ */
+export function findMaxGap(
+  vehicle: Vehicle,
+  cargo: Cargo[],
+  mode?: string,
+  stackingEnabled = false,
+  startGap?: number,
+): MaxGapResult {
+  const start = startGap && startGap > 0 ? Math.min(50, Math.ceil(startGap)) : 50;
+  for (let g = start; g >= 0; g -= 5) {
+    const fit = canFitAll(vehicle, cargo, { walls: g, width: g, length: g }, stackingEnabled, mode);
+    if (fit.ok) return { ok: true, gap: Math.max(0, g) };
+  }
+  return { ok: false, gap: 0 };
+}
+
 /** Проверка возможности штабелирования всех грузов при включении чекбокса */
 export function canStackAll(vehicle: Vehicle, cargo: Cargo[], gaps: Gaps, settings: PackSettings): FitCheck {
   const total = totalQuantity(cargo);

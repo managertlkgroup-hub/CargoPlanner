@@ -32,6 +32,7 @@ const KEYS = {
   pristine: 'mlp:pristine-items',
   activeVariant: 'mlp:active-variant',
   settings: 'mlp:settings',
+  maxGap: 'mlp:max-gap',
   sessions: 'mlp:sessions',
   theme: 'mlp:theme',
   loadingPoints: 'mlp:loading-points',
@@ -122,6 +123,9 @@ interface AppState {
   // Настройки расчёта
   settings: PackSettings;
   setSettings: (s: PackSettings) => void;
+  /** Максимально допустимый зазор, найденный при последнем включении зазоров */
+  maxGap: number;
+  setMaxGap: (g: number) => void;
 
   // Глобальные единицы измерения (отображение/ввод)
   unit: Unit;
@@ -395,6 +399,11 @@ export const useAppStore = create<AppState>()(
       setSettings: (s) => {
         saveToStorage(KEYS.settings, s);
         set({ settings: s });
+      },
+      maxGap: loadFromStorage<number>(KEYS.maxGap, 0),
+      setMaxGap: (g) => {
+        saveToStorage(KEYS.maxGap, g);
+        set({ maxGap: g });
       },
 
       // --- Единицы измерения ---
@@ -677,6 +686,7 @@ export const useAppStore = create<AppState>()(
         selectedVehicleId: s.selectedVehicleId,
         cargo: s.cargo,
         settings: s.settings,
+        maxGap: s.maxGap,
         result: s.result,
         pristine: s.pristine,
         activeVariant: s.activeVariant,

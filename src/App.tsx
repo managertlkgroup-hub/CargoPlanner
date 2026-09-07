@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAppStore, getCurrentVehicle } from './store/useAppStore';
-import { packItems, canFitAll } from './lib/packer/packer';
+import { packItems, canFitAll, findMaxGap } from './lib/packer/packer';
 import Header from './components/Layout/Header';
 import Footer from './components/Layout/Footer';
 import VehicleSelector from './components/VehicleSelector/VehicleSelector';
@@ -86,6 +86,8 @@ const App: React.FC = () => {
   const setActiveVariant = useAppStore((s) => s.setActiveVariant);
   const setCalculating = useAppStore((s) => s.setCalculating);
   const setSettings = useAppStore((s) => s.setSettings);
+  const maxGap = useAppStore((s) => s.maxGap);
+  const setMaxGap = useAppStore((s) => s.setMaxGap);
   const error = useAppStore((s) => s.error);
   const setError = useAppStore((s) => s.setError);
 
@@ -130,17 +132,25 @@ const App: React.FC = () => {
       // режима. Если с текущими зазорами грузы в новом режиме не помещаются —
       // отключаем зазоры и показываем тост.
       if (settings.gapsEnabled) {
-        const gaps = {
-          walls: settings.gapWalls ?? 0,
-          width: settings.gapWidth ?? 0,
-          length: settings.gapLength ?? 0,
-        };
-        const fit = canFitAll(vehicle, cargo, gaps, stacking, currentMode(activeVariant));
-        if (!fit.ok) {
+        // При смене режима подбираем максимально допустимый зазор для нового
+        // режима и применяем его. Если даже с нулевым зазором грузы не
+        // помещаются — отключаем зазоры и показываем тост.
+        const res = findMaxGap(vehicle, cargo, currentMode(activeVariant), stacking);
+        if (!res.ok) {
           const off: PackSettings = { ...settings, gapsEnabled: false, gap: 0, gapWalls: 0, gapWidth: 0, gapLength: 0 };
           setSettings(off);
           recalcWithSettings(vehicle, off, false);
           setError(tr(lang, 'gaps.cannotEnable'));
+          return;
+        }
+        const g = res.gap;
+        const gapChanged = g !== (settings.gapWalls ?? 0) || g !== (settings.gapWidth ?? 0) || g !== (settings.gapLength ?? 0);
+        if (gapChanged) {
+          setMaxGap(g);
+          const next: PackSettings = { ...settings, gapsEnabled: true, gap: 0, gapWalls: g, gapWidth: g, gapLength: g };
+          recalcWithSettings(vehicle, next, false);
+          const maxStr = formatDimension(g, unit);
+          setError(trf(lang, 'gaps.enabledMax', { max: maxStr, u: UNIT_LABEL[unit] }));
           return;
         }
       }
@@ -424,20 +434,27 @@ const App: React.FC = () => {
                         const next = e.target.checked;
                         const veh = getCurrentVehicle(selectedVehicleId, customVehicles);
                         if (next && cargo.length > 0 && veh) {
-                          // При включении зазоров проверяем, помещаются ли все грузы
-                          // в текущем режиме раскладки с минимальным зазором 50 мм.
-                          const MIN = 50;
-                          const minimal = { walls: MIN, width: MIN, length: MIN };
-                          const check = canFitAll(veh, cargo, minimal, stacking, currentMode(activeVariant));
-                          if (!check.ok) {
+                          // При включении зазоров подбираем максимально допустимый
+                          // зазор для текущего режима (поиск от 50 мм или от сохранённого
+                          // значения вниз с шагом 5 мм). Если даже с нулевым зазором
+                          // грузы не помещаются — не включаем и показываем тост.
+                          const res = findMaxGap(veh, cargo, currentMode(activeVariant), stacking, maxGap > 0 ? maxGap : undefined);
+                          if (!res.ok) {
                             setError(tr(lang, 'gaps.cannotEnable'));
                             return;
                           }
+                          const g = res.gap;
+                          setMaxGap(g);
+                          const on: PackSettings = { ...settings, gapsEnabled: true, gap: 0, gapWalls: g, gapWidth: g, gapLength: g };
+                          recalcWithSettings(veh, on, true);
+                          const maxStr = formatDimension(g, unit);
+                          setError(trf(lang, 'gaps.enabledMax', { max: maxStr, u: UNIT_LABEL[unit] }));
+                        } else {
+                          const newSettings: PackSettings = next
+                            ? { ...settings, gapsEnabled: true, gap: 0, gapWalls: 50, gapWidth: 50, gapLength: 50 }
+                            : { ...settings, gapsEnabled: false, gap: 0, gapWalls: 0, gapWidth: 0, gapLength: 0 };
+                          recalcWithSettings(veh, newSettings, true);
                         }
-                        const newSettings: PackSettings = next
-                          ? { ...settings, gapsEnabled: true, gap: 0, gapWalls: 50, gapWidth: 50, gapLength: 50 }
-                          : { ...settings, gapsEnabled: false, gap: 0, gapWalls: 0, gapWidth: 0, gapLength: 0 };
-                        recalcWithSettings(veh, newSettings, true);
                       }}
                     />
                     <label htmlFor="gaps-master-toggle" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--text)', cursor: 'pointer' }}>
