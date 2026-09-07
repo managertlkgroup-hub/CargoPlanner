@@ -32,7 +32,9 @@ const KEYS = {
   pristine: 'mlp:pristine-items',
   activeVariant: 'mlp:active-variant',
   settings: 'mlp:settings',
-  maxGap: 'mlp:max-gap',
+  maxGapWalls: 'mlp:max-gap-walls',
+  maxGapWidth: 'mlp:max-gap-width',
+  maxGapLength: 'mlp:max-gap-length',
   sessions: 'mlp:sessions',
   theme: 'mlp:theme',
   loadingPoints: 'mlp:loading-points',
@@ -123,9 +125,13 @@ interface AppState {
   // Настройки расчёта
   settings: PackSettings;
   setSettings: (s: PackSettings) => void;
-  /** Максимально допустимый зазор, найденный при последнем включении зазоров */
-  maxGap: number;
-  setMaxGap: (g: number) => void;
+  /** Максимально допустимые значения по типам зазора (0 — тип невозможен) */
+  maxGapWalls: number;
+  setMaxGapWalls: (g: number) => void;
+  maxGapWidth: number;
+  setMaxGapWidth: (g: number) => void;
+  maxGapLength: number;
+  setMaxGapLength: (g: number) => void;
 
   // Глобальные единицы измерения (отображение/ввод)
   unit: Unit;
@@ -400,10 +406,20 @@ export const useAppStore = create<AppState>()(
         saveToStorage(KEYS.settings, s);
         set({ settings: s });
       },
-      maxGap: loadFromStorage<number>(KEYS.maxGap, 0),
-      setMaxGap: (g) => {
-        saveToStorage(KEYS.maxGap, g);
-        set({ maxGap: g });
+      maxGapWalls: loadFromStorage<number>(KEYS.maxGapWalls, 0),
+      setMaxGapWalls: (g) => {
+        saveToStorage(KEYS.maxGapWalls, g);
+        set({ maxGapWalls: g });
+      },
+      maxGapWidth: loadFromStorage<number>(KEYS.maxGapWidth, 0),
+      setMaxGapWidth: (g) => {
+        saveToStorage(KEYS.maxGapWidth, g);
+        set({ maxGapWidth: g });
+      },
+      maxGapLength: loadFromStorage<number>(KEYS.maxGapLength, 0),
+      setMaxGapLength: (g) => {
+        saveToStorage(KEYS.maxGapLength, g);
+        set({ maxGapLength: g });
       },
 
       // --- Единицы измерения ---
@@ -686,7 +702,9 @@ export const useAppStore = create<AppState>()(
         selectedVehicleId: s.selectedVehicleId,
         cargo: s.cargo,
         settings: s.settings,
-        maxGap: s.maxGap,
+        maxGapWalls: s.maxGapWalls,
+        maxGapWidth: s.maxGapWidth,
+        maxGapLength: s.maxGapLength,
         result: s.result,
         pristine: s.pristine,
         activeVariant: s.activeVariant,

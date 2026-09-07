@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAppStore, getCurrentVehicle } from './store/useAppStore';
-import { packItems, canFitAll, findMaxGap } from './lib/packer/packer';
+import { packItems, canFitAll, findMaxGapByType } from './lib/packer/packer';
 import Header from './components/Layout/Header';
 import Footer from './components/Layout/Footer';
 import VehicleSelector from './components/VehicleSelector/VehicleSelector';
@@ -28,43 +28,57 @@ type LayoutMode = 'along' | 'across' | 'mixed';
 const currentMode = (v: string | null | undefined): LayoutMode | undefined =>
   v === 'along' || v === 'across' || v === 'mixed' ? v : undefined;
 
-/** Строка настройки одного зазора: чекбокс включения + числовое поле с учётом единиц (на одной строке) */
+/** Тост со списком максимальных значений по типам зазора (только возможные > 0) */
+const gapMaximaMsg = (
+  m: { walls: number; width: number; length: number },
+  unit: Unit,
+  lang: ReturnType<typeof useAppStore.getState>['lang'],
+): string => {
+  const parts: string[] = [];
+  if (m.walls > 0) parts.push(`${tr(lang, 'gaps.wallShort')} — ${formatDimension(m.walls, unit)}`);
+  if (m.width > 0) parts.push(`${tr(lang, 'gaps.widthShort')} — ${formatDimension(m.width, unit)}`);
+  if (m.length > 0) parts.push(`${tr(lang, 'gaps.lengthShort')} — ${formatDimension(m.length, unit)}`);
+  return trf(lang, 'gaps.enabledMaxima', { parts: parts.join(', ') });
+};
+
+/** Строка настройки одного зазора: если тип невозможен (≤ 0) — серая надпись «Невозможно», иначе числовое поле */
 const GapRow: React.FC<{
   id: string;
   lang: ReturnType<typeof useAppStore.getState>['lang'];
   unit: Unit;
-  checked: boolean;
+  possible: boolean;
   label: string;
   valueMm: number;
   onChange: (mm: number) => void;
-}> = ({ id, unit, checked, label, valueMm, onChange }) => {
+}> = ({ id, lang, unit, possible, label, valueMm, onChange }) => {
   const step = unit === 'mm' ? 1 : unit === 'cm' ? 0.5 : 0.05;
-  const value = Number(toUnit(valueMm || 50, unit).toFixed(unit === 'm' ? 2 : 1));
+  if (!possible) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+        <span style={{ fontSize: 13, color: 'var(--text-muted)', flex: 1, minWidth: 0 }}>{label}</span>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>{tr(lang, 'gaps.typeImpossible')}</span>
+      </div>
+    );
+  }
+  const value = Number(toUnit(valueMm || 1, unit).toFixed(unit === 'm' ? 2 : 1));
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-      <input
-        type="checkbox"
-        id={id}
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked ? (valueMm || 50) : 0)}
-      />
-      <label htmlFor={id} style={{ fontSize: 13, color: 'var(--text)', flex: 1, minWidth: 0 }}>{label}</label>
-      {checked && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <input
-            type="number"
-            min="0"
-            step={step}
-            value={value}
-            onChange={(e) => {
-              const v = parseFloat(e.target.value);
-              if (Number.isFinite(v) && v >= 0) onChange(fromUnit(v, unit));
-            }}
-            style={{ width: 70, padding: '3px 6px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13 }}
-          />
-          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{UNIT_LABEL[unit]}</span>
-        </div>
-      )}
+      <span style={{ fontSize: 13, color: 'var(--text)', flex: 1, minWidth: 0 }}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <input
+          id={id}
+          type="number"
+          min="0"
+          step={step}
+          value={value}
+          onChange={(e) => {
+            const v = parseFloat(e.target.value);
+            if (Number.isFinite(v) && v >= 0) onChange(fromUnit(v, unit));
+          }}
+          style={{ width: 70, padding: '3px 6px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13 }}
+        />
+        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{UNIT_LABEL[unit]}</span>
+      </div>
     </div>
   );
 };
@@ -86,8 +100,9 @@ const App: React.FC = () => {
   const setActiveVariant = useAppStore((s) => s.setActiveVariant);
   const setCalculating = useAppStore((s) => s.setCalculating);
   const setSettings = useAppStore((s) => s.setSettings);
-  const maxGap = useAppStore((s) => s.maxGap);
-  const setMaxGap = useAppStore((s) => s.setMaxGap);
+  const setMaxGapWalls = useAppStore((s) => s.setMaxGapWalls);
+  const setMaxGapWidth = useAppStore((s) => s.setMaxGapWidth);
+  const setMaxGapLength = useAppStore((s) => s.setMaxGapLength);
   const error = useAppStore((s) => s.error);
   const setError = useAppStore((s) => s.setError);
 
@@ -132,25 +147,25 @@ const App: React.FC = () => {
       // режима. Если с текущими зазорами грузы в новом режиме не помещаются —
       // отключаем зазоры и показываем тост.
       if (settings.gapsEnabled) {
-        // При смене режима подбираем максимально допустимый зазор для нового
-        // режима и применяем его. Если даже с нулевым зазором грузы не
-        // помещаются — отключаем зазоры и показываем тост.
-        const res = findMaxGap(vehicle, cargo, currentMode(activeVariant), stacking);
-        if (!res.ok) {
+        // При смене режима пересчитываем максимальные значения всех типов зазора
+        // для нового режима и применяем их. Если ни один тип не возможен —
+        // отключаем зазоры и показываем тост.
+        const res = findMaxGapByType(vehicle, cargo, currentMode(activeVariant), stacking);
+        if (res.walls === 0 && res.width === 0 && res.length === 0) {
           const off: PackSettings = { ...settings, gapsEnabled: false, gap: 0, gapWalls: 0, gapWidth: 0, gapLength: 0 };
           setSettings(off);
           recalcWithSettings(vehicle, off, false);
           setError(tr(lang, 'gaps.cannotEnable'));
           return;
         }
-        const g = res.gap;
-        const gapChanged = g !== (settings.gapWalls ?? 0) || g !== (settings.gapWidth ?? 0) || g !== (settings.gapLength ?? 0);
+        const gapChanged = res.walls !== (settings.gapWalls ?? 0) || res.width !== (settings.gapWidth ?? 0) || res.length !== (settings.gapLength ?? 0);
         if (gapChanged) {
-          setMaxGap(g);
-          const next: PackSettings = { ...settings, gapsEnabled: true, gap: 0, gapWalls: g, gapWidth: g, gapLength: g };
+          setMaxGapWalls(res.walls);
+          setMaxGapWidth(res.width);
+          setMaxGapLength(res.length);
+          const next: PackSettings = { ...settings, gapsEnabled: true, gap: 0, gapWalls: res.walls, gapWidth: res.width, gapLength: res.length };
           recalcWithSettings(vehicle, next, false);
-          const maxStr = formatDimension(g, unit);
-          setError(trf(lang, 'gaps.enabledMax', { max: maxStr, u: UNIT_LABEL[unit] }));
+          setError(gapMaximaMsg(res, unit, lang));
           return;
         }
       }
@@ -250,6 +265,34 @@ const App: React.FC = () => {
       } catch (err) { /* пересчёт зазора */ }
       finally { setCalculating(false); }
     }
+  };
+
+  // Правка конкретного типа зазора: проверяется только этот тип. Если новое
+  // значение ≤ 0 мм или грузы с ним не помещаются — значение не меняется
+  // (откат к последнему допустимому > 0) и показывается тост.
+  const editGapType = (key: 'gapWalls' | 'gapWidth' | 'gapLength', v: number) => {
+    const veh = getCurrentVehicle(selectedVehicleId, customVehicles);
+    const prev = settings[key] ?? 0;
+    if (v < 0 || v === prev) return;
+    if (cargo.length === 0 || !veh) {
+      setSettings({ ...settings, gap: 0, [key]: v });
+      return;
+    }
+    if (v <= 0) {
+      setError(trf(lang, 'gaps.typeTooBig', { max: formatDimension(prev || 1, unit), u: UNIT_LABEL[unit] }));
+      return;
+    }
+    const next = { ...settings, gap: 0, [key]: v };
+    const fit = canFitAll(veh, cargo, {
+      walls: next.gapWalls ?? 0,
+      width: next.gapWidth ?? 0,
+      length: next.gapLength ?? 0,
+    }, stacking, currentMode(activeVariant));
+    if (!fit.ok) {
+      setError(trf(lang, 'gaps.typeTooBig', { max: formatDimension(prev, unit), u: UNIT_LABEL[unit] }));
+      return;
+    }
+    recalcWithSettings(veh, next, false);
   };
 
   // Сохранение состояния секций левой панели в localStorage
@@ -434,21 +477,20 @@ const App: React.FC = () => {
                         const next = e.target.checked;
                         const veh = getCurrentVehicle(selectedVehicleId, customVehicles);
                         if (next && cargo.length > 0 && veh) {
-                          // При включении зазоров подбираем максимально допустимый
-                          // зазор для текущего режима (поиск от 50 мм или от сохранённого
-                          // значения вниз с шагом 5 мм). Если даже с нулевым зазором
-                          // грузы не помещаются — не включаем и показываем тост.
-                          const res = findMaxGap(veh, cargo, currentMode(activeVariant), stacking, maxGap > 0 ? maxGap : undefined);
-                          if (!res.ok) {
+                          // При включении зазоров подбираем максимальное значение для
+                          // каждого типа (от стен, по ширине, по длине) в текущем режиме.
+                          // Если ни один тип невозможен (≤ 0) — не включаем и показываем тост.
+                          const res = findMaxGapByType(veh, cargo, currentMode(activeVariant), stacking);
+                          if (res.walls === 0 && res.width === 0 && res.length === 0) {
                             setError(tr(lang, 'gaps.cannotEnable'));
                             return;
                           }
-                          const g = res.gap;
-                          setMaxGap(g);
-                          const on: PackSettings = { ...settings, gapsEnabled: true, gap: 0, gapWalls: g, gapWidth: g, gapLength: g };
-                          recalcWithSettings(veh, on, true);
-                          const maxStr = formatDimension(g, unit);
-                          setError(trf(lang, 'gaps.enabledMax', { max: maxStr, u: UNIT_LABEL[unit] }));
+                          setMaxGapWalls(res.walls);
+                          setMaxGapWidth(res.width);
+                          setMaxGapLength(res.length);
+                          const on: PackSettings = { ...settings, gapsEnabled: true, gap: 0, gapWalls: res.walls, gapWidth: res.width, gapLength: res.length };
+                          recalcWithSettings(veh, on, false);
+                          setError(gapMaximaMsg(res, unit, lang));
                         } else {
                           const newSettings: PackSettings = next
                             ? { ...settings, gapsEnabled: true, gap: 0, gapWalls: 50, gapWidth: 50, gapLength: 50 }
@@ -467,28 +509,28 @@ const App: React.FC = () => {
                         id="gap-walls-toggle"
                         lang={lang}
                         unit={unit}
-                        checked={(settings.gapWalls ?? 0) > 0}
+                        possible={(settings.gapWalls ?? 0) > 0}
                         label={tr(lang, 'gaps.walls')}
                         valueMm={settings.gapWalls ?? 0}
-                        onChange={(v) => recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), { ...settings, gap: 0, gapWalls: v }, true)}
+                        onChange={(v) => editGapType('gapWalls', v)}
                       />
                       <GapRow
                         id="gap-width-toggle"
                         lang={lang}
                         unit={unit}
-                        checked={(settings.gapWidth ?? 0) > 0}
+                        possible={(settings.gapWidth ?? 0) > 0}
                         label={tr(lang, 'gaps.width')}
                         valueMm={settings.gapWidth ?? 0}
-                        onChange={(v) => recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), { ...settings, gap: 0, gapWidth: v }, true)}
+                        onChange={(v) => editGapType('gapWidth', v)}
                       />
                       <GapRow
                         id="gap-length-toggle"
                         lang={lang}
                         unit={unit}
-                        checked={(settings.gapLength ?? 0) > 0}
+                        possible={(settings.gapLength ?? 0) > 0}
                         label={tr(lang, 'gaps.length')}
                         valueMm={settings.gapLength ?? 0}
-                        onChange={(v) => recalcWithSettings(getCurrentVehicle(selectedVehicleId, customVehicles), { ...settings, gap: 0, gapLength: v }, true)}
+                        onChange={(v) => editGapType('gapLength', v)}
                       />
                     </>
                   )}
