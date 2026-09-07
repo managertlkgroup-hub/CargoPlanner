@@ -27,23 +27,20 @@ export function VehicleDetailsPanel({ vehicleId, onClose }: VehiclePanelProps) {
   const [editWeight, setEditWeight] = useState(String(weightUnit === 'ton' ? Math.round(toWeightUnit(vehicle.maxWeight, weightUnit) * 100) / 100 : vehicle.maxWeight));
   const addCustomVehicle = useAppStore((s) => s.addCustomVehicle);
   const updateCustomVehicle = useAppStore((s) => s.updateCustomVehicle);
+  const updateStandardVehicle = useAppStore((s) => s.updateStandardVehicle);
 
   const handleSave = () => {
+    const patch: Partial<Vehicle> = {
+      name: editName,
+      nameKey: undefined,
+      maxWeight: Math.round(fromWeightUnit(Number(editWeight) || 0, weightUnit) * 100) / 100,
+    };
     if (vehicle.isCustom) {
-      updateCustomVehicle(vehicle.id, {
-        name: editName,
-        nameKey: undefined,
-        maxWeight: Math.round(fromWeightUnit(Number(editWeight) || 0, weightUnit) * 100) / 100,
-      });
+      updateCustomVehicle(vehicle.id, patch);
     } else {
-      addCustomVehicle({
-        ...vehicle,
-        id: `custom-${Date.now()}`,
-        name: editName,
-        nameKey: undefined,
-        maxWeight: Math.round(fromWeightUnit(Number(editWeight) || 0, weightUnit) * 100) / 100,
-        isCustom: true,
-      });
+      // Стандартный пресет обновляется «на месте» (через override) —
+      // без создания копии в пользовательских.
+      updateStandardVehicle(vehicle.id, patch);
     }
     setEditing(false);
     onClose();
