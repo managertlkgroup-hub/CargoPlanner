@@ -22,6 +22,12 @@ import { tr, trf } from './i18n';
 
 const toUnitDisplay = (mm: number, unit: Unit) => formatDimension(mm, unit);
 
+type LayoutMode = 'along' | 'across' | 'mixed';
+
+/** Активный режим раскладки (для проверки зазоров) или undefined, если ещё не выбран */
+const currentMode = (v: string | null | undefined): LayoutMode | undefined =>
+  v === 'along' || v === 'across' || v === 'mixed' ? v : undefined;
+
 /** Строка настройки одного зазора: чекбокс включения + числовое поле с учётом единиц (на одной строке) */
 const GapRow: React.FC<{
   id: string;
@@ -119,9 +125,28 @@ const App: React.FC = () => {
   useEffect(() => {
     if (prevActiveVariantRef.current === activeVariant) return;
     prevActiveVariantRef.current = activeVariant;
-    if (cargo.length > 0 && (settings.gapsEnabled || stacking)) {
-      const veh = getCurrentVehicle(selectedVehicleId, customVehicles);
-      recalcWithSettings(veh, settings, false);
+    if (cargo.length > 0 && vehicle) {
+      // При смене режима раскладки пересчитываем зазоры/штабелирование для нового
+      // режима. Если с текущими зазорами грузы в новом режиме не помещаются —
+      // отключаем зазоры и показываем тост.
+      if (settings.gapsEnabled) {
+        const gaps = {
+          walls: settings.gapWalls ?? 0,
+          width: settings.gapWidth ?? 0,
+          length: settings.gapLength ?? 0,
+        };
+        const fit = canFitAll(vehicle, cargo, gaps, stacking, currentMode(activeVariant));
+        if (!fit.ok) {
+          const off: PackSettings = { ...settings, gapsEnabled: false, gap: 0, gapWalls: 0, gapWidth: 0, gapLength: 0 };
+          setSettings(off);
+          recalcWithSettings(vehicle, off, false);
+          setError(tr(lang, 'gaps.cannotEnable'));
+          return;
+        }
+      }
+      if (settings.gapsEnabled || stacking) {
+        recalcWithSettings(vehicle, settings, false);
+      }
     }
   }, [activeVariant]);
 
@@ -176,7 +201,7 @@ const App: React.FC = () => {
     setSettings(nextSettings);
     if (cargo.length > 0 && veh) {
       // При изменении любого зазора сначала проверяем, помещаются ли все грузы
-      // с новым значением (во всех трёх режимах раскладки). Если нет — откатываем
+      // с новым значением в текущем режиме раскладки. Если нет — откатываем
       // к последнему допустимому значению и показываем тост.
       if (isGapEdit && prevGoodResultRef.current && prevGoodSettingsRef.current) {
         const gaps = {
@@ -184,7 +209,7 @@ const App: React.FC = () => {
           width: nextSettings.gapWidth ?? 0,
           length: nextSettings.gapLength ?? 0,
         };
-        const fit = canFitAll(veh, cargo, gaps, stacking);
+        const fit = canFitAll(veh, cargo, gaps, stacking, currentMode(activeVariant));
         if (!fit.ok) {
           revertToPrevGood(prevGoodSettingsRef.current, prevGoodResultRef.current);
           return;
@@ -400,10 +425,10 @@ const App: React.FC = () => {
                         const veh = getCurrentVehicle(selectedVehicleId, customVehicles);
                         if (next && cargo.length > 0 && veh) {
                           // При включении зазоров проверяем, помещаются ли все грузы
-                          // (во всех трёх режимах раскладки) с минимальным зазором 50 мм.
+                          // в текущем режиме раскладки с минимальным зазором 50 мм.
                           const MIN = 50;
                           const minimal = { walls: MIN, width: MIN, length: MIN };
-                          const check = canFitAll(veh, cargo, minimal, stacking);
+                          const check = canFitAll(veh, cargo, minimal, stacking, currentMode(activeVariant));
                           if (!check.ok) {
                             setError(tr(lang, 'gaps.cannotEnable'));
                             return;

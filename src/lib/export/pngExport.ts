@@ -83,7 +83,7 @@ export async function exportSceneToPng(
   const PAD = 40 * S;
   const HEADER_H = 70 * S;
   const CARGO_LEGEND_H = cargoLegend.length > 0 ? (cargoLegend.length * 22 + 40) * S : 0;
-  const METRICS_LINES = 6 + (enabledGaps.length > 0 ? 1 + enabledGaps.length : 0) + 1;
+  const METRICS_LINES = 7 + (enabledGaps.length > 0 ? 1 + enabledGaps.length : 0) + 1;
   const METRICS_H = (30 + METRICS_LINES * 18) * S;
   const FOOTER_H = 40 * S;
 
@@ -238,11 +238,17 @@ export async function exportSceneToPng(
         .join(', ');
     }
 
+    // Общий габарит размещения (bounding box) по всем размещённым грузам
+    const bbox = variant.dimensions && variant.items.length > 0
+      ? `${tr(lang, 'png.bbox')}: ${fmt(variant.dimensions.length)}×${fmt(variant.dimensions.width)}×${fmt(variant.dimensions.height)} ${unitLabel(lang, unit)}`
+      : '';
+
     const metrics = [
       `${nameOf(vehicle, lang)} (${fmt(vehicle.length)}×${fmt(vehicle.width)}×${fmt(vehicle.height)} ${unitLabel(lang, unit)})`,
       `${tr(lang, 'png.items')}: ${variant.items.length}`,
       `${tr(lang, 'png.layers')}: ${layers}`,
       cargoDims ? `${tr(lang, cargoLabelKey)}: ${cargoDims} ${unitLabel(lang, unit)}` : '',
+      bbox,
       `${tr(lang, 'png.fillVolume')}: ${variant.volumeFill ?? 0}%`,
       `${tr(lang, 'png.totalWeight')}: ${formatWeight(variant.totalWeight ?? 0, weightUnit)} ${WEIGHT_UNIT_LABEL[weightUnit]}`,
       `${tr(lang, 'png.fillWeight')}: ${variant.weightFill ?? 0}%`,

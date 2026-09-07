@@ -219,9 +219,9 @@ function buildCargoSheet(
 
 // ─── Sheet 3: Схема / Scheme ─────────────────────────────────────────────────
 //
-// Вид сверху: кузов разбит на сетку (столбцы = длина, строки = ширина).
-// Каждый груз — ПРЯМОУГОЛЬНИК: объединённый диапазон ячеек, залитый цветом
-// слоя, с номером по центру. В конце — легенда «№ — название — размеры».
+// Доступная сетка: кузов разбит на ячейки (≈ RES мм). В каждую ячейку заданной
+// площади груза записывается его НОМЕР, ячейки заливаются цветом слоя.
+// Слои разделяются пустой строкой. Внизу — легенда «№ — название — размеры».
 
 function buildSchemeSheet(
   wb: ExcelJS.Workbook,
@@ -240,8 +240,8 @@ function buildSchemeSheet(
   const numbered = best.items.map((it, i) => ({ it, num: i + 1 }));
   const maxL = best.items.reduce((m, it) => Math.max(m, layerOfPacked(it)), 0);
 
-  // Сетка кузова
-  const RES = 100; // мм на ячейку
+  // Сетка кузова: одна ячейка = RES мм
+  const RES = 200; // мм на ячейку
   const nCols = Math.max(1, Math.round(vehicle.length / RES));
   const nRows = Math.max(1, Math.round(vehicle.width / RES));
   const colPerMm = nCols / Math.max(1, vehicle.length);
@@ -256,47 +256,50 @@ function buildSchemeSheet(
     ws.addRow([`${tr(lang, 'xl.scheme.layer')} ${layer + 1}${layer === 0 ? tr(lang, 'xl.scheme.layerFloor') : ''}`]).font = { bold: true };
     const gridStart = ws.rowCount + 1; // первая строка сетки этого слоя (1-индекс)
 
+    // Записываем номер груза в каждую ячейку его площади
     for (const { it, num } of layerItems) {
       const c0 = Math.round(it.position.x * colPerMm);
       const c1 = Math.min(nCols - 1, Math.max(c0, Math.round((it.position.x + it.dimensions.length) * colPerMm) - 1));
       const r0 = Math.round(it.position.z * rowPerMm);
       const r1 = Math.min(nRows - 1, Math.max(r0, Math.round((it.position.z + it.dimensions.width) * rowPerMm) - 1));
 
-      const topRow = gridStart + r0;
-      const botRow = gridStart + r1;
-      const leftCol = c0 + 1;
-      const rightCol = c1 + 1;
-
-      if (botRow > topRow || rightCol > leftCol) {
-        ws.mergeCells(topRow, leftCol, botRow, rightCol);
+      for (let rr = r0; rr <= r1; rr++) {
+        for (let cc = c0; cc <= c1; cc++) {
+          const cell = ws.getCell(gridStart + rr, cc + 1);
+          cell.value = num;
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 8 };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: color } };
+          cell.border = thinBorder();
+        }
       }
-      const cell = ws.getCell(topRow, leftCol);
-      cell.value = num;
-      cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 9 };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: color } };
-      cell.border = thinBorder();
     }
 
-    // Доводим лист до полной высоты сетки слоя
+    // Доводим лист до полной высоты сетки слоя (разделитель слоёв — пустая строка ниже)
     const needed = gridStart + nRows - 1;
-    const cur = ws.rowCount;
-    for (let rr = cur + 1; rr <= needed; rr++) {
+    for (let rr = ws.rowCount + 1; rr <= needed; rr++) {
       ws.getCell(rr, 1).value = '';
     }
     ws.addRow([]);
   }
 
-  // Легенда
-  ws.addRow([tr(lang, 'xl.scheme.legend'), tr(lang, 'xl.scheme.dims')]).font = { bold: true };
+  // Легенда: № — название — размеры — слой
+  ws.addRow([tr(lang, 'xl.scheme.legend'), tr(lang, 'xl.scheme.dims'), tr(lang, 'xl.scheme.layer')]).font = { bold: true };
   for (const { it, num } of numbered) {
+    const layer = layerOfPacked(it) ?? 0;
     const dims = `${fmtDimension(it.dimensions.length, unit)}×${fmtDimension(it.dimensions.width, unit)}×${fmtDimension(it.dimensions.height, unit)}`;
-    ws.addRow([`${num}. ${nameOf(it, lang)}`, dims]);
+    const row = ws.addRow([`${num}. ${nameOf(it, lang)}`, dims, layer + 1]);
+    row.getCell(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF' + SCHEME_COLORS[layer % SCHEME_COLORS.length] },
+    };
+    row.getCell(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
   }
 
-  // Ширины столбцов сетки — узкие, чтобы прямоугольники были соразмерны кузову
+  // Ширины столбцов сетки — узкие, чтобы схема была компактной
   for (let c = 1; c <= nCols; c++) {
-    ws.getColumn(c).width = 2.2;
+    ws.getColumn(c).width = 4;
   }
 }
 

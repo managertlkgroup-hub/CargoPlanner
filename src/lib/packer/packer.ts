@@ -593,6 +593,9 @@ export function packItems(
         label,
         labelKey: `mode.${mode}`,
         items,
+        dimensions: items.length > 0
+          ? { length: Math.round(maxCargoX), width: Math.round(maxCargoZ), height: Math.round(maxCargoY) }
+          : undefined,
         volumeFill: Math.round(volumeFill * 10) / 10,
         weightFill: Math.round(weightFill * 10) / 10,
         totalWeight: Math.round(totalWeight),
@@ -643,13 +646,11 @@ function totalQuantity(cargo: Cargo[]): number {
 }
 
 /**
- * Размещает все грузы и возвращает МАКСИМАЛЬНОЕ число размещённых грузов среди
- * всех трёх режимов укладки (вдоль / поперёк / смешанный) при заданных настройках.
- * Важно: режим «поперёк» может вместить грузы, которые не помещаются «вдоль»
- * (и наоборот), поэтому проверка возможности зазоров/штабелирования должна
- * учитывать любой достижимый режим, а не только первый (variants[0]).
+ * Размещает все грузы и возвращает МАКСИМАЛЬНОЕ число размещённых грузов при
+ * заданных настройках. Если задан mode ('along' | 'across' | 'mixed') — только
+ * в этом режиме укладки; иначе — среди всех трёх режимов.
  */
-function countPlaced(vehicle: Vehicle, cargo: Cargo[], gaps: Gaps, maxStackHeight: number): number {
+function countPlaced(vehicle: Vehicle, cargo: Cargo[], gaps: Gaps, maxStackHeight: number, mode?: string): number {
   const s: PackSettings = {
     maxStackHeight,
     allowRotation: true,
@@ -662,15 +663,17 @@ function countPlaced(vehicle: Vehicle, cargo: Cargo[], gaps: Gaps, maxStackHeigh
   const result = packItems(vehicle, cargo, s, undefined);
   let max = 0;
   for (const v of result.variants) {
-    max = Math.max(max, v?.items?.length ?? 0);
+    if (v && (mode == null || v.id === mode)) {
+      max = Math.max(max, v?.items?.length ?? 0);
+    }
   }
   return max;
 }
 
 /** Проверка, помещаются ли все грузы при заданных зазорах и режиме штабелирования */
-export function canFitAll(vehicle: Vehicle, cargo: Cargo[], gaps: Gaps, stackingEnabled: boolean): FitCheck {
+export function canFitAll(vehicle: Vehicle, cargo: Cargo[], gaps: Gaps, stackingEnabled: boolean, mode?: string): FitCheck {
   const total = totalQuantity(cargo);
-  const placed = countPlaced(vehicle, cargo, gaps, stackingEnabled ? vehicle.height : 0);
+  const placed = countPlaced(vehicle, cargo, gaps, stackingEnabled ? vehicle.height : 0, mode);
   if (placed >= total) return { ok: true, reason: '' };
   if (stackingEnabled) {
     // 1) Груз выше кузова — штабелирование в принципе невозможно

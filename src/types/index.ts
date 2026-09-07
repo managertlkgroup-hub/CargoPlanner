@@ -226,6 +226,8 @@ export interface LayoutVariant {
   /** i18n-ключ названия режима (mode.along/mode.across/mode.mixed) */
   labelKey: string;
   items: PackedItem[];
+  /** Габариты размещённого груза (bounding box), мм: длина × ширина × высота */
+  dimensions?: { length: number; width: number; height: number };
   /** Заполнение по объёму, % (0..100) */
   volumeFill: number;
   /** Заполнение по весу, % (0..100) */
