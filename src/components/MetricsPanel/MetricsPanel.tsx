@@ -176,6 +176,11 @@ export default function MetricsPanel() {
                   </div>
                 </div>
               )}
+              {settings.gapsEnabled && unplaced.restQty > 0 && (
+                <div style={{ fontSize: 12, marginTop: 4, opacity: 0.9 }}>
+                  {trf(lang, 'metric.gapsPartial', { placed: unplaced.placedQty, total: unplaced.totalQty })}
+                </div>
+              )}
             </div>
             <button
               className="btn btn-sm"

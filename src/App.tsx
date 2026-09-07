@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAppStore, getCurrentVehicle } from './store/useAppStore';
-import { packItems, canFitAll, canStackAll, findMaxGapByType } from './lib/packer/packer';
+import { packItems, canStackAll, findMaxGapByType, applyGapsToPlacedItems, itemPlacedHeight } from './lib/packer/packer';
 import Header from './components/Layout/Header';
 import Footer from './components/Layout/Footer';
 import VehicleSelector from './components/VehicleSelector/VehicleSelector';
@@ -18,6 +18,7 @@ import { VehicleDetailsPanel, CargoDetailsPanel } from './components/PresetDetai
 import { generateSuggestions, type PackingSuggestion } from './lib/packer/suggestions';
 import { formatDimension, toUnit, fromUnit, UNIT_LABEL, nameOf } from './utils/helpers';
 import type { Unit, PackSettings } from './types';
+import { getCargoSize } from './types';
 import { tr, trf } from './i18n';
 
 const toUnitDisplay = (mm: number, unit: Unit) => formatDimension(mm, unit);
@@ -118,16 +119,37 @@ const App: React.FC = () => {
 
   const [activeView, setActiveView] = useState<'3d' | '2d'>('2d');
   const [stacking, setStacking] = useState(settings.maxStackHeight > 0);
+  // Сколько грузов помещается в ТЕКУЩЕМ режиме без зазоров (для «Режим не подходит»)
+  const [modePlacedCount, setModePlacedCount] = useState(0);
 
   // Автоматический пересчёт максимально допустимых зазоров для каждого типа
   // (walls/width/length) в текущем режиме раскладки при изменении любых данных.
   // Эти максимумы — только для отображения («Невозможно», если = 0) и для
   // блокировки ввода; сами значения зазоров пользователь вводит вручную и они
   // не автозаполняются при включении.
+  // Зазоры считаются относительно РАЗМЕЩЁННЫХ грузов в текущем режиме (частичная
+  // загрузка разрешена): если какой-то режим размещает не весь объём, зазоры
+  // всё равно доступны для тех грузов, которые реально помещаются.
   const recomputeMaxGaps = () => {
     const veh = getCurrentVehicle(selectedVehicleId, customVehicles);
-    if (cargo.length === 0 || !veh) return;
-    const res = findMaxGapByType(veh, cargo, currentMode(activeVariant), stacking);
+    if (cargo.length === 0 || !veh) {
+      setMaxGapWalls(0);
+      setMaxGapWidth(0);
+      setMaxGapLength(0);
+      setModePlacedCount(0);
+      return;
+    }
+    const mode = currentMode(activeVariant);
+    if (!mode) {
+      setMaxGapWalls(0);
+      setMaxGapWidth(0);
+      setMaxGapLength(0);
+      setModePlacedCount(0);
+      return;
+    }
+    const basePlaced = applyGapsToPlacedItems(veh, cargo, mode, { walls: 0, width: 0, length: 0 }, stacking);
+    setModePlacedCount(basePlaced);
+    const res = findMaxGapByType(veh, cargo, mode, stacking, basePlaced);
     setMaxGapWalls(res.walls);
     setMaxGapWidth(res.width);
     setMaxGapLength(res.length);
@@ -222,10 +244,16 @@ const App: React.FC = () => {
           width: nextSettings.gapWidth ?? 0,
           length: nextSettings.gapLength ?? 0,
         };
-        const fit = canFitAll(veh, cargo, gaps, stacking, currentMode(activeVariant));
-        if (!fit.ok) {
-          revertToPrevGood(prevGoodSettingsRef.current, prevGoodResultRef.current);
-          return;
+        // Допустимые зазоры сохраняют число размещённых грузов в текущем режиме
+        // (частичная загрузка разрешена — не требуется, чтобы помещался ВЕСЬ груз).
+        const mode = currentMode(activeVariant);
+        if (mode) {
+          const base = applyGapsToPlacedItems(veh, cargo, mode, { walls: 0, width: 0, length: 0 }, stacking);
+          const withGaps = applyGapsToPlacedItems(veh, cargo, mode, gaps, stacking);
+          if (base > 0 && withGaps < base) {
+            revertToPrevGood(prevGoodSettingsRef.current, prevGoodResultRef.current);
+            return;
+          }
         }
       }
 
@@ -440,7 +468,24 @@ const App: React.FC = () => {
                         const check = canStackAll(veh, cargo);
                         if (!check.ok) {
                           setStacking(false);
-                          if (check.code === 'tooHigh') setError(trf(lang, 'stacking.cannotTooHigh', { name: check.cargoName ?? '' }));
+                          if (check.code === 'tooHigh') {
+                            const bad = check.cargoId ? cargo.find((c) => c.id === check.cargoId) : undefined;
+                            if (bad) {
+                              const size = getCargoSize(bad);
+                              const dims = `${formatDimension(size.length, unit)}×${formatDimension(size.width, unit)}×${formatDimension(size.height, unit)}`;
+                              const h2 = formatDimension(itemPlacedHeight(bad) * 2, unit);
+                              const vh = formatDimension(veh?.height ?? 0, unit);
+                              setError(trf(lang, 'stacking.cannotTooHigh', {
+                                name: nameOf(bad, lang),
+                                dims,
+                                u: UNIT_LABEL[unit],
+                                h2,
+                                vh,
+                              }));
+                            } else {
+                              setError(trf(lang, 'stacking.cannotTooHigh', { name: check.cargoName ?? '', dims: '', u: UNIT_LABEL[unit], h2: '', vh: '' }));
+                            }
+                          }
                           else if (check.code === 'incompatible') setError(tr(lang, 'stacking.cannotIncompatible'));
                           else setError(tr(lang, 'stacking.cannotSpace'));
                           return;
@@ -510,6 +555,11 @@ const App: React.FC = () => {
                         valueMm={settings.gapLength ?? 0}
                         onChange={(v) => editGapType('gapLength', v)}
                       />
+                      {modePlacedCount === 0 && (
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic', marginTop: 6 }}>
+                          {tr(lang, 'gaps.modeUnfit')}
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -587,11 +637,17 @@ function SuggestionsPanel({ show, onToggle }: { show: boolean; onToggle: () => v
   const activeVariant = useAppStore((s) => s.activeVariant);
   const unit = useAppStore((s) => s.unit);
   const lang = useAppStore((s) => s.lang);
+  const cargoList = useAppStore((s) => s.cargo);
+
+  const totalCargo = useMemo(
+    () => cargoList.reduce((sum, c) => sum + Math.max(1, Math.floor(c.quantity || 1)), 0),
+    [cargoList],
+  );
 
   const suggestions: PackingSuggestion[] = useMemo(() => {
     if (!result) return [];
-    return generateSuggestions(result, vehicle, activeVariant, unit, lang);
-  }, [result, vehicle, activeVariant, unit, lang]);
+    return generateSuggestions(result, vehicle, activeVariant, unit, lang, totalCargo);
+  }, [result, vehicle, activeVariant, unit, lang, totalCargo]);
 
   if (suggestions.length === 0) return null;
 

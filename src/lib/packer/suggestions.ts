@@ -19,6 +19,9 @@ export interface PackingSuggestion {
 
 /**
  * Анализирует результат упаковки и генерирует подсказки для ТЕКУЩЕГО варианта.
+ * @param totalCargo — общее количество единиц груза (сумма quantity). Позволяет
+ *   корректно показывать подсказку о неразмещённых грузах именно для активного
+ *   варианта (placedCount < totalCargo), а не сравнивать варианты между собой.
  */
 export function generateSuggestions(
   result: PackResult,
@@ -26,6 +29,7 @@ export function generateSuggestions(
   activeVariantId?: string | null,
   unit: Unit = 'mm',
   lang: Lang = 'ru',
+  totalCargo?: number,
 ): PackingSuggestion[] {
   const suggestions: PackingSuggestion[] = [];
   // Используем активный вариант, а не всегда variants[0]
@@ -44,9 +48,10 @@ export function generateSuggestions(
     });
   }
 
-  // 2. Есть неразмещённые грузы
-  const totalCargoCount = variant.items.length;
-  if (result.variants.some(v => v.items.length < totalCargoCount)) {
+  // 2. Есть неразмещённые грузы для ТЕКУЩЕГО активного варианта
+  const placedCount = variant.items.length;
+  const totalCargoCount = totalCargo ?? placedCount;
+  if (placedCount < totalCargoCount) {
     suggestions.push({
       id: 'unplaced',
       icon: AlertTriangle,

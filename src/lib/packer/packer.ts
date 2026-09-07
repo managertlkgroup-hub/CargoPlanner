@@ -636,10 +636,12 @@ export interface FitCheck {
   code?: 'tooHigh' | 'incompatible' | 'spaceWithGaps' | 'space';
   /** Имя груза, вызвавшего невозможность (для code='tooHigh') */
   cargoName?: string;
+  /** id груза, вызвавшего невозможность (для code='tooHigh') */
+  cargoId?: string;
 }
 
 /** Высота груза в уложенном виде (одинаково для canFitAll/canStackAll) */
-function itemPlacedHeight(c: Cargo): number {
+export function itemPlacedHeight(c: Cargo): number {
   const size = getCargoSize(c);
   return c.shape === 'cylinder'
     ? (c.cylinderOrientation === 'vertical' ? size.length : (c.diameter ?? size.width))
@@ -683,6 +685,15 @@ function countPlaced(vehicle: Vehicle, cargo: Cargo[], gaps: Gaps, maxStackHeigh
   return max;
 }
 
+/**
+ * Сколько единиц груза помещается в конкретном режиме укладки при заданных
+ * зазорах. Зазоры применяются только к реально размещаемым грузам — для
+ * частичной загрузки (placed < total) это количество сохраняется.
+ */
+export function applyGapsToPlacedItems(vehicle: Vehicle, cargo: Cargo[], mode: string, gaps: Gaps, stackingEnabled = false): number {
+  return countPlaced(vehicle, cargo, gaps, stackingEnabled ? vehicle.height : 0, mode);
+}
+
 /** Проверка, помещаются ли все грузы при заданных зазорах и режиме штабелирования */
 export function canFitAll(vehicle: Vehicle, cargo: Cargo[], gaps: Gaps, stackingEnabled: boolean, mode?: string): FitCheck {
   const total = totalQuantity(cargo);
@@ -722,36 +733,76 @@ export interface GapTypeMaxes {
 
 /**
  * Ищет максимально допустимые значения для каждого типа зазора (от стен, между
- * рядами по ширине, между рядами по длине) для текущего режима раскладки.
+ * рядами по ширине, между рядами по длине) для заданного режима раскладки.
+ *
+ * При частичной загрузке (передан minCount < общего количества) зазоры
+ * вычисляются относительно РАЗМЕЩЁННЫХ грузов: ищется наибольший зазор, при
+ * котором число размещённых грузов не опускается ниже minCount. Поэтому зазоры
+ * доступны в любом режиме, где помещается хотя бы один груз, даже если не весь
+ * объём влезает. По умолчанию (minCount === undefined) — как раньше: все грузы.
+ *
  * Используется прямой геометрический расчёт: для каждого типа ищется наибольшее
- * значение (сверху вниз от геометрической верхней границы кузова) с точностью
- * до 1 мм, при котором все грузы ещё помещаются. Типы перебираются поочерёдно,
- * фиксируя уже найденные значения предыдущих — итоговый набор гарантированно
- * помещается. Если даже с зазором 1 мм грузы не помещаются — тип считается
- * невозможным и возвращается 0 мм.
+ * значение (бинарным поиском с точностью 1 мм), при котором ещё помещается
+ * нужное число грузов. Типы перебираются поочерёдно, фиксируя уже найденные
+ * значения предыдущих — итоговый набор гарантированно размещается. Верхние
+ * границы поиска ограничены фактическим свободным пространством вдоль оси
+ * после размещения грузов без зазоров (чтобы значение зазора не было
+ * бессмысленно-большим для типов, не влияющих на раскладку). Если даже с
+ * зазором 1 мм грузы не помещаются — тип считается невозможным (0).
  */
 export function findMaxGapByType(
   vehicle: Vehicle,
   cargo: Cargo[],
   mode?: string,
   stackingEnabled = false,
+  minCount?: number,
 ): GapTypeMaxes {
-  // Геометрические верхние границы поиска (в мм): зазор не может быть больше
-  // соответствующего габарита кузова, от стен — больше минимального габарита.
-  const bounds: Record<'walls' | 'width' | 'length', number> = {
-    walls: Math.floor(Math.min(vehicle.length, vehicle.width, vehicle.height)),
-    width: Math.floor(vehicle.width),
-    length: Math.floor(vehicle.length),
+  const total = totalQuantity(cargo);
+  const target = minCount ?? total;
+  if (target <= 0) return { walls: 0, width: 0, length: 0 };
+
+  // Верхние границы поиска: зазор не может превышать свободное пространство
+  // вдоль соответствующей оси после размещения грузов БЕЗ зазоров.
+  // walls применяется симметрично (с обеих сторон и по высоте) — делим на 2.
+  const zeroSettings: PackSettings = {
+    maxStackHeight: stackingEnabled ? vehicle.height : 0,
+    allowRotation: true,
+    gapsEnabled: false,
+    gap: 0,
+    gapWalls: 0,
+    gapWidth: 0,
+    gapLength: 0,
   };
+  const zeroResult = packItems(vehicle, cargo, zeroSettings, undefined);
+  const zeroVar = (mode ? zeroResult.variants.find((v) => v.id === mode) : zeroResult.variants[0]) ?? zeroResult.variants[0];
+  const bb = zeroVar?.dimensionsWithoutGaps;
+  const bounds: Record<'walls' | 'width' | 'length', number> = {
+    walls: Math.max(0, Math.floor(Math.min(
+      (vehicle.length - (bb?.length ?? vehicle.length)) / 2,
+      (vehicle.width - (bb?.width ?? vehicle.width)) / 2,
+      (vehicle.height - (bb?.height ?? vehicle.height)) / 2,
+    ))),
+    width: Math.max(0, Math.floor(vehicle.width - (bb?.width ?? 0))),
+    length: Math.max(0, Math.floor(vehicle.length - (bb?.length ?? 0))),
+  };
+
+  const fits = (key: 'walls' | 'width' | 'length', val: number, base: Gaps): boolean => {
+    const g = { ...base, [key]: val };
+    if (minCount != null) {
+      return countPlaced(vehicle, cargo, g, stackingEnabled ? vehicle.height : 0, mode) >= target;
+    }
+    return canFitAll(vehicle, cargo, g, stackingEnabled, mode).ok;
+  };
+
   const search = (key: 'walls' | 'width' | 'length', base: Gaps): number => {
-    if (!canFitAll(vehicle, cargo, { ...base, [key]: 1 }, stackingEnabled, mode).ok) return 0;
+    if (bounds[key] < 1 || !fits(key, 1, base)) return 0;
     let lo = 1;
     let hi = bounds[key];
     // Возможность размещения монотонно убывает с ростом зазора — бинарный поиск
     // точного максимума с шагом 1 мм.
     while (lo <= hi) {
       const mid = Math.floor((lo + hi) / 2);
-      if (canFitAll(vehicle, cargo, { ...base, [key]: mid }, stackingEnabled, mode).ok) {
+      if (fits(key, mid, base)) {
         lo = mid + 1;
       } else {
         hi = mid - 1;
@@ -785,7 +836,7 @@ export function canStackAll(vehicle: Vehicle, cargo: Cargo[]): FitCheck {
   for (const c of cargo) {
     const itemHeight = itemPlacedHeight(c);
     if (itemHeight > 0 && itemHeight * 2 > vehicle.height) {
-      return { ok: false, code: 'tooHigh', cargoName: c.name, reason: `нельзя штабелировать 2 слоя груза "${c.name}"` };
+      return { ok: false, code: 'tooHigh', cargoName: c.name, cargoId: c.id, reason: `нельзя штабелировать 2 слоя груза "${c.name}"` };
     }
   }
   // 3) Раскладка при нулевых зазорах и полной высоте кузова — несколько слоёв
