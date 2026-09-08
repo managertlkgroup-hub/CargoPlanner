@@ -12,7 +12,6 @@ import VariantTabs from './components/VariantTabs/VariantTabs';
 import MetricsPanel from './components/MetricsPanel/MetricsPanel';
 import SettingsModal from './components/Settings/SettingsModal';
 import ReportButton from './components/Report/ReportButton';
-import VehicleVisibilityControls from './components/VehicleSelector/VehicleVisibilityControls';
 import VehicleMatcher from './components/VehicleSelector/VehicleMatcher';
 import { VehicleDetailsPanel, CargoDetailsPanel } from './components/PresetDetails/PresetDetailsPanel';
 import { generateSuggestions, type PackingSuggestion } from './lib/packer/suggestions';
@@ -48,7 +47,7 @@ const GapRow: React.FC<{
       </div>
     );
   }
-  const value = Number(toUnit(valueMm, unit).toFixed(unit === 'm' ? 2 : 1));
+  const value = Number(toUnit(valueMm, unit).toFixed(unit === 'm' ? 3 : 1));
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
       <span style={{ fontSize: 13, color: 'var(--text)', flex: 1, minWidth: 0 }}>{label}</span>
@@ -459,7 +458,7 @@ const App: React.FC = () => {
           </div>
 
           {/* Секция «Управление» */}
-          <div className="accordion-section">
+          <div className="accordion-section controls-section">
             <button className="accordion-toggle" onClick={() => setControlSectionOpen(!controlSectionOpen)}>
               <span><Settings size={14} /> {tr(lang, 'section.control')}</span>
               <span>{controlSectionOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</span>
@@ -583,7 +582,6 @@ const App: React.FC = () => {
                     </>
                   )}
                 </div>
-                <VehicleVisibilityControls vehicleId={selectedVehicleId} />
               </div>
             )}
           </div>
@@ -658,6 +656,7 @@ function SuggestionsPanel({ show, onToggle }: { show: boolean; onToggle: () => v
   const unit = useAppStore((s) => s.unit);
   const lang = useAppStore((s) => s.lang);
   const cargoList = useAppStore((s) => s.cargo);
+  const gapsEnabled = useAppStore((s) => s.settings.gapsEnabled);
 
   const totalCargo = useMemo(
     () => cargoList.reduce((sum, c) => sum + Math.max(1, Math.floor(c.quantity || 1)), 0),
@@ -666,8 +665,8 @@ function SuggestionsPanel({ show, onToggle }: { show: boolean; onToggle: () => v
 
   const suggestions: PackingSuggestion[] = useMemo(() => {
     if (!result) return [];
-    return generateSuggestions(result, vehicle, activeVariant, unit, lang, totalCargo, cargoList);
-  }, [result, vehicle, activeVariant, unit, lang, totalCargo, cargoList]);
+    return generateSuggestions(result, vehicle, activeVariant, unit, lang, totalCargo, cargoList, gapsEnabled);
+  }, [result, vehicle, activeVariant, unit, lang, totalCargo, cargoList, gapsEnabled]);
 
   if (suggestions.length === 0) return null;
 

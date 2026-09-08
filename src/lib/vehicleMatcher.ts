@@ -8,7 +8,7 @@
 
 import type { Cargo, LoadingPoint, PackedItem, PackResult, PackSettings, Vehicle } from '../types';
 import { getCargoVolume } from '../types';
-import { packItems } from './packer/packer';
+import { packItems, canStackAll } from './packer/packer';
 
 export type LayoutMode = 'along' | 'across' | 'mixed';
 
@@ -57,6 +57,8 @@ export interface VehicleMatch {
   overflowPct: number;
   /** Груз помещается целиком хотя бы в одном варианте */
   fits: boolean;
+  /** Реально ли штабелирование для этого автомобиля */
+  stackOk: boolean;
   /** Заполнение объёма лучшего варианта, % (совместимость) */
   volumeFill: number;
   /** Заполнение по весу лучшего варианта, % (совместимость) */
@@ -149,9 +151,15 @@ export function matchVehicles(
     const binVolume = v.length * v.width * v.height;
 
     const noStack = packItems(v, cargo, { ...base, maxStackHeight: 0 }, loadingPoints);
-    const withStack = packItems(v, cargo, { ...base, maxStackHeight: v.height }, loadingPoints);
     const optNo = bestVariant(noStack, units);
-    const optStack = bestVariant(withStack, units);
+
+    // Штабелирование реально возможно только если грузы совместимы, двойная высота
+    // помещается и физическая раскладка на второй слой возможна. Если нет — вариант
+    // «Со штабелированием» приравниваем к «Без штабелирования» (не даём ложных цифр).
+    const stackOk = canStackAll(v, cargo).ok;
+    const optStack = stackOk
+      ? bestVariant(packItems(v, cargo, { ...base, maxStackHeight: v.height }, loadingPoints), units)
+      : { ...optNo, mode: optNo.mode as StackOption['mode'] };
 
     const bestPlaced = Math.max(optNo.placed, optStack.placed);
     const overflow = Math.max(0, units - bestPlaced);
@@ -172,6 +180,7 @@ export function matchVehicles(
       overflow,
       overflowPct,
       fits,
+      stackOk,
       volumeFill: best.volumeFill,
       weightFill: best.weightFill,
       effectiveFill: Math.round((best.volumeFill / 0.7) * 10) / 10,

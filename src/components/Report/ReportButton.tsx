@@ -1,8 +1,8 @@
 // ============================================================================
-// Кнопки формирования отчётов (PDF и Excel)
+// Кнопка формирования PDF-отчёта
 // ============================================================================
 
-import { FileText, Table } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { getCurrentVehicle, useActiveVariant } from '../../store/useAppStore';
 import { useAppStore } from '../../store/useAppStore';
 import { tr } from '../../i18n';
@@ -32,26 +32,10 @@ export default function ReportButton() {
     }
   };
 
-  const handleXlsx = async () => {
-    if (!result || result.variants.length === 0) {
-      setError(tr(lang, 'err.calcFirst'));
-      return;
-    }
-    try {
-      const { exportToXLSX } = await import('../../lib/export/xlsxExport');
-      exportToXLSX(vehicle, cargo, result.variants, weightUnit, lang);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : tr(lang, 'err.excel'));
-    }
-  };
-
   return (
     <div className="row">
       <button className="btn btn-primary" onClick={handlePdf}>
         <FileText size={14} /> {tr(lang, 'rb.pdf')}
-      </button>
-      <button className="btn btn-success" onClick={handleXlsx}>
-        <Table size={14} /> {tr(lang, 'rb.excel')}
       </button>
     </div>
   );

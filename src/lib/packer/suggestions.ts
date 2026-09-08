@@ -32,6 +32,7 @@ export function generateSuggestions(
   lang: Lang = 'ru',
   totalCargo?: number,
   cargo?: Cargo[],
+  gapsEnabled?: boolean,
 ): PackingSuggestion[] {
   const suggestions: PackingSuggestion[] = [];
   // Используем активный вариант, а не всегда variants[0]
@@ -62,7 +63,7 @@ export function generateSuggestions(
     suggestions.push({
       id: 'unplaced',
       icon: AlertTriangle,
-      message: stackOk ? tr(lang, 'sg.unplaced') : tr(lang, 'sg.unplacedNoStack'),
+      message: gapsEnabled ? tr(lang, 'sg.unplacedGaps') : tr(lang, 'sg.unplacedNoGaps'),
       cargoIds: [],
     });
   }

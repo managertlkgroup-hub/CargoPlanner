@@ -71,7 +71,6 @@ const ru: Dict = {
   'err.pdf': 'Ошибка формирования PDF',
   'err.png': 'Ошибка экспорта PNG',
   'err.pngNotFound': 'Не удалось найти 2D-канвас для экспорта',
-  'err.excel': 'Ошибка экспорта в Excel',
   'err.importCsv': 'Ошибка импорта CSV',
   'err.editCustomOnly': 'Можно редактировать только пользовательский груз.',
   'err.csvNoName': 'Отсутствует название',
@@ -91,8 +90,6 @@ const ru: Dict = {
   'metric.placed': 'Размещено, шт',
   'metric.layers': 'Слоёв штабеля',
   'metric.unplaced': 'Размещено {placed} из {total} шт — осталось {rest}',
-  'metric.unplacedBody': 'Не поместились: ~{w}, ~{v}. Попробуйте другой режим раскладки или включите штабелирование.',
-  'metric.unplacedBodyNoStack': 'Не поместились: ~{w}, ~{v}. Попробуйте другой режим раскладки или уменьшите зазоры.',
   'metric.fitHint': 'Весь груз физически не влезает в кузов — выберите автомобиль большего размера или уменьшите зазоры.',
   'metric.gapsPartial': 'Зазоры включены для {placed} грузов (из {total}). Для неразмещённых грузов зазоры не применяются.',
   'metric.unplacedShow': 'Показать неразмещённые',
@@ -100,7 +97,6 @@ const ru: Dict = {
   'metric.unplacedList': 'Неразмещённые грузы:',
   'metric.unplacedQty': '×{n} шт',
   'metric.unplacedItem': '×{n} (не поместилось)',
-  'metric.unplacedDetail': '{name} ×{n} ({dims}, {w} {wu}, {v})',
   'metric.dimensions': 'Габариты',
   'metric.dimensionsHint': 'Габарит укладки — размеры прямоугольника, в который вписаны все грузы по фактическим координатам (без учёта зазоров).',
   'metric.dimWithGaps': 'Габариты с зазорами',
@@ -143,7 +139,6 @@ const ru: Dict = {
 
   // Кнопки отчётов
   'rb.pdf': 'Отчёт PDF',
-  'rb.excel': 'Экспорт в Excel',
 
   // Видимость кузова
   'vis.title': 'Видимость кузова',
@@ -275,7 +270,6 @@ const ru: Dict = {
 
   // 3D сцена
   's3d.glue': 'Склеить',
-  's3d.spread': 'Разнести',
   's3d.body': 'Кузов',
   's3d.bodyHint': 'ЛКМ вращение · ПКМ перемещение · колесо — зум',
   's3d.layers': 'Слои:',
@@ -446,8 +440,8 @@ const ru: Dict = {
 
   // Подсказки
   'sg.lowFill': 'Заполнение {p} — попробуйте добавить больше грузов или увеличить количество.',
-  'sg.unplaced': 'Некоторые грузы не поместились. Попробуйте другой режим или включите штабелирование.',
-  'sg.unplacedNoStack': 'Некоторые грузы не поместились. Попробуйте другой режим раскладки или уменьшите зазоры.',
+  'sg.unplacedGaps': 'Некоторые грузы не поместились. Попробуйте другой режим раскладки или уменьшите зазоры.',
+  'sg.unplacedNoGaps': 'Некоторые грузы не поместились. Попробуйте другой режим раскладки.',
   'sg.weightLimit': 'Вес загрузки {p} — близко к пределу. Распределите вес равномерно.',
   'sg.enableStacking': '{n} штабелируемых грузов на полу. Включите штабелирование для экономии места.',
   'sg.stackingImpossible': 'Высота кузова ({v}) не позволяет штабелировать эти грузы (2 × {h} > {v}).',
@@ -638,7 +632,6 @@ const en: Dict = {
   'err.pdf': 'Error generating PDF',
   'err.png': 'Error exporting PNG',
   'err.pngNotFound': 'Could not find 2D canvas for export',
-  'err.excel': 'Error exporting to Excel',
   'err.importCsv': 'CSV import error',
   'err.editCustomOnly': 'Only custom cargo can be edited.',
   'err.csvNoName': 'Missing name',
@@ -657,8 +650,6 @@ const en: Dict = {
   'metric.placed': 'Placed, pcs',
   'metric.layers': 'Stack layers',
   'metric.unplaced': 'Placed {placed} of {total} pcs — {rest} left',
-  'metric.unplacedBody': 'Not fitted: ~{w}, ~{v}. Try another layout mode or enable stacking.',
-  'metric.unplacedBodyNoStack': 'Not fitted: ~{w}, ~{v}. Try another layout mode or reduce the gaps.',
   'metric.fitHint': 'The cargo physically cannot fit in this body — choose a larger vehicle or reduce the gaps.',
   'metric.gapsPartial': 'Gaps are enabled for {placed} cargo units (of {total}). Gaps are not applied to unplaced cargo.',
   'metric.unplacedShow': 'Show unfitted',
@@ -666,7 +657,6 @@ const en: Dict = {
   'metric.unplacedList': 'Unfitted cargo:',
   'metric.unplacedQty': '×{n} pcs',
   'metric.unplacedItem': '×{n} (not placed)',
-  'metric.unplacedDetail': '{name} ×{n} ({dims}, {w} {wu}, {v})',
   'metric.dimensions': 'Dimensions',
   'metric.dimensionsHint': 'Placement dimensions — the bounding box enclosing all cargo by actual coordinates (without gaps).',
   'metric.dimWithGaps': 'Dimensions with gaps',
@@ -706,7 +696,6 @@ const en: Dict = {
   's2d.weightUnit': 'kg',
 
   'rb.pdf': 'PDF Report',
-  'rb.excel': 'Export Excel',
 
   'vis.title': 'Body visibility',
   'vis.roof': 'Roof',
@@ -829,7 +818,6 @@ const en: Dict = {
   'pd.oversizeItem': 'Oversize cargo',
 
   's3d.glue': 'Glue',
-  's3d.spread': 'Spread',
   's3d.body': 'Body',
   's3d.bodyHint': 'LMB rotate · RMB pan · wheel — zoom',
   's3d.layers': 'Layers:',
@@ -997,8 +985,8 @@ const en: Dict = {
 
   // Подсказки
   'sg.lowFill': 'Fill {p} — try adding more cargo or increasing the quantity.',
-  'sg.unplaced': 'Some cargo did not fit. Try another layout mode or enable stacking.',
-  'sg.unplacedNoStack': 'Some cargo did not fit. Try another layout mode or reduce the gaps.',
+  'sg.unplacedGaps': 'Some cargo did not fit. Try another layout mode or reduce the gaps.',
+  'sg.unplacedNoGaps': 'Some cargo did not fit. Try another layout mode.',
   'sg.weightLimit': 'Load weight {p} — close to the limit. Distribute weight evenly.',
   'sg.enableStacking': '{n} stackable items on the floor. Enable stacking to save space.',
   'sg.stackingImpossible': 'Body height ({v}) does not allow stacking these items (2 × {h} > {v}).',

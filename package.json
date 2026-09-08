@@ -14,7 +14,6 @@
     "@react-pdf/renderer": "^4.9.0",
     "@react-three/drei": "^9.108.4",
     "@react-three/fiber": "^8.16.8",
-    "exceljs": "^4.4.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
     "lucide-react": "^1.35.0",
@@ -24,7 +23,6 @@
     "react-window": "^1.8.10",
     "three": "^0.165.0",
     "uuid": "^9.0.1",
-    "xlsx": "^0.18.5",
     "zustand": "^4.5.2"
   },
   "devDependencies": {

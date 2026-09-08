@@ -10,6 +10,7 @@ import { SCALE } from './Container3D';
 import type { PackedItem } from '../../types';
 import { tr } from '../../i18n';
 import ScenePlaceholder from '../ScenePlaceholder';
+import VehicleVisibilityControls from '../VehicleSelector/VehicleVisibilityControls';
 
 /** Компонент-обёртка для плавного перемещения камеры к грузу */
 function CameraFocuser({ items, focusItemId }: { items: PackedItem[]; focusItemId: string | null }) {
@@ -44,8 +45,6 @@ const Scene3D: React.FC = () => {
   const vehicle = useSelectedVehicle();
   const focusItemId = useAppStore((s) => s.focusItemId);
   const highlightItemId = useAppStore((s) => s.highlightItemId);
-  const spreadMode = useAppStore((s) => s.spreadMode);
-  const toggleSpreadMode = useAppStore((s) => s.toggleSpreadMode);
   const setFocusItemId = useAppStore((s) => s.setFocusItemId);
   const unit = useAppStore((s) => s.unit);
   const lang = useAppStore((s) => s.lang);
@@ -174,35 +173,12 @@ const Scene3D: React.FC = () => {
             const layer = Math.round(item.position.y / Math.max(1, item.dimensions.height));
             return layer === visibleLayer;
           })
-          .map((item, idx) => {
-          // Spread mode: offset items for visual separation
-          let spreadOffset = { x: 0, y: 0, z: 0 };
-          if (spreadMode) {
-            const cols = Math.ceil(Math.sqrt(packedItems.length));
-            const row = Math.floor(idx / cols);
-            const col = idx % cols;
-            // Смещение 25% от габаритов кузова — достаточно для визуального разделения
-            const spacingX = vehicle.length * SCALE * 0.25;
-            const spacingZ = vehicle.width * SCALE * 0.25;
-            spreadOffset = {
-              x: (col - cols / 2) * spacingX,
-              y: 0,
-              z: (row - Math.ceil(packedItems.length / cols) / 2) * spacingZ,
-            };
-          }
-          const spreadItem = spreadMode ? {
-            ...item,
-            position: {
-              x: item.position.x + spreadOffset.x,
-              y: item.position.y + spreadOffset.y,
-              z: item.position.z + spreadOffset.z,
-            },
-          } : item;
+          .map((item) => {
           const isHighlighted = highlightItemId === item.id || highlightItemId === item.id.split('-')[0];
           return (
             <CargoItem3D
               key={item.id}
-              item={spreadItem}
+              item={item}
               vehicle={vehicle}
               isSelected={selectedId === item.id || isHighlighted}
               onSelect={(id) => setSelectedId(id)}
@@ -274,25 +250,15 @@ const Scene3D: React.FC = () => {
         );
       })()}
 
-      {/* Кнопка «Разнести грузы» */}
-      <button
-        onClick={toggleSpreadMode}
-        style={{
-          position: 'absolute',
-          bottom: 40,
-          right: 10,
-          padding: '4px 8px',
-          fontSize: 10,
-          borderRadius: 4,
-          border: '1px solid var(--border)',
-          background: spreadMode ? 'var(--color-accent)' : 'var(--bg-panel)',
-          color: spreadMode ? '#fff' : 'var(--text)',
-          cursor: 'pointer',
-          zIndex: 10,
-        }}
-      >
-        {spreadMode ? tr(lang, 's3d.glue') : tr(lang, 's3d.spread')}
-      </button>
+      {/* Видимость кузова — легенда в 3D */}
+      <div className="scene-overlay" style={{
+        bottom: 40, left: 10, pointerEvents: 'auto',
+        background: 'rgba(255,255,255,0.92)', color: '#1e293b',
+        borderRadius: 6, padding: '6px 8px',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+      }}>
+        <VehicleVisibilityControls vehicleId={vehicle.id} />
+      </div>
     </div>
   );
 };

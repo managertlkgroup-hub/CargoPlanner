@@ -4,7 +4,7 @@ import { useActiveVariant, useSelectedVehicle } from '../../store/useAppStore';
 import { useAppStore } from '../../store/useAppStore';
 import { volumeToM3, unitLabel, formatDimension, formatWeight, weightUnitLabel, nameOf } from '../../utils/helpers';
 import { calculateCOG } from '../../lib/physics/cog';
-import { canFitAll, canStackAll } from '../../lib/packer/packer';
+import { canFitAll } from '../../lib/packer/packer';
 import { tr, trf } from '../../i18n';
 
 // id размещённого предмета имеет формат `${cargoId}-${x}-${y}-${z}` (см. packer.ts),
@@ -142,9 +142,6 @@ export default function MetricsPanel() {
     }, true);
   }, [vehicle, cargoList, settings, unplaced.restQty]);
 
-  // Реально ли штабелирование — если нет, не предлагаем его и в баннере
-  const stackOk = vehicle && cargoList.length > 0 ? canStackAll(vehicle, cargoList).ok : true;
-
 
   // Количество негабаритных
   const oversizeCount = useMemo(() => {
@@ -176,28 +173,6 @@ export default function MetricsPanel() {
               <div style={{ fontWeight: 600 }}>
                 {trf(lang, 'metric.unplaced', { placed: unplaced.placedQty, total: unplaced.totalQty, rest: unplaced.restQty })}
               </div>
-              <div style={{ fontSize: 12 }}>
-                {trf(lang, stackOk ? 'metric.unplacedBody' : 'metric.unplacedBodyNoStack', {
-                  w: `${formatWeight(unplaced.restWeight, weightUnit)} ${weightUnitLabel(lang, weightUnit)}`,
-                  v: volumeToM3(unplaced.restVolume, lang),
-                })}
-              </div>
-              {unplaced.missing.length > 0 && (
-                <div style={{ marginTop: 4 }}>
-                  {unplaced.missing.map((m) => (
-                    <div key={m.id} style={{ fontSize: 12, marginTop: 2 }}>
-                      {trf(lang, 'metric.unplacedDetail', {
-                        name: m.name,
-                        n: m.qty,
-                        dims: m.dims,
-                        w: formatWeight(m.weight, weightUnit),
-                        wu: weightUnitLabel(lang, weightUnit),
-                        v: volumeToM3(m.volume, lang),
-                      })}
-                    </div>
-                  ))}
-                </div>
-              )}
               {fitHint && !fitHint.ok && (
                 <div style={{ fontSize: 12, fontWeight: 500, marginTop: 4 }}>
                   {fitHint.reason}

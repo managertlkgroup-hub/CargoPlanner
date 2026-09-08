@@ -165,7 +165,9 @@ export default function VehicleMatcher({ onClose }: Props) {
                 </div>
 
                 <OptionLine lang={lang} opt={m.withoutStacking} stacking={false} fitsBadge={m.withoutStacking.fits} unit={unit} />
-                <OptionLine lang={lang} opt={m.withStacking} stacking={true} fitsBadge={m.withStacking.fits} unit={unit} />
+                {m.stackOk && (
+                  <OptionLine lang={lang} opt={m.withStacking} stacking={true} fitsBadge={m.withStacking.fits} unit={unit} />
+                )}
 
                 {!fits && (
                   <div style={{ fontSize: 12, color: 'var(--color-warning)', marginTop: 4, fontWeight: 600 }}>

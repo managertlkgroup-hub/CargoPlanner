@@ -643,6 +643,7 @@ function CargoTable({ cargo, items, unit, weightUnit, lang }: { cargo: Cargo[]; 
 
           return (
             <View
+              wrap={false}
               key={`${item.id}-${idx}`}
               style={[styles.tableRow, rowIdx % 2 === 0 ? styles.tableRowAlt : {}]}
             >

@@ -237,17 +237,18 @@ function packIntoBin(
   sortMode: 'along' | 'across' | 'mixed',
   gaps: Gaps,
 ): PlacedBox[] {
+  // Упаковка всегда выполняется с НУЛЕВЫМИ зазорами (детерминированная базовая
+  // раскладка). Зазоры затем распределяются детерминированным «reflow»-сдвигом
+  // (см. reflow), который НЕ уменьшает число размещённых грузов. Это делает
+  // зазоры стабильными: увеличение зазора до максимума не «роняет» грузы.
+  const zeroGaps: Gaps = { walls: 0, width: 0, length: 0 };
   const placed: PlacedBox[] = [];
   let usedWeight = 0;
 
-  // Ограничения рабочей области с учётом зазора от стен (периметр).
-  // Первая точка отступает от передней и левой стенок на gapWalls, а правая
-  // и задняя границы ограничены так, чтобы отступ от задней и правой стенок
-  // был таким же (gapWalls). Так зазор от стен получается симметричным.
-  const innerLen = bin.length - gaps.walls;
-  const innerWid = bin.width - gaps.walls;
-  const innerHgt = bin.height - gaps.walls;
-  const points: { x: number; y: number; z: number }[] = [{ x: gaps.walls, y: 0, z: gaps.walls }];
+  const innerLen = bin.length - zeroGaps.walls;
+  const innerWid = bin.width - zeroGaps.walls;
+  const innerHgt = bin.height - zeroGaps.walls;
+  const points: { x: number; y: number; z: number }[] = [{ x: zeroGaps.walls, y: 0, z: zeroGaps.walls }];
 
   // Сортировка боксов в зависимости от режима (с учётом порядка выгрузки stopOrder)
   // stopOrder=1 (первая точка выгрузки) размещаем глубже (меньше X), т.е. укладываем раньше.
@@ -337,7 +338,7 @@ function packIntoBin(
           rotY: orientation.rotY,
         };
 
-        if (placed.some((p) => intersectsGap(candidate, p, gaps))) {
+        if (placed.some((p) => intersectsGap(candidate, p, zeroGaps))) {
           continue;
         }
         if (usedWeight + box.weight > maxWeight) continue;
@@ -407,11 +408,11 @@ function packIntoBin(
 
       // Добавляем новые крайние точки после размещения груза
       // Точка справа от груза (по оси X), плюс зазор по длине
-      points.push({ x: point.x + placedBox.placedLength + gaps.length, y: point.y, z: point.z });
+      points.push({ x: point.x + placedBox.placedLength + zeroGaps.length, y: point.y, z: point.z });
       // Точка сверху от груза (по оси Y)
       points.push({ x: point.x, y: point.y + placedBox.placedHeight, z: point.z });
       // Точка сзади от груза (по оси Z), плюс зазор по ширине
-      points.push({ x: point.x, y: point.y, z: point.z + placedBox.placedWidth + gaps.width });
+      points.push({ x: point.x, y: point.y, z: point.z + placedBox.placedWidth + zeroGaps.width });
       
       // Удаляем дубликаты и точки, попавшие внутрь уже размещённых грузов
       const uniquePoints: { x: number; y: number; z: number }[] = [];
@@ -440,7 +441,104 @@ function packIntoBin(
     }
   }
   
-  return placed;
+  // Распределяем зазоры детерминированным сдвигом; если расширение выходит за
+  // границы кузова — возвращаем базовую (нуль-зазорную) раскладку (не теряем грузы).
+  return reflow(placed, gaps, bin) ?? placed;
+}
+
+/**
+ * Детерминированное распределение зазоров по базовой (нуль-зазорной) раскладке.
+ *
+ * 1. Зазор от стен (walls): все грузы сдвигаются от передней и левой стенки на
+ *    walls, чтобы получить симметричный отступ со всех сторон. Негабаритные грузы
+ *    не сдвигаются (они выступают за кузов намеренно).
+ * 2. Зазор между рядами по длине (length): грузы группируются в ряды по
+ *    Z-интервалам (свип со строгим lo < curHi); внутри ряда одинаковым
+ *    X-позициям назначается одинаковый сдвиг (стек не разрывается), и k-я
+ *    позиция по X сдвигается на k × gaps.length.
+ * 3. Зазор между рядами по ширине (width): симметрично — группировка по
+ *    X-интервалам, сдвиг по Z на k × gaps.width.
+ *
+ * Если после расширения какой-либо груз выходит за границы (с учётом walls с
+ * правой/задней стенки) — возвращается null, вызывающий код откатывается на
+ * базовую раскладку.
+ */
+function reflow(placed: PlacedBox[], gaps: Gaps, bin: { length: number; width: number; height: number }): PlacedBox[] | null {
+  if (placed.length === 0) return placed;
+  const hasWalls = gaps.walls > 0;
+  const hasLength = gaps.length > 0;
+  const hasWidth = gaps.width > 0;
+  if (!hasWalls && !hasLength && !hasWidth) return placed;
+
+  let items: PlacedBox[] = placed.map((p) =>
+    p.isOversize ? p : { ...p, x: p.x + gaps.walls, z: p.z + gaps.walls },
+  );
+
+  // Зазор между рядами по длине (X): сдвиг k-й X-позиции внутри Z-ряда
+  if (hasLength) {
+    const bands = groupByIntervals(
+      items.map((it, i) => ({ i, lo: it.z, hi: it.z + it.placedWidth })),
+    );
+    const shifts = new Array<number>(items.length).fill(0);
+    for (const band of bands) {
+      const xs = Array.from(new Set(band.map((e) => items[e].x))).sort((a, b) => a - b);
+      xs.forEach((x, k) => {
+        for (const e of band) if (items[e].x === x) shifts[e] = k * gaps.length;
+      });
+    }
+    items = items.map((it, i) => (shifts[i] ? { ...it, x: it.x + shifts[i] } : it));
+  }
+
+  // Зазор между рядами по ширине (Z): сдвиг k-й Z-позиции внутри X-ряда
+  if (hasWidth) {
+    const bands = groupByIntervals(
+      items.map((it, i) => ({ i, lo: it.x, hi: it.x + it.placedLength })),
+    );
+    const shifts = new Array<number>(items.length).fill(0);
+    for (const band of bands) {
+      const zs = Array.from(new Set(band.map((e) => items[e].z))).sort((a, b) => a - b);
+      zs.forEach((z, k) => {
+        for (const e of band) if (items[e].z === z) shifts[e] = k * gaps.width;
+      });
+    }
+    items = items.map((it, i) => (shifts[i] ? { ...it, z: it.z + shifts[i] } : it));
+  }
+
+  // Проверка границ: с учётом walls с правой/задней стенки и от потолка
+  for (const p of items) {
+    if (p.isOversize) continue;
+    if (p.x + p.placedLength > bin.length - gaps.walls) return null;
+    if (p.z + p.placedWidth > bin.width - gaps.walls) return null;
+    if (p.y + p.placedHeight > bin.height - gaps.walls) return null;
+  }
+
+  return items;
+}
+
+/**
+ * Разбивает элементы на «ряды» — группы по пересечению интервалов по одной оси
+ * (строгое пересечение lo < curHi). Возвращает массивы индексов, объединённые
+ * в цепочки (элементы одного ряда связаны пересечением).
+ */
+function groupByIntervals(list: Array<{ i: number; lo: number; hi: number }>): number[][] {
+  if (list.length === 0) return [];
+  const sorted = list.slice().sort((a, b) => a.lo - b.lo || a.hi - b.hi);
+  const bands: number[][] = [];
+  let cur: typeof sorted = [sorted[0]];
+  let curHi = sorted[0].hi;
+  for (let k = 1; k < sorted.length; k++) {
+    const e = sorted[k];
+    if (e.lo < curHi) {
+      cur.push(e);
+      if (e.hi > curHi) curHi = e.hi;
+    } else {
+      bands.push(cur.map((x) => x.i));
+      cur = [e];
+      curHi = e.hi;
+    }
+  }
+  bands.push(cur.map((x) => x.i));
+  return bands;
 }
 
 /** Осветляет/затемняет hex-цвет на указанный процент (положительный — светлее, отрицательный — темнее) */
@@ -564,7 +662,12 @@ export function packItems(
     ];
 
     const variants: LayoutVariant[] = modes.map(({ mode, label }) => {
-      const placed = packIntoBin(bin, vehicle.maxWeight, boxes, resolvedSettings, mode, gaps);
+      // Базовая (нуль-зазорная) раскладка — детерминированная, не зависит от зазоров.
+      const basePlaced = packIntoBin(bin, vehicle.maxWeight, boxes, resolvedSettings, mode, { walls: 0, width: 0, length: 0 });
+      // Раскладка с зазорами: reflow сдвигает базовую раскладку (не теряет грузы).
+      const placed = gaps.walls > 0 || gaps.width > 0 || gaps.length > 0
+        ? (reflow(basePlaced, gaps, bin) ?? basePlaced)
+        : basePlaced;
 
       let totalWeight = 0;
       let totalVolume = 0;
@@ -589,14 +692,8 @@ export function packItems(
       // Габариты укладки (bounding box) с учётом зазоров: позиции грузов уже
       // включают зазоры (стены + между рядами), поэтому bbox растёт с зазорами.
       const dims = measureBBox(placed);
-      // Габариты без учёта зазоров: перекладываем с нулевыми зазорами и замеряем
-      // bbox по фактическим координатам грузов — не должна меняться от зазоров.
-      const dimsWithoutGaps =
-        gaps.walls > 0 || gaps.width > 0 || gaps.length > 0
-          ? measureBBox(
-              packIntoBin(bin, vehicle.maxWeight, boxes, resolvedSettings, mode, { walls: 0, width: 0, length: 0 }),
-            )
-          : dims;
+      // Габариты без учёта зазоров — замер базовой (нуль-зазорной) раскладки.
+      const dimsWithoutGaps = measureBBox(basePlaced);
 
       // Заполнение объёма и свободный объём считаются от СУММЫ физических объёмов
       // грузов (totalVolume), а не от bounding box — зазоры на них не влияют.
@@ -832,11 +929,12 @@ export function findMaxGapByType(
   const zeroVar = (mode ? zeroResult.variants.find((v) => v.id === mode) : zeroResult.variants[0]) ?? zeroResult.variants[0];
   const bb = zeroVar?.dimensionsWithoutGaps;
 
-  // Высота потолка для walls: верхняя граница лега-пути (стены со всех сторон)
+  // Зазор от стен — геометрический предел, согласованный с reflow:
+  // стены со всех сторон (по длине/ширине делим на 2), по высоте — полный запас.
   const freeLen = Math.max(0, (vehicle.length - (bb?.length ?? vehicle.length)) / 2);
   const freeWid = Math.max(0, (vehicle.width - (bb?.width ?? vehicle.width)) / 2);
-  const freeHgt = Math.max(0, (vehicle.height - (bb?.height ?? vehicle.height)) / 2);
-  const wallsBound = Math.max(0, Math.floor(Math.min(freeLen, freeWid, freeHgt)));
+  const freeHgt = Math.max(0, vehicle.height - (bb?.height ?? vehicle.height));
+  const walls = Math.max(0, Math.floor(Math.min(freeLen, freeWid, freeHgt)));
 
   // Геометрический расчёт зазоров между рядами (по длине и по ширине)
   const spaces = rowSpaces(zeroVar?.items ?? []);
@@ -846,29 +944,6 @@ export function findMaxGapByType(
   const length = spaces.length > 0
     ? Math.max(0, Math.floor((vehicle.length - (bb?.length ?? vehicle.length)) / spaces.length))
     : 0;
-
-  // Зазор от стен — бинарный поиск (независимо от width/length)
-  const fitsWalls = (val: number): boolean => {
-    const g: Gaps = { walls: val, width: 0, length: 0 };
-    if (minCount != null) {
-      return countPlaced(vehicle, cargo, g, stackingEnabled ? vehicle.height : 0, mode) >= target;
-    }
-    return canFitAll(vehicle, cargo, g, stackingEnabled, mode).ok;
-  };
-  let walls = 0;
-  if (wallsBound >= 1 && fitsWalls(1)) {
-    let lo = 1;
-    let hi = wallsBound;
-    while (lo <= hi) {
-      const mid = Math.floor((lo + hi) / 2);
-      if (fitsWalls(mid)) {
-        lo = mid + 1;
-      } else {
-        hi = mid - 1;
-      }
-    }
-    walls = Math.max(0, hi);
-  }
 
   return { walls, width, length };
 }
