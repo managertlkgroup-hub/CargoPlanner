@@ -4,9 +4,10 @@
 
 import type { ComponentType } from 'react';
 import { Package, AlertTriangle, Scale, Layers, ArrowUp } from 'lucide-react';
-import type { PackResult, Vehicle, Unit } from '../../types';
+import type { PackResult, Vehicle, Unit, Cargo } from '../../types';
 import { UNIT_LABEL, formatDimension } from '../../utils/helpers';
 import { tr, trf, type Lang } from '../../i18n';
+import { canStackAll } from './packer';
 
 export interface PackingSuggestion {
   id: string;
@@ -30,6 +31,7 @@ export function generateSuggestions(
   unit: Unit = 'mm',
   lang: Lang = 'ru',
   totalCargo?: number,
+  cargo?: Cargo[],
 ): PackingSuggestion[] {
   const suggestions: PackingSuggestion[] = [];
   // Используем активный вариант, а не всегда variants[0]
@@ -37,6 +39,11 @@ export function generateSuggestions(
     ? result.variants.find(v => v.id === activeVariantId) ?? result.variants[0]
     : result.variants[0];
   if (!variant || variant.items.length === 0) return suggestions;
+
+  // Штабелирование реально возможно только если грузы совместимы, двойная высота
+  // помещается в кузов и физическая раскладка на второй слой возможна. Если нет —
+  // не предлагаем штабелирование и не упоминаем его в подсказках о неразмещённых.
+  const stackOk = cargo && cargo.length > 0 ? canStackAll(vehicle, cargo).ok : true;
 
   // 1. Низкое заполнение объёма
   if (variant.volumeFill < 50) {
@@ -55,7 +62,7 @@ export function generateSuggestions(
     suggestions.push({
       id: 'unplaced',
       icon: AlertTriangle,
-      message: tr(lang, 'sg.unplaced'),
+      message: stackOk ? tr(lang, 'sg.unplaced') : tr(lang, 'sg.unplacedNoStack'),
       cargoIds: [],
     });
   }
@@ -71,14 +78,16 @@ export function generateSuggestions(
   }
 
   // 4. Анализ свободного пространства — грузы на полу, но есть место сверху
+  //    (только если штабелирование в принципе возможно; иначе такой вариант
+  //    не предлагаем — только смену режима или уменьшение зазоров)
   const floorItems = variant.items.filter(it => it.position.y === 0);
   const stackedItems = variant.items.filter(it => it.position.y > 0);
   // Физическая проверка: поместится ли второй слой (2 × высота груза ≤ высота кузова)
   const maxFloorHeight = floorItems.length
     ? Math.max(...floorItems.map(it => it.dimensions.height))
     : 0;
-  const canStackTwo = maxFloorHeight > 0 && maxFloorHeight * 2 <= vehicle.height;
-  if (floorItems.length > 3 && stackedItems.length === 0) {
+  const canStackTwo = stackOk && maxFloorHeight > 0 && maxFloorHeight * 2 <= vehicle.height;
+  if (stackOk && floorItems.length > 3 && stackedItems.length === 0) {
     const stackableFloor = floorItems.filter(it => it.stackable);
     if (stackableFloor.length >= 2) {
       if (canStackTwo) {

@@ -4,7 +4,7 @@ import { useActiveVariant, useSelectedVehicle } from '../../store/useAppStore';
 import { useAppStore } from '../../store/useAppStore';
 import { volumeToM3, unitLabel, formatDimension, formatWeight, weightUnitLabel, nameOf } from '../../utils/helpers';
 import { calculateCOG } from '../../lib/physics/cog';
-import { canFitAll } from '../../lib/packer/packer';
+import { canFitAll, canStackAll } from '../../lib/packer/packer';
 import { tr, trf } from '../../i18n';
 
 // id размещённого предмета имеет формат `${cargoId}-${x}-${y}-${z}` (см. packer.ts),
@@ -26,6 +26,17 @@ export default function MetricsPanel() {
 
   // Количество неразмещённых грузов и остаток объёма/веса
   const unplaced = useMemo(() => {
+    // Габариты одного груза в выбранной единице (формат «1.7×1×2.07 м»)
+    const dimStr = (c: (typeof cargoList)[number]): string => {
+      const suffix = ` ${unitLabel(lang, unit)}`;
+      if (c.shape === 'cylinder') {
+        const d = c.diameter ?? c.width ?? 0;
+        return c.cylinderOrientation === 'vertical'
+          ? `⌀${formatDimension(d, unit)} × ${formatDimension(c.length, unit)}${suffix}`
+          : `${formatDimension(c.length, unit)} × ⌀${formatDimension(d, unit)}${suffix}`;
+      }
+      return `${formatDimension(c.length, unit)}×${formatDimension(c.width ?? 0, unit)}×${formatDimension(c.height ?? 0, unit)}${suffix}`;
+    };
     let totalQty = 0;
     let totalWeight = 0;
     let totalVolume = 0;
@@ -48,7 +59,7 @@ export default function MetricsPanel() {
       placedById[base] = (placedById[base] ?? 0) + 1;
     });
     const missing: {
-      id: string; name: string; qty: number; weight: number; volume: number;
+      id: string; name: string; qty: number; weight: number; volume: number; dims: string;
     }[] = [];
     for (const c of cargoList) {
       const q = Math.max(1, c.quantity || 1);
@@ -64,7 +75,7 @@ export default function MetricsPanel() {
         }
         missing.push({
           id: c.id, name: nameOf(c, lang), qty: missingQty,
-          weight: c.weight * missingQty, volume: vol,
+          weight: c.weight * missingQty, volume: vol, dims: dimStr(c),
         });
       }
     }
@@ -76,7 +87,7 @@ export default function MetricsPanel() {
       totalQty,
       missing,
     };
-  }, [cargoList, variant]);
+  }, [cargoList, variant, unit, lang]);
 
   const layerCount = useMemo(() => {
     if (!variant || variant.items.length === 0) return 0;
@@ -131,6 +142,9 @@ export default function MetricsPanel() {
     }, true);
   }, [vehicle, cargoList, settings, unplaced.restQty]);
 
+  // Реально ли штабелирование — если нет, не предлагаем его и в баннере
+  const stackOk = vehicle && cargoList.length > 0 ? canStackAll(vehicle, cargoList).ok : true;
+
 
   // Количество негабаритных
   const oversizeCount = useMemo(() => {
@@ -163,11 +177,27 @@ export default function MetricsPanel() {
                 {trf(lang, 'metric.unplaced', { placed: unplaced.placedQty, total: unplaced.totalQty, rest: unplaced.restQty })}
               </div>
               <div style={{ fontSize: 12 }}>
-                {trf(lang, 'metric.unplacedBody', {
+                {trf(lang, stackOk ? 'metric.unplacedBody' : 'metric.unplacedBodyNoStack', {
                   w: `${formatWeight(unplaced.restWeight, weightUnit)} ${weightUnitLabel(lang, weightUnit)}`,
                   v: volumeToM3(unplaced.restVolume, lang),
                 })}
               </div>
+              {unplaced.missing.length > 0 && (
+                <div style={{ marginTop: 4 }}>
+                  {unplaced.missing.map((m) => (
+                    <div key={m.id} style={{ fontSize: 12, marginTop: 2 }}>
+                      {trf(lang, 'metric.unplacedDetail', {
+                        name: m.name,
+                        n: m.qty,
+                        dims: m.dims,
+                        w: formatWeight(m.weight, weightUnit),
+                        wu: weightUnitLabel(lang, weightUnit),
+                        v: volumeToM3(m.volume, lang),
+                      })}
+                    </div>
+                  ))}
+                </div>
+              )}
               {fitHint && !fitHint.ok && (
                 <div style={{ fontSize: 12, fontWeight: 500, marginTop: 4 }}>
                   {fitHint.reason}
@@ -197,6 +227,7 @@ export default function MetricsPanel() {
                 <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '2px 0' }}>
                   <span style={{ flex: 1, color: 'var(--color-ink, #1e293b)' }}>
                     {m.name} <span style={{ color: 'var(--color-warning)' }}>{trf(lang, 'metric.unplacedItem', { n: m.qty })}</span>
+                    <span style={{ opacity: 0.75, marginLeft: 6 }}>{m.dims}</span>
                   </span>
                   <span>{formatWeight(m.weight, weightUnit)} {weightUnitLabel(lang, weightUnit)}</span>
                   <span>{volumeToM3(m.volume, lang)}</span>

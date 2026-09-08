@@ -160,12 +160,32 @@ const App: React.FC = () => {
     setStacking(settings.maxStackHeight > 0);
   }, [settings.maxStackHeight]);
 
-  // При изменении количества грузов, автомобиля, режима раскладки или
-  // штабелирования — автоматически пересчитываем максимальные зазоры по типам.
+  // При изменении количества грузов — автоматический пересчёт максимальных
+  // зазоров по типам (и обновление полей) с debounce 300 мс, чтобы не считать
+  // на каждый введённый символ. Если зазоры или штабелирование уже включены —
+  // дополнительно пересчитывается раскладка с новыми значениями.
+  const firstCargoLoadRef = useRef(true);
+  useEffect(() => {
+    if (firstCargoLoadRef.current) {
+      firstCargoLoadRef.current = false;
+      return;
+    }
+    const t = setTimeout(() => {
+      recomputeMaxGaps();
+      if (vehicle && cargo.length > 0 && (settings.gapsEnabled || stacking)) {
+        recalcWithSettings(vehicle, settings, false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cargo]);
+
+  // При изменении автомобиля, режима раскладки или штабелирования —
+  // пересчитываем максимальные зазоры по типам.
   useEffect(() => {
     recomputeMaxGaps();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cargo, selectedVehicleId, activeVariant, stacking]);
+  }, [selectedVehicleId, activeVariant, stacking]);
 
   // Пересчёт при смене активного режима раскладки (вдоль / поперёк / смешанный):
   // режим не «откатывается» — пользователь видит раскладку выбранного режима даже
@@ -646,8 +666,8 @@ function SuggestionsPanel({ show, onToggle }: { show: boolean; onToggle: () => v
 
   const suggestions: PackingSuggestion[] = useMemo(() => {
     if (!result) return [];
-    return generateSuggestions(result, vehicle, activeVariant, unit, lang, totalCargo);
-  }, [result, vehicle, activeVariant, unit, lang, totalCargo]);
+    return generateSuggestions(result, vehicle, activeVariant, unit, lang, totalCargo, cargoList);
+  }, [result, vehicle, activeVariant, unit, lang, totalCargo, cargoList]);
 
   if (suggestions.length === 0) return null;
 

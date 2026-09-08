@@ -732,23 +732,81 @@ export interface GapTypeMaxes {
 }
 
 /**
+ * Максимальное число предметов в одной «полосе» (пересекающихся интервалов по
+ * одной из осей). Используется для подсчёта количества рядов грузов из фактической
+ * раскладки без зазоров: чем больше грузов лежит на одной линии вдоль оси — тем
+ * больше промежутков между ними, по которым можно распределить свободное место.
+ */
+function maxBandOverlap(intervals: Array<{ lo: number; hi: number }>): number {
+  if (intervals.length === 0) return 0;
+  const sorted = intervals.slice().sort((a, b) => a.lo - b.lo || a.hi - b.hi);
+  let max = 1;
+  let cur = 1;
+  let curHi = sorted[0].hi;
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i].lo < curHi) {
+      // Интервал пересекает текущую полосу — присоединяем к ней
+      if (sorted[i].hi > curHi) curHi = sorted[i].hi;
+      cur++;
+    } else {
+      if (cur > max) max = cur;
+      cur = 1;
+      curHi = sorted[i].hi;
+    }
+  }
+  return Math.max(max, cur);
+}
+
+/**
+ * Количество промежутков, доступных для распределения зазоров между рядами,
+ * исходя из фактической раскладки грузов БЕЗ зазоров:
+ *  - «зазор между рядами по длине» распределяется по промежуткам внутри ряда,
+ *    идущего вдоль длины (X) — число грузов в самой длинной полосе по ширине (Z);
+ *  - «зазор между рядами по ширине» — по промежуткам внутри ряда поперёк ширины
+ *    (Z), т.е. число грузов в самой длинной полосе по длине (X).
+ * Если число промежутков = 0 (в ряду один груз) — данный тип зазора недоступен.
+ */
+function rowSpaces(placed: PackedItem[]): { length: number; width: number } {
+  const xBands: Array<{ lo: number; hi: number }> = [];
+  const zBands: Array<{ lo: number; hi: number }> = [];
+  for (const it of placed) {
+    // У PackedItem габариты dimensions уже повёрнуты: при rotationY=90 длина и
+    // ширина меняются местами относительно оси X/Z кузова.
+    const extentL = it.rotationY === 90 ? it.dimensions.width : it.dimensions.length;
+    const extentW = it.rotationY === 90 ? it.dimensions.length : it.dimensions.width;
+    zBands.push({ lo: it.position.z, hi: it.position.z + extentW });
+    xBands.push({ lo: it.position.x, hi: it.position.x + extentL });
+  }
+  return {
+    // Количество промежутков вдоль длины = грузам в одном ряду по ширине (Z)
+    length: Math.max(0, maxBandOverlap(zBands) - 1),
+    // Количество промежутков вдоль ширины = грузам в одном ряду по длине (X)
+    width: Math.max(0, maxBandOverlap(xBands) - 1),
+  };
+}
+
+/**
  * Ищет максимально допустимые значения для каждого типа зазора (от стен, между
  * рядами по ширине, между рядами по длине) для заданного режима раскладки.
  *
- * При частичной загрузке (передан minCount < общего количества) зазоры
- * вычисляются относительно РАЗМЕЩЁННЫХ грузов: ищется наибольший зазор, при
- * котором число размещённых грузов не опускается ниже minCount. Поэтому зазоры
- * доступны в любом режиме, где помещается хотя бы один груз, даже если не весь
- * объём влезает. По умолчанию (minCount === undefined) — как раньше: все грузы.
+ * УНИВЕРСАЛЬНАЯ ЛОГИКА ДЛЯ ЛЮБОГО КОЛИЧЕСТВА РЯДОВ. Зазоры между рядами
+ * (по ширине и по длине) считаются геометрически из раскладки БЕЗ зазоров:
+ *  - если рядов ≥ 2 — зазор = свободное место / (число рядов − 1);
+ *  - если ряд 1, но грузов в ряду > 1 — зазор = свободное место / (грузов − 1)
+ *    (показывается в том же поле «Зазор между рядами»);
+ *  - если ряд 1 и грузов в ряду 1 — тип недоступен («Невозможно», 0).
+ * Свободное место вдоль оси = габарит кузова минус bounding box раскладки.
  *
- * Используется прямой геометрический расчёт: для каждого типа ищется наибольшее
- * значение (бинарным поиском с точностью 1 мм), при котором ещё помещается
- * нужное число грузов. Типы перебираются поочерёдно, фиксируя уже найденные
- * значения предыдущих — итоговый набор гарантированно размещается. Верхние
- * границы поиска ограничены фактическим свободным пространством вдоль оси
- * после размещения грузов без зазоров (чтобы значение зазора не было
- * бессмысленно-большим для типов, не влияющих на раскладку). Если даже с
- * зазором 1 мм грузы не помещаются — тип считается невозможным (0).
+ * При частичной загрузке (передан minCount < общего количества) зазоры
+ * вычисляются относительно РАЗМЕЩЁННЫХ грузов: bounding box и ряды берутся из
+ * фактической раскладки режима. Поэтому зазоры доступны в любом режиме, где
+ * помещается хотя бы один груз, даже если не весь объём влезает.
+ *
+ * ГЕОМЕТРИЧЕСКИЕ зазоры (width/length) считаются по формуле напрямую и не
+ * зависят от зазора от стен. Зазор от стен (walls) ищется бинарным поиском
+ * (с точностью 1 мм) — максимальное значение, при котором ещё помещается нужное
+ * число грузов; верхняя граница ограничена фактическим свободным пространством
+ * со всех сторон (делится на 2, т.к. стены со всех сторон).
  */
 export function findMaxGapByType(
   vehicle: Vehicle,
@@ -761,9 +819,6 @@ export function findMaxGapByType(
   const target = minCount ?? total;
   if (target <= 0) return { walls: 0, width: 0, length: 0 };
 
-  // Верхние границы поиска: зазор не может превышать свободное пространство
-  // вдоль соответствующей оси после размещения грузов БЕЗ зазоров.
-  // walls применяется симметрично (с обеих сторон и по высоте) — делим на 2.
   const zeroSettings: PackSettings = {
     maxStackHeight: stackingEnabled ? vehicle.height : 0,
     allowRotation: true,
@@ -776,43 +831,45 @@ export function findMaxGapByType(
   const zeroResult = packItems(vehicle, cargo, zeroSettings, undefined);
   const zeroVar = (mode ? zeroResult.variants.find((v) => v.id === mode) : zeroResult.variants[0]) ?? zeroResult.variants[0];
   const bb = zeroVar?.dimensionsWithoutGaps;
-  const bounds: Record<'walls' | 'width' | 'length', number> = {
-    walls: Math.max(0, Math.floor(Math.min(
-      (vehicle.length - (bb?.length ?? vehicle.length)) / 2,
-      (vehicle.width - (bb?.width ?? vehicle.width)) / 2,
-      (vehicle.height - (bb?.height ?? vehicle.height)) / 2,
-    ))),
-    width: Math.max(0, Math.floor(vehicle.width - (bb?.width ?? 0))),
-    length: Math.max(0, Math.floor(vehicle.length - (bb?.length ?? 0))),
-  };
 
-  const fits = (key: 'walls' | 'width' | 'length', val: number, base: Gaps): boolean => {
-    const g = { ...base, [key]: val };
+  // Высота потолка для walls: верхняя граница лега-пути (стены со всех сторон)
+  const freeLen = Math.max(0, (vehicle.length - (bb?.length ?? vehicle.length)) / 2);
+  const freeWid = Math.max(0, (vehicle.width - (bb?.width ?? vehicle.width)) / 2);
+  const freeHgt = Math.max(0, (vehicle.height - (bb?.height ?? vehicle.height)) / 2);
+  const wallsBound = Math.max(0, Math.floor(Math.min(freeLen, freeWid, freeHgt)));
+
+  // Геометрический расчёт зазоров между рядами (по длине и по ширине)
+  const spaces = rowSpaces(zeroVar?.items ?? []);
+  const width = spaces.width > 0
+    ? Math.max(0, Math.floor((vehicle.width - (bb?.width ?? vehicle.width)) / spaces.width))
+    : 0;
+  const length = spaces.length > 0
+    ? Math.max(0, Math.floor((vehicle.length - (bb?.length ?? vehicle.length)) / spaces.length))
+    : 0;
+
+  // Зазор от стен — бинарный поиск (независимо от width/length)
+  const fitsWalls = (val: number): boolean => {
+    const g: Gaps = { walls: val, width: 0, length: 0 };
     if (minCount != null) {
       return countPlaced(vehicle, cargo, g, stackingEnabled ? vehicle.height : 0, mode) >= target;
     }
     return canFitAll(vehicle, cargo, g, stackingEnabled, mode).ok;
   };
-
-  const search = (key: 'walls' | 'width' | 'length', base: Gaps): number => {
-    if (bounds[key] < 1 || !fits(key, 1, base)) return 0;
+  let walls = 0;
+  if (wallsBound >= 1 && fitsWalls(1)) {
     let lo = 1;
-    let hi = bounds[key];
-    // Возможность размещения монотонно убывает с ростом зазора — бинарный поиск
-    // точного максимума с шагом 1 мм.
+    let hi = wallsBound;
     while (lo <= hi) {
       const mid = Math.floor((lo + hi) / 2);
-      if (fits(key, mid, base)) {
+      if (fitsWalls(mid)) {
         lo = mid + 1;
       } else {
         hi = mid - 1;
       }
     }
-    return Math.max(0, hi);
-  };
-  const walls = search('walls', { walls: 0, width: 0, length: 0 });
-  const width = search('width', { walls, width: 0, length: 0 });
-  const length = search('length', { walls, width, length: 0 });
+    walls = Math.max(0, hi);
+  }
+
   return { walls, width, length };
 }
 
